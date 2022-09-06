@@ -1,7 +1,7 @@
 from __future__ import annotations
-from PyQt6.QtCore import *
-from PyQt6.QtWidgets import *
+from PyQt6.QtCore import Qt, QPointF, QRectF
 from PyQt6.QtGui import *
+from PyQt6.QtWidgets import *
 from typing import Optional
 
 from .graph import Graph

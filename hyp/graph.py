@@ -52,7 +52,7 @@ class Graph:
         for v in t: self.vdata[v].in_edges.add(e)
         return e
 
-    def add_edge(self, ty:int, s:List[int], t:List[int]) -> int:
+    def add_edge(self, ty:int, s:int, t:int) -> int:
         e = self.add_hedge(ty, [s], [t])
         self.edata[e].hyper = False
         return e

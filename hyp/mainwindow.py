@@ -17,9 +17,9 @@
 # along with Hyp. If not, see <https://www.gnu.org/licenses/>.
 
 from __future__ import annotations
-from PyQt6.QtCore import *
-from PyQt6.QtWidgets import *
+from PyQt6.QtCore import Qt, QPointF, QRectF, QSettings
 from PyQt6.QtGui import *
+from PyQt6.QtWidgets import *
 import os
 
 from . import app
