@@ -26,7 +26,7 @@ setuptools.setup(
         "License :: OSI Approved :: Apache Software License",
         "Operating System :: OS Independent",
     ],
-    packages=["dodo"],
+    packages=["chyp"],
     package_data={'': ['*.svg']},
     data_files=data_files,
     install_requires=["PyQt6>=6.2"],
