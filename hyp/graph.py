@@ -1,17 +1,17 @@
 from __future__ import annotations
-from typing import Set, List, Dict, Iterator
+from typing import Set, List, Dict, Iterator, Any
 
 class VData:
-    def __init__(self, ty: int=0, x: float=0, y: float=0, in_edges: Set[int]=set(), out_edges: Set[int]=set()):
-        self.ty = ty
+    def __init__(self, value: Any="", x: float=0, y: float=0, in_edges: Set[int]=set(), out_edges: Set[int]=set()):
+        self.value = value
         self.x = x
         self.y = y
         self.in_edges = in_edges
         self.out_edges = out_edges
 
 class EData:
-    def __init__(self, ty: int=0, s: List[int]=[], t: List[int]=[], x: float=0, y: float=0, hyper: bool=True):
-        self.ty = ty
+    def __init__(self, value: Any="", s: List[int]=[], t: List[int]=[], x: float=0, y: float=0, hyper: bool=True):
+        self.value = value
         self.x = x
         self.y = y
         self.s = s
