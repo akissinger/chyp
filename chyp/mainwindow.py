@@ -48,14 +48,15 @@ class MainWindow(QMainWindow):
         view = GraphView()
 
         g = Graph()
-        v0 = g.add_vertex(0, -4, -1)
-        v1 = g.add_vertex(0, -4, 1)
-        v2 = g.add_vertex(0, 0, 0)
-        v3 = g.add_vertex(0, 4, -1)
-        v4 = g.add_vertex(0, 4, 0)
-        v5 = g.add_vertex(0, 4, 1)
-        e0 = g.add_hedge("f", [v0, v1], [v2], -2, 0)
-        e1 = g.add_hedge("g", [v2], [v3,v4,v5], 2, 0)
+        v0 = g.add_vertex(-4, -1)
+        v1 = g.add_vertex(-4, 1)
+        v2 = g.add_vertex(0, 0)
+        v3 = g.add_vertex(4, -1)
+        v4 = g.add_vertex(4, 0)
+        v5 = g.add_vertex(4, 1)
+        e0 = g.add_edge([v0, v1], [v2], -2, 0, "f")
+        e1 = g.add_edge([v2], [v3,v4,v5], 2, 0, "g")
+
         view.set_graph(g)
 
         w.layout().addWidget(view)

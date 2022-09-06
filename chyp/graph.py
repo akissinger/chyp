@@ -17,7 +17,7 @@ from __future__ import annotations
 from typing import Set, List, Dict, Iterator, Any
 
 class VData:
-    def __init__(self, value: Any="", x: float=0, y: float=0, in_edges: Set[int]=set(), out_edges: Set[int]=set()):
+    def __init__(self, x: float=0, y: float=0, value: Any="", in_edges: Set[int]=set(), out_edges: Set[int]=set()):
         self.value = value
         self.x = x
         self.y = y
@@ -25,7 +25,7 @@ class VData:
         self.out_edges = out_edges
 
 class EData:
-    def __init__(self, value: Any="", s: List[int]=[], t: List[int]=[], x: float=0, y: float=0, hyper: bool=True):
+    def __init__(self, s: List[int]=[], t: List[int]=[], x: float=0, y: float=0, value: Any="", hyper: bool=True):
         self.value = value
         self.x = x
         self.y = y
@@ -52,22 +52,22 @@ class Graph:
     def edge_data(self, e: int) -> EData:
         return self.edata[e]
 
-    def add_vertex(self, value: Any, x:float=0, y:float=0) -> int:
+    def add_vertex(self, x:float=0, y:float=0, value: Any="") -> int:
         v = self.vindex
         self.vindex += 1
-        self.vdata[v] = VData(value, x, y)
+        self.vdata[v] = VData(x, y, value)
         return v
 
-    def add_hedge(self, value: Any, s:List[int], t:List[int], x:float=0, y:float=0) -> int:
+    def add_edge(self, s:List[int], t:List[int], x:float=0, y:float=0, value: Any="") -> int:
         e = self.eindex
         self.eindex += 1
-        self.edata[e] = EData(value, s, t, x, y)
+        self.edata[e] = EData(s, t, x, y, value)
         for v in s: self.vdata[v].out_edges.add(e)
         for v in t: self.vdata[v].in_edges.add(e)
         return e
 
-    def add_edge(self, value: Any, s:int, t:int) -> int:
-        e = self.add_hedge(value, [s], [t])
+    def add_simple_edge(self, s:int, t:int, value: Any="") -> int:
+        e = self.add_edge([s], [t], value)
         self.edata[e].hyper = False
         return e
 
