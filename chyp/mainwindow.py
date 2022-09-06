@@ -45,8 +45,6 @@ class MainWindow(QMainWindow):
         if geom: self.restoreGeometry(geom)
         self.show()
 
-        view = GraphView()
-
         g = Graph()
         v0 = g.add_vertex(-4, -1)
         v1 = g.add_vertex(-4, 1)
@@ -54,9 +52,10 @@ class MainWindow(QMainWindow):
         v3 = g.add_vertex(4, -1)
         v4 = g.add_vertex(4, 0)
         v5 = g.add_vertex(4, 1)
-        e0 = g.add_edge([v0, v1], [v2], -2, 0, "f")
-        e1 = g.add_edge([v2], [v3,v4,v5], 2, 0, "g")
+        g.add_edge([v0, v1], [v2], -2, 0, "f")
+        g.add_edge([v2], [v3,v4,v5], 2, 0, "g")
 
+        view = GraphView()
         view.set_graph(g)
 
         w.layout().addWidget(view)

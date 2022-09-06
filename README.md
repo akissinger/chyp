@@ -2,6 +2,30 @@
 
 `chyp` (pronounced "chip") is a Python library for viewing, editing, and rewriting hypergraphs. It is especially intended for use with hypergraphs with boundaries, which are used to represent processes with inputs and outputs. The 'C' is for "compositional", meaning it makes sense for these kinds of hypergraphs to get plugged into one other, representing the composition of processes.
 
+The main classes provided by the library are the `Graph` datatype of hypergraphs (note the prefix "hyper-" is omitted from hypergraph and hyperedge everywhere) and the PyQt6 `GraphView` widget. Here's an example of their use, assuming `w` is the Qt widget where you want to add the `GraphView`:
+
+```python
+from chyp.graphview import GraphView
+from chyp.graph import Graph
+
+# ...
+
+g = Graph()
+v0 = g.add_vertex(-4, -1)
+v1 = g.add_vertex(-4, 1)
+v2 = g.add_vertex(0, 0)
+v3 = g.add_vertex(4, -1)
+v4 = g.add_vertex(4, 0)
+v5 = g.add_vertex(4, 1)
+g.add_edge([v0, v1], [v2], -2, 0, "f")
+g.add_edge([v2], [v3,v4,v5], 2, 0, "g")
+
+view = GraphView()
+view.set_graph(g)
+
+w.layout().addWidget(view)
+```
+
 This library is at an early stage, and mainly intended as a testbed for some ideas or to be incorporated in other tools/libraries.
 
 For those interested in the mathematics behind this library: hypergraphs with boundaries are the combinatoric cousins of _string diagrams_, a graphical notation for morphisms in a symmetric monoidal category. By switching to a combinatoric structure based on hypergraphs, we obtain a convenient rewrite theory for string diagrams. This is developed over a series of papers:
