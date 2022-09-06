@@ -94,18 +94,10 @@ class GraphScene(QGraphicsScene):
         self.setSceneRect(-2000, -2000, 4000, 4000)
         self.drag_start = None
         self.drag_items: List[QGraphicsItem] = []
-        self.titems: List[TItem] = []
 
-        g = Graph()
-        v0 = g.add_vertex(0, -4, -1)
-        v1 = g.add_vertex(0, -4, 1)
-        v2 = g.add_vertex(0, 0, 0)
-        v3 = g.add_vertex(0, 4, -1)
-        v4 = g.add_vertex(0, 4, 0)
-        v5 = g.add_vertex(0, 4, 1)
-        e0 = g.add_hedge("f", [v0, v1], [v2], -2, 0)
-        e1 = g.add_hedge("g", [v2], [v3,v4,v5], 2, 0)
+    def set_graph(self, g: Graph):
         self.g = g
+        self.clear()
         self.add_items()
 
     def add_items(self):
@@ -123,11 +115,9 @@ class GraphScene(QGraphicsScene):
             ed = self.g.edge_data(e)
             for i, v in enumerate(ed.s):
                 ti = TItem(vi[v], ei[e], i, src=True)
-                self.titems.append(ti)
                 self.addItem(ti)
             for i, v in enumerate(ed.t):
                 ti = TItem(vi[v], ei[e], i, src=False)
-                self.titems.append(ti)
                 self.addItem(ti)
 
     def mousePressEvent(self, e: QGraphicsSceneMouseEvent):
@@ -145,15 +135,17 @@ class GraphScene(QGraphicsScene):
         dx = round((p.x() - self.drag_start.x())/grid_size) * grid_size
         dy = round((p.y() - self.drag_start.y())/grid_size) * grid_size
 
-        for item,pos in self.drag_items:
-            item.setPos(QPointF(pos.x() + dx, pos.y() + dy))
-            for titem in self.titems:
-                if titem.vitem == item or titem.eitem == item:
-                    titem.refresh()
+        # move the items that have been dragged
+        for it,pos in self.drag_items:
+            it.setPos(QPointF(pos.x() + dx, pos.y() + dy))
 
-        self.views()[0].viewport().repaint()
-
-
+        # update positions for any tentacles attached to dragged items
+        for it in self.items():
+            if isinstance(it, TItem):
+                for it1,_ in self.drag_items:
+                    if it.vitem == it1 or it.eitem == it1:
+                        it.refresh()
+                        break
 
     def mouseReleaseEvent(self, e: QGraphicsSceneMouseEvent):
         self.drag_items = []

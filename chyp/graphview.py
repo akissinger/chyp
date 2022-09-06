@@ -18,10 +18,14 @@ from PyQt6.QtCore import Qt, QPointF, QRectF
 from PyQt6.QtWidgets import *
 from PyQt6.QtGui import *
 
-from . import graphscene
+from .graphscene import GraphScene
+from .graph import Graph
 
 class GraphView(QGraphicsView):
     def __init__(self):
-        self.scene = graphscene.GraphScene()
-        super().__init__(self.scene)
+        self.graph_scene = GraphScene()
+        super().__init__(self.graph_scene)
         self.setRenderHint(QPainter.RenderHint.Antialiasing)
+
+    def set_graph(self, g: Graph):
+        self.graph_scene.set_graph(g)

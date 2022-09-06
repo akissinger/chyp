@@ -1,3 +1,4 @@
+# type: ignore
 import setuptools
 
 # read description from README.md
