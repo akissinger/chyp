@@ -46,8 +46,8 @@ class MainWindow(QMainWindow):
         self.show()
 
         g = Graph()
-        v0 = g.add_vertex(-4, -1)
-        v1 = g.add_vertex(-4, 1)
+        v0 = g.add_vertex(-4, 1)
+        v1 = g.add_vertex(-4, -1)
         v2 = g.add_vertex(0, 0)
         v3 = g.add_vertex(4, 2)
         v4 = g.add_vertex(4, 0)

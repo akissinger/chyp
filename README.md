@@ -10,20 +10,25 @@ from chyp import Graph, GraphView
 # ...
 
 g = Graph()
-v0 = g.add_vertex(-4, -1)
-v1 = g.add_vertex(-4, 1)
+v0 = g.add_vertex(-4, 1)
+v1 = g.add_vertex(-4, -1)
 v2 = g.add_vertex(0, 0)
-v3 = g.add_vertex(4, -1)
+v3 = g.add_vertex(4, 2)
 v4 = g.add_vertex(4, 0)
-v5 = g.add_vertex(4, 1)
+v5 = g.add_vertex(4, -2)
 g.add_edge([v0, v1], [v2], -2, 0, "f")
 g.add_edge([v2], [v3,v4,v5], 2, 0, "g")
+g.add_edge([v3], [], 6, 2, "x")
+g.add_edge([v4], [], 6, 0, "y")
 
 view = GraphView()
 view.set_graph(g)
 
 w.layout().addWidget(view)
 ```
+
+This will produce a hypergraph view with draggable nodes and boxes that looks like this:
+![Hypergraph example](https://github.com/akissinger/chyp/raw/master/example.png)
 
 This library is at an early stage, and mainly intended as a testbed for some ideas or to be incorporated in other tools/libraries.
 
