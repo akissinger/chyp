@@ -17,3 +17,5 @@
 # along with Hyp. If not, see <https://www.gnu.org/licenses/>.
 
 from . import app
+from .graphview import GraphView
+from .graph import Graph

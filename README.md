@@ -5,8 +5,7 @@
 The main classes provided by the library are the `Graph` datatype of hypergraphs (note the prefix "hyper-" is omitted from hypergraph and hyperedge everywhere) and the PyQt6 `GraphView` widget. Here's an example of their use, assuming `w` is the Qt widget where you want to add the `GraphView`:
 
 ```python
-from chyp.graphview import GraphView
-from chyp.graph import Graph
+from chyp import Graph, GraphView
 
 # ...
 
