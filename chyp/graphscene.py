@@ -17,7 +17,7 @@ from __future__ import annotations
 from PyQt6.QtCore import Qt, QPointF, QRectF
 from PyQt6.QtGui import *
 from PyQt6.QtWidgets import *
-from typing import Optional
+from typing import Optional, List, Tuple
 
 from .graph import Graph
 
@@ -37,7 +37,7 @@ class EItem(QGraphicsRectItem):
         self.setPen(QPen(QColor(0,0,0)))
         self.setBrush(QBrush(QColor(200,200,255)))
 
-    def paint(self, painter: QPainter, option: QStyleOptionGraphicsItem, widget: Optional[QWidget]=None):
+    def paint(self, painter: QPainter, option: QStyleOptionGraphicsItem, widget: Optional[QWidget]=None) -> None:
         super().paint(painter, option, widget)
         ed = self.g.edge_data(self.e)
         painter.setFont(QFont("sans", 14))
@@ -61,11 +61,11 @@ class TItem(QGraphicsPathItem):
         super().__init__()
         self.refresh()
 
-    def refresh(self):
+    def refresh(self) -> None:
         path = QPainterPath()
 
         if self.src:
-            if self.eitem.num_s == 1: offset = 0
+            if self.eitem.num_s == 1: offset = 0.0
             else: offset = (2 * self.i / (self.eitem.num_s - 1) - 1) * SCALE
 
             p1x = self.vitem.pos().x()
@@ -89,20 +89,20 @@ class TItem(QGraphicsPathItem):
         self.update(-2000,-2000,4000,4000)
 
 class GraphScene(QGraphicsScene):
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__()
         self.undo_stack = QUndoStack(self)
 
         self.setSceneRect(-2000, -2000, 4000, 4000)
-        self.drag_start = None
-        self.drag_items: List[QGraphicsItem] = []
+        self.drag_start = QPointF(0,0)
+        self.drag_items: List[Tuple[QGraphicsItem, QPointF]] = []
 
-    def set_graph(self, g: Graph):
+    def set_graph(self, g: Graph) -> None:
         self.g = g
         self.clear()
         self.add_items()
 
-    def add_items(self):
+    def add_items(self) -> None:
         vi = {}
         ei = {}
         for e in self.g.edges():
@@ -122,7 +122,7 @@ class GraphScene(QGraphicsScene):
                 ti = TItem(vi[v], ei[e], i, src=False)
                 self.addItem(ti)
 
-    def mousePressEvent(self, e: QGraphicsSceneMouseEvent):
+    def mousePressEvent(self, e: QGraphicsSceneMouseEvent) -> None:
         super().mousePressEvent(e)
         
         self.drag_start = e.scenePos()
@@ -131,7 +131,7 @@ class GraphScene(QGraphicsScene):
         if it and (isinstance(it, EItem) or isinstance(it, VItem)):
             self.drag_items = [(it, it.scenePos())]
 
-    def mouseMoveEvent(self, e: QGraphicsSceneMouseEvent):
+    def mouseMoveEvent(self, e: QGraphicsSceneMouseEvent) -> None:
         p = e.scenePos()
         grid_size = SCALE / 8
         dx = round((p.x() - self.drag_start.x())/grid_size) * grid_size
@@ -149,6 +149,6 @@ class GraphScene(QGraphicsScene):
                         it.refresh()
                         break
 
-    def mouseReleaseEvent(self, e: QGraphicsSceneMouseEvent):
+    def mouseReleaseEvent(self, e: QGraphicsSceneMouseEvent) -> None:
         self.drag_items = []
 

@@ -22,10 +22,10 @@ from .graphscene import GraphScene
 from .graph import Graph
 
 class GraphView(QGraphicsView):
-    def __init__(self):
+    def __init__(self) -> None:
         self.graph_scene = GraphScene()
         super().__init__(self.graph_scene)
         self.setRenderHint(QPainter.RenderHint.Antialiasing)
 
-    def set_graph(self, g: Graph):
+    def set_graph(self, g: Graph) -> None:
         self.graph_scene.set_graph(g)

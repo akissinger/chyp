@@ -34,7 +34,7 @@ class EData:
         self.hyper = hyper
 
 class Graph:
-    def __init__(self):
+    def __init__(self) -> None:
         self.vdata: Dict[int, VData] = {}
         self.edata: Dict[int, EData] = {}
         self.vindex = 0
