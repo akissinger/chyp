@@ -25,12 +25,12 @@ class VData:
         self.out_edges = out_edges
 
 class EData:
-    def __init__(self, s: List[int]=[], t: List[int]=[], x: float=0, y: float=0, value: Any="", hyper: bool=True):
+    def __init__(self, s: List[int]=None, t: List[int]=None, x: float=0, y: float=0, value: Any="", hyper: bool=True):
         self.value = value
         self.x = x
         self.y = y
-        self.s = s
-        self.t = t
+        self.s = [] if s is None else s
+        self.t = [] if t is None else t
         self.hyper = hyper
 
 class Graph:
