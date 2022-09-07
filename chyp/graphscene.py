@@ -31,6 +31,8 @@ class EItem(QGraphicsRectItem):
         ed = g.edge_data(e)
         self.num_s = len(ed.s)
         self.num_t = len(ed.t)
+        if self.num_s <= 1 and self.num_t <= 1:
+            self.setRect(-0.5 * SCALE, -0.5 * SCALE, SCALE, SCALE)
         self.setPos(ed.x * SCALE, -ed.y * SCALE)
         self.setPen(QPen(QColor(0,0,0)))
         self.setBrush(QBrush(QColor(200,200,255)))
@@ -69,13 +71,13 @@ class TItem(QGraphicsPathItem):
             p1x = self.vitem.pos().x()
             p1y = self.vitem.pos().y()
             p2x = self.eitem.pos().x() - 0.5 * SCALE
-            p2y = self.eitem.pos().y() - offset
+            p2y = self.eitem.pos().y() + offset
         else:
             if self.eitem.num_t == 1: offset = 0
             else: offset = (2 * self.i / (self.eitem.num_t - 1) - 1) * SCALE
 
             p1x = self.eitem.pos().x() + 0.5 * SCALE
-            p1y = self.eitem.pos().y() - offset
+            p1y = self.eitem.pos().y() + offset
             p2x = self.vitem.pos().x()
             p2y = self.vitem.pos().y()
 
