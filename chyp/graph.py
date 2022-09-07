@@ -17,7 +17,7 @@ from __future__ import annotations
 from typing import Set, List, Dict, Iterator, Any, Optional
 
 class VData:
-    def __init__(self, x: float=0, y: float=0, value: Any="", in_edges: Set[int]=set(), out_edges: Set[int]=set()):
+    def __init__(self, x: float=0, y: float=0, value: Any="", in_edges: Set[int]=set(), out_edges: Set[int]=set()) -> None:
         self.value = value
         self.x = x
         self.y = y
@@ -31,7 +31,7 @@ class EData:
             x: float=0,
             y: float=0,
             value: Any="",
-            hyper: bool=True):
+            hyper: bool=True) -> None:
         self.value = value
         self.x = x
         self.y = y
