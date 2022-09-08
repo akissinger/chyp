@@ -49,8 +49,8 @@ class Graph:
     def __init__(self) -> None:
         self.vdata: Dict[int, VData] = {}
         self.edata: Dict[int, EData] = {}
-        self.inputs = Tuple[int] = ()
-        self.outputs = Tuple[int] = ()
+        self.inputs: List[int] = []
+        self.outputs: List[int] = []
         self.vindex = 0
         self.eindex = 0
 
@@ -103,27 +103,27 @@ class Graph:
         self.edata[e].hyper = False
         return e
 
-    def set_inputs(self, inp: Tuple[int]):
+    def set_inputs(self, inp: List[int]) -> None:
         self.inputs = inp
-        for d in self.vertex_data.values():
+        for d in self.vdata.values():
             d.in_indices.clear()
 
         for i,v in enumerate(self.inputs):
             self.vdata[v].in_indices.add(i)
 
-    def set_outputs(self, outp: Tuple[int]):
+    def set_outputs(self, outp: List[int]) -> None:
         self.outputs = outp
-        for d in self.vertex_data.values():
+        for d in self.vdata.values():
             d.in_indices.clear()
 
         for i,v in enumerate(self.outputs):
             self.vdata[v].out_indices.add(i)
 
-    def is_input(self, v: int):
+    def is_input(self, v: int) -> bool:
         return len(self.vdata[v].in_indices) > 0
 
-    def is_output(self, v: int):
+    def is_output(self, v: int) -> bool:
         return len(self.vdata[v].out_indices) > 0
 
-    def is_boundary(self, v: int):
+    def is_boundary(self, v: int) -> bool:
         return self.is_input(v) or self.is_output(v)
