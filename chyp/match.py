@@ -4,33 +4,42 @@ from typing import Set, List, Dict, Iterator, Any, Optional, Iterable
 from .graph import Graph
 
 class Match:
+    dom: Graph
+    cod: Graph
+    vmap: Dict[int,int]
+    vimg: Set[int]
+    emap: Dict[int,int]
+    eimg: Set[int]
+
     def __init__(self, dom: Graph=None, cod: Graph=None, m: Match=None) -> None:
         if m:
             self.dom = m.dom
             self.cod = m.cod
-            self.vmap: Dict[int,int] = m.vmap.copy()
-            self.vimg: Set[int] = m.vimg.copy()
-            self.emap: Dict[int,int] = m.emap.copy()
-            self.eimg: Set[int] = m.eimg.copy()
-        else:
+            self.vmap = m.vmap.copy()
+            self.vimg = m.vimg.copy()
+            self.emap = m.emap.copy()
+            self.eimg = m.eimg.copy()
+        elif dom and cod:
             self.dom = dom
             self.cod = cod
-            self.vmap: Dict[int,int] = dict()
-            self.vimg: Dict[int,int] = dict()
-            self.emap: Dict[int,int] = dict()
-            self.eimg: Dict[int,int] = dict()
+            self.vmap = dict()
+            self.vimg = set()
+            self.emap = dict()
+            self.eimg = set()
+        else:
+            raise ValueError("Must provide either a match or a pair of graphs")
 
     def copy(self) -> Match:
         return Match(m=self)
 
     def try_add_vertex(self, v: int, cod_v: int) -> bool:
-        if self.dom.vdata(v).value != self.cod.vdata(cod_v).value: return False
+        if self.dom.vertex_data(v).value != self.cod.vertex_data(cod_v).value: return False
         if self.cod.is_boundary(cod_v) and not self.dom.is_boundary(v): return False
 
         # matches are only allowed to be non-injective on the boundary
         if cod_v in self.vimg:
             if not self.dom.is_boundary(v): return False
-            for dv, cv in self.dom.vmap.items():
+            for dv, cv in self.vmap.items():
                 if cv == cod_v and not self.dom.is_boundary(dv):
                     return False
         self.vmap[v] = cod_v
@@ -40,16 +49,16 @@ class Match:
         # matchings are required to be injective on edges, this will guarantee that the gluing
         # conditions are satisfied.
         if not self.dom.is_boundary(v):
-            if len(self.dom.in_edges(v)) != len(self.cod(in_edges(cod_v))):
+            if len(self.dom.in_edges(v)) != len(self.cod.in_edges(cod_v)):
                 return False
-            if len(self.dom.out_edges(v)) != len(self.cod(out_edges(cod_v))):
+            if len(self.dom.out_edges(v)) != len(self.cod.out_edges(cod_v)):
                 return False
 
         return True
 
     def try_add_edge(self, e: int, cod_e: int) -> bool:
-        if self.dom.edata(e).value != self.cod.edata(cod_e).value: return False
-        if e_cod in self.eimg: return False
+        if self.dom.edge_data(e).value != self.cod.edge_data(cod_e).value: return False
+        if cod_e in self.eimg: return False
         self.emap[e] = cod_e
         self.eimg.add(cod_e)
 
@@ -72,7 +81,7 @@ class Match:
 
         return True
 
-    def dom_nhd_mapped(self, v: int):
+    def dom_nhd_mapped(self, v: int) -> bool:
         """Returns True if nhd(v) is the domain of emap"""
         return (all(e in self.emap for e in self.dom.in_edges(v)) and
                 all(e in self.emap for e in self.dom.out_edges(v)))
@@ -123,6 +132,8 @@ class Match:
                 if m1.try_add_vertex(v, cod_v):
                     ms.append(m1)
             return ms
+
+        return []
     
     def is_total(self) -> bool:
         return len(self.vmap) == self.dom.num_vertices() and len(self.emap) == self.dom.num_edges()
@@ -134,7 +145,7 @@ class Match:
         return len(self.vmap) == len(self.vimg)
 
 class Matches(Iterable):
-    def __init__(self, dom, cod) -> None:
+    def __init__(self, dom: Graph, cod: Graph) -> None:
         self.match_stack = [Match(dom=dom, cod=cod)]
 
     def __iter__(self) -> Iterator:
