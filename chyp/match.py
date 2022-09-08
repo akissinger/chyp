@@ -10,6 +10,7 @@ class Match:
             self.cod = m.cod
             self.vmap: Dict[int,int] = m.vmap.copy()
             self.vimg: Set[int] = m.vimg.copy()
+            self.vdone: Set[int] = m.vdone.copy()
             self.emap: Dict[int,int] = m.emap.copy()
             self.eimg: Set[int] = m.eimg.copy()
         else:
@@ -17,6 +18,7 @@ class Match:
             self.cod = cod
             self.vmap: Dict[int,int] = dict()
             self.vimg: Dict[int,int] = dict()
+            self.vdone: Set[int] = m.vdone.copy()
             self.emap: Dict[int,int] = dict()
             self.eimg: Dict[int,int] = dict()
 
@@ -35,6 +37,7 @@ class Match:
                     return False
         self.vmap[v] = cod_v
         self.vimg.add(cod_v)
+        return self.check_gluing_cond(v)
 
     def try_add_edge(self, e: int, cod_e: int) -> bool:
         if self.dom.edata(e).value != self.cod.edata(cod_e).value: return False
@@ -53,17 +56,44 @@ class Match:
             return False
 
         # then, each vertex that is already mapped needs to be consistent
-        success = True
         for v1, cod_v1 in zip(s + t, cod_s + cod_t):
             if v1 in self.vmap:
-                if self.vmap[v1] != cod_v1:
-                    success = False
-                    break
+                if self.vmap[v1] != cod_v1 or not self.check_gluing_cond(v1):
+                    return False
             else:
                 if not self.try_add_vertex(v1, cod_v1):
-                    success = False
-                    break
-        return success
+                    return False
+
+        return True
+
+    def dom_nhd_mapped(self, v: int):
+        """Returns True if nhd(v) is the domain of emap"""
+        return (all(e in self.emap for e in self.dom.in_edges(v)) and
+                all(e in self.emap for e in self.dom.out_edges(v)))
+
+    def cod_nhd_mapped(self, cod_v: int):
+        """Returns True if nhd(cod_v) is the range of emap"""
+        return (all(e in self.eimg for e in self.cod.in_edges(cod_v)) and
+                all(e in self.eimg for e in self.cod.out_edges(cod_v)))
+
+    def check_gluing_cond(self, v: int) -> bool:
+        """Check gluing conditions local to a vertex v
+
+        Called the first time v gets mapped, then every time we map an edge adjacent to v. This checks
+        that either v is a boundary or the homomorphism (vmap, emap) satisfies the gluing conditions on
+        the nhd of v.
+
+        That is, emap should restrict to a bijection emap' : nhd(v) -> nhd(vmap(v)).
+        """
+        if not v in self.vdone:
+            cod_v = self.vmap[v]
+            if self.dom_nhd_mapped(v):
+                if self.dom.is_boundary(v) or self.cod_nhd_mapped(cod_v):
+                    self.vdone.add(v)
+                else:
+                    return False
+        return True
+
 
     def more(self) -> List[Match]:
         # a list of partial matches the same as this one, but matching 1 more vertex or edge
@@ -72,10 +102,7 @@ class Match:
         # first try to complete nhds of vertices already matched
         for v in self.vmap:
             # check if a vertex's nhd is already fully mapped
-            if (all(e in self.emap for e in self.dom.in_edges(v)) and
-                all(e in self.emap for e in self.dom.out_edges(v))):
-                continue
-
+            if v in self.vdone: continue
             cod_v = self.vmap[v]
 
             # try to extend the match by mapping the next in_edge
