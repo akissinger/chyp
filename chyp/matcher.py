@@ -158,5 +158,5 @@ class Matches(Iterable):
             else: self.match_stack += m.more()
         raise StopIteration
 
-def match(dom: Graph, cod: Graph) -> Matches:
+def match_graph(dom: Graph, cod: Graph) -> Matches:
     return Matches(dom, cod)
