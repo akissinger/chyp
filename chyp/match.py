@@ -36,8 +36,9 @@ class Match:
         self.vmap[v] = cod_v
         self.vimg.add(cod_v)
 
-        # unless v is a boundary, check the gluing condition. Note we can do this eagerly
-        # just by making sure that nhd(v) and nhd(vmap(v)) are the same size.
+        # unless v is a boundary, check that nhd(v) and nhd(vmap(v)) are the same size. Because
+        # matchings are required to be injective on edges, this will guarantee that the gluing
+        # conditions are satisfied.
         if not self.dom.is_boundary(v):
             if len(self.dom.in_edges(v)) != len(self.cod(in_edges(cod_v))):
                 return False
