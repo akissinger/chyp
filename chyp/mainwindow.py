@@ -22,6 +22,7 @@ import os
 from . import app
 from .graphview import GraphView
 from .graph import Graph
+from .matcher import match_graph
 
 class MainWindow(QMainWindow):
     def __init__(self, a: app.Chyp):
@@ -56,6 +57,20 @@ class MainWindow(QMainWindow):
         g.add_edge([v2], [v3,v4,v5], 2, 0, "g")
         g.add_edge([v3], [], 6, 2, "x")
         g.add_edge([v4], [], 6, 0, "y")
+
+        g1 = Graph()
+        w0 = g1.add_vertex(0, 0)
+        w1 = g1.add_vertex(2, 1)
+        w2 = g1.add_vertex(2, 0)
+        w3 = g1.add_vertex(2, -1)
+        g1.add_edge([w0], [w1, w2, w3], 1, 0, "g")
+        g1.add_edge([w1], [], 2, 0, "x")
+        g1.set_inputs([w0])
+        g1.set_outputs([w2, w3])
+
+        ms = match_graph(g1, g)
+        for m in ms:
+            print(m)
 
         view = GraphView()
         view.set_graph(g)

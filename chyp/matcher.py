@@ -29,6 +29,9 @@ class Match:
         else:
             raise ValueError("Must provide either a match or a pair of graphs")
 
+    def __str__(self) -> str:
+        return "vmap: {}\nemap: {}\n".format(str(self.vmap), str(self.emap))
+
     def copy(self) -> Match:
         return Match(m=self)
 
@@ -57,7 +60,10 @@ class Match:
         return True
 
     def try_add_edge(self, e: int, cod_e: int) -> bool:
-        if self.dom.edge_data(e).value != self.cod.edge_data(cod_e).value: return False
+        e_val = self.dom.edge_data(e).value
+        cod_e_val = self.cod.edge_data(cod_e).value
+        if e_val != cod_e_val:
+            return False
         if cod_e in self.eimg: return False
         self.emap[e] = cod_e
         self.eimg.add(cod_e)
@@ -75,9 +81,11 @@ class Match:
         # then, each vertex that is already mapped needs to be consistent
         for v1, cod_v1 in zip(s + t, cod_s + cod_t):
             if v1 in self.vmap:
-                if self.vmap[v1] != cod_v1: return False
+                if self.vmap[v1] != cod_v1:
+                    return False
             else:
-                if not self.try_add_vertex(v1, cod_v1): return False
+                if not self.try_add_vertex(v1, cod_v1):
+                    return False
 
         return True
 
@@ -115,7 +123,6 @@ class Match:
             for e in self.dom.out_edges(v):
                 if e in self.emap: continue
                 for cod_e in self.cod.out_edges(cod_v):
-                    if cod_e in self.eimg: continue
                     m1 = self.copy()
                     if m1.try_add_edge(e, cod_e):
                         ms.append(m1)
@@ -154,8 +161,10 @@ class Matches(Iterable):
     def __next__(self) -> Match:
         while len(self.match_stack) > 0:
             m = self.match_stack.pop()
-            if m.is_total(): return m
-            else: self.match_stack += m.more()
+            if m.is_total():
+                return m
+            else:
+                self.match_stack += m.more()
         raise StopIteration
 
 def match_graph(dom: Graph, cod: Graph) -> Matches:

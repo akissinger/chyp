@@ -114,7 +114,7 @@ class Graph:
     def set_outputs(self, outp: List[int]) -> None:
         self.outputs = outp
         for d in self.vdata.values():
-            d.in_indices.clear()
+            d.out_indices.clear()
 
         for i,v in enumerate(self.outputs):
             self.vdata[v].out_indices.add(i)
