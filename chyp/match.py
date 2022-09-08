@@ -4,7 +4,7 @@ from typing import Set, List, Dict, Iterator, Any, Optional, Iterable
 from .graph import Graph
 
 class Match:
-    def __init__(self, dom: Graph=None, cod: Graph=None, m: Match=None):
+    def __init__(self, dom: Graph=None, cod: Graph=None, m: Match=None) -> None:
         if m:
             self.dom = m.dom
             self.cod = m.cod
@@ -25,6 +25,7 @@ class Match:
 
     def try_add_vertex(self, v: int, cod_v: int) -> bool:
         if self.dom.vdata(v).value != self.cod.vdata(cod_v).value: return False
+        if self.cod.is_boundary(cod_v) and not self.dom.is_boundary(v): return False
 
         # matches are only allowed to be non-injective on the boundary
         if cod_v in self.vimg:
@@ -118,8 +119,8 @@ class Match:
         return len(self.vmap) == len(self.vimg)
 
 class Matches(Iterable):
-    def __init__(self):
-        self.match_stack = []
+    def __init__(self, dom, cod) -> None:
+        self.match_stack = [Match(dom=dom, cod=cod)]
 
     def __iter__(self) -> Iterator:
         return self
@@ -130,3 +131,6 @@ class Matches(Iterable):
             if m.is_total(): return m
             else: self.match_stack += m.more()
         raise StopIteration
+
+def match(dom: Graph, cod: Graph) -> Matches:
+    return Matches(dom, cod)
