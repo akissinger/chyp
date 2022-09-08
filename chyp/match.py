@@ -10,7 +10,6 @@ class Match:
             self.cod = m.cod
             self.vmap: Dict[int,int] = m.vmap.copy()
             self.vimg: Set[int] = m.vimg.copy()
-            self.vdone: Set[int] = m.vdone.copy()
             self.emap: Dict[int,int] = m.emap.copy()
             self.eimg: Set[int] = m.eimg.copy()
         else:
@@ -18,7 +17,6 @@ class Match:
             self.cod = cod
             self.vmap: Dict[int,int] = dict()
             self.vimg: Dict[int,int] = dict()
-            self.vdone: Set[int] = set()
             self.emap: Dict[int,int] = dict()
             self.eimg: Dict[int,int] = dict()
 
@@ -72,12 +70,9 @@ class Match:
 
         # first try to complete nhds of vertices already matched
         for v in self.vmap:
-            # check if a vertex's nhd is already fully mapped. the set vdone prevents this check from
-            #  being done multiple times.
-            if v in self.vdone: continue
+            # check if a vertex's nhd is already fully mapped
             if (all(e in self.emap for e in self.dom.in_edges(v)) and
                 all(e in self.emap for e in self.dom.out_edges(v))):
-                self.vdone.add(v)
                 continue
 
             cod_v = self.vmap[v]
