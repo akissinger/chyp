@@ -21,8 +21,14 @@ class VData:
         self.value = value
         self.x = x
         self.y = y
-        self.in_edges = set()
-        self.out_edges = set()
+
+        # for quickly finding edges in the nhd of v
+        self.in_edges: Set[int] = set()
+        self.out_edges: Set[int] = set()
+
+        # if v is in the list of inputs/outputs, save its index here
+        self.in_indices: Set[int] = set()
+        self.out_indices: Set[int] = set()
 
 class EData:
     def __init__(self,
@@ -43,6 +49,8 @@ class Graph:
     def __init__(self) -> None:
         self.vdata: Dict[int, VData] = {}
         self.edata: Dict[int, EData] = {}
+        self.inputs = Tuple[int] = ()
+        self.outputs = Tuple[int] = ()
         self.vindex = 0
         self.eindex = 0
 
@@ -76,4 +84,20 @@ class Graph:
         e = self.add_edge([s], [t], value)
         self.edata[e].hyper = False
         return e
+
+    def set_inputs(self, inp: Tuple[int]):
+        self.inputs = inp
+        for d in self.vertex_data.values():
+            d.in_indices.clear()
+
+        for i,v in enumerate(self.inputs):
+            self.vdata[v].in_indices.add(i)
+
+    def set_outputs(self, outp: Tuple[int]):
+        self.outputs = outp
+        for d in self.vertex_data.values():
+            d.in_indices.clear()
+
+        for i,v in enumerate(self.outputs):
+            self.vdata[v].out_indices.add(i)
 
