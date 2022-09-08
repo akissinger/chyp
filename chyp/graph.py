@@ -60,11 +60,29 @@ class Graph:
     def edges(self) -> Iterator[int]:
         return iter(self.edata.keys())
 
+    def num_vertices(self) -> int:
+        return len(self.vdata)
+
+    def num_edges(self) -> int:
+        return len(self.edata)
+
     def vertex_data(self, v: int) -> VData:
         return self.vdata[v]
 
     def edge_data(self, e: int) -> EData:
         return self.edata[e]
+
+    def in_edges(self, v: int) -> Set[int]:
+        return self.vdata[v].in_edges
+
+    def out_edges(self, v: int) -> Set[int]:
+        return self.vdata[v].out_edges
+
+    def source(self, e: int) -> List[int]:
+        return self.edata[e].s
+
+    def target(self, e: int) -> List[int]:
+        return self.edata[e].t
 
     def add_vertex(self, x:float=0, y:float=0, value: Any="") -> int:
         v = self.vindex
@@ -101,3 +119,11 @@ class Graph:
         for i,v in enumerate(self.outputs):
             self.vdata[v].out_indices.add(i)
 
+    def is_input(self, v: int):
+        return len(self.vdata[v].in_indices) > 0
+
+    def is_output(self, v: int):
+        return len(self.vdata[v].out_indices) > 0
+
+    def is_boundary(self, v: int):
+        return self.is_input(v) or self.is_output(v)
