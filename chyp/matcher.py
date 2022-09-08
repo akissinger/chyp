@@ -1,7 +1,11 @@
 from __future__ import annotations
 from typing import Set, List, Dict, Iterator, Any, Optional, Iterable
-
 from .graph import Graph
+
+def match_log(s: str) -> None:
+    """Used for debugging the matcher"""
+    pass
+    # print(s)
 
 class Match:
     dom: Graph
@@ -30,20 +34,34 @@ class Match:
             raise ValueError("Must provide either a match or a pair of graphs")
 
     def __str__(self) -> str:
-        return "vmap: {}\nemap: {}\n".format(str(self.vmap), str(self.emap))
+        return "  vmap: {}\n  emap: {}".format(str(self.vmap), str(self.emap))
 
     def copy(self) -> Match:
         return Match(m=self)
 
     def try_add_vertex(self, v: int, cod_v: int) -> bool:
-        if self.dom.vertex_data(v).value != self.cod.vertex_data(cod_v).value: return False
-        if self.cod.is_boundary(cod_v) and not self.dom.is_boundary(v): return False
+        match_log("trying to add vertex {} -> {} to match:".format(v, cod_v))
+        match_log(str(self))
+
+        v_val = self.dom.vertex_data(v).value
+        cod_v_val = self.cod.vertex_data(cod_v).value
+
+        if v_val != cod_v_val:
+            match_log("vertex failed: values {} != {}".format(v_val, cod_v_val))
+            return False
+
+        if self.cod.is_boundary(cod_v) and not self.dom.is_boundary(v):
+            match_log("vertex failed: cod v is boundary but dom v is not")
+            return False
 
         # matches are only allowed to be non-injective on the boundary
         if cod_v in self.vimg:
-            if not self.dom.is_boundary(v): return False
+            if not self.dom.is_boundary(v):
+                match_log("vertex failed: non-injective on interior vertex")
+                return False
             for dv, cv in self.vmap.items():
                 if cv == cod_v and not self.dom.is_boundary(dv):
+                    match_log("vertex failed: non-injective on interior vertex")
                     return False
         self.vmap[v] = cod_v
         self.vimg.add(cod_v)
@@ -53,18 +71,29 @@ class Match:
         # conditions are satisfied.
         if not self.dom.is_boundary(v):
             if len(self.dom.in_edges(v)) != len(self.cod.in_edges(cod_v)):
+                match_log("vertex failed: in_edges cannot satisfy gluing conds")
                 return False
             if len(self.dom.out_edges(v)) != len(self.cod.out_edges(cod_v)):
+                match_log("vertex failed: out_edges cannot satisfy gluing conds")
                 return False
 
+        match_log("vertex success")
         return True
 
     def try_add_edge(self, e: int, cod_e: int) -> bool:
+        match_log("trying to add edge {} -> {} to match:".format(e, cod_e))
+        match_log(str(self))
+
         e_val = self.dom.edge_data(e).value
         cod_e_val = self.cod.edge_data(cod_e).value
         if e_val != cod_e_val:
+            match_log("edge failed: values {} != {}".format(e_val, cod_e_val))
             return False
-        if cod_e in self.eimg: return False
+
+        if cod_e in self.eimg:
+            match_log("edge failed: non-injective")
+            return False
+
         self.emap[e] = cod_e
         self.eimg.add(cod_e)
 
@@ -76,17 +105,21 @@ class Match:
 
         # first the lengths need to be the same
         if len(s) != len(cod_s) or len(t) != len(cod_t):
+            match_log("edge failed: source or target len doesn't match image")
             return False
 
         # then, each vertex that is already mapped needs to be consistent
         for v1, cod_v1 in zip(s + t, cod_s + cod_t):
             if v1 in self.vmap:
                 if self.vmap[v1] != cod_v1:
+                    match_log("edge failed: inconsistent with previously mapped vertex")
                     return False
             else:
                 if not self.try_add_vertex(v1, cod_v1):
+                    match_log("edge failed: couldn't add a vertex")
                     return False
-
+        
+        match_log("edge success")
         return True
 
     def dom_nhd_mapped(self, v: int) -> bool:
@@ -162,6 +195,7 @@ class Matches(Iterable):
         while len(self.match_stack) > 0:
             m = self.match_stack.pop()
             if m.is_total():
+                match_log("got successful match:\n" + str(m))
                 return m
             else:
                 self.match_stack += m.more()
