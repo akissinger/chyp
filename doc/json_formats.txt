@@ -1,0 +1,76 @@
+JSON File Formats
+
+These are draft JSON file formats for chyp. These formats are based in part on those
+used by Quantomatic, but simplified and adapted for hypergraphs.
+
+
+========================
+COMMON
+========================
+
+The following conventions are used below:
+
+LIST[A]   ::= [ A (, A)* ] | []
+DICT[A,B] ::= { A : B (, A : B)* } | {}
+
+- VNAME and EDGE_NAME are both non-negative integers, given as quoted strings.
+- STRING, INT, FLOAT, BOOL are (non-null) fields of the given type
+
+========================
+GRAPHS
+========================
+
+File extension: .chyp
+
+This represents a hypergraph with input and output boundaries. Vertices and hyperedges
+are allowed to carry arbitrary string data, called the "value" which can be interpreted
+and/or parsed by other tools. Hyperedges additionally carry a flag "hyper", which when
+set to false tells the GUI to draw a hyperedge just as a normal edge, rather than a box.
+
+Note that "inputs" and "outputs" can, in principle, have repeated names. This corresponds
+to the boundary of the hypergraph embedding non-injectively. This makes rewriting more
+complicated but is sometimes necessary when doing rewriting modulo Frobenius structure.
+
+
+GRAPH ::=
+{
+  "vertices": DICT[VNAME, VDATA]
+  "edges": DICT[EDGE_NAME, EDATA]
+  "inputs": LIST[VNAME],
+  "outputs": LIST[VNAME]
+}
+VDATA ::=
+{
+  "x": FLOAT,
+  "y": FLOAT,
+  "value" : STRING
+}
+EDATA ::=
+{
+  "s" : LIST[VNAME],
+  "t" : LIST[VNAME],
+  "x": FLOAT,
+  "y": FLOAT,
+  "hyper": BOOL,
+  "value" : STRING
+}
+
+
+
+========================
+RULES
+========================
+
+File extension: .chyprule
+
+This file represents a DPO rewrite rule of hypergraphs. This consists of a pair of hypergraphs L, R
+whose "inputs" and "outputs" lists both have the same length. The i-th element of each list should
+point to a vertex with the same "value" in each graph.
+
+RULE ::=
+{
+  "lhs" : GRAPH,
+  "rhs" : GRAPH
+}
+
+

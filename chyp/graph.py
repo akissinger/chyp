@@ -17,12 +17,12 @@ from __future__ import annotations
 from typing import Set, List, Dict, Iterator, Any, Optional
 
 class VData:
-    def __init__(self, x: float=0, y: float=0, value: Any="", in_edges: Set[int]=set(), out_edges: Set[int]=set()) -> None:
+    def __init__(self, x: float=0, y: float=0, value: Any="") -> None:
         self.value = value
         self.x = x
         self.y = y
-        self.in_edges = in_edges
-        self.out_edges = out_edges
+        self.in_edges = set()
+        self.out_edges = set()
 
 class EData:
     def __init__(self,
