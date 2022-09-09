@@ -64,7 +64,13 @@ g2.set_outputs([w1, w2])
 r = Rule(g1, g2)
 ```
 
-In order to apply a rule, it must be _matched_, i.e. one must find an embedding of the lefthand-side `r.lhs` into `g`. Matches can be found using the `match_rule` method. This returns an `Iterable` containing a `Match` object for each of the possible matches of `r.lhs` into `g`. There could be very many of these, so it is computed lazily.
+In order to apply a rule, it must be _matched_, i.e. one must find an embedding of the lefthand-side `r.lhs` into `g`. Matches can be found using the `match_rule` method:
+
+```python
+def match_rule(r: Rule, g: Graph) -> Iterable[Match]
+```
+
+This returns an `Iterable` containing a `Match` object for each of the possible matches of `r.lhs` into `g`. There could be very many of these, so they are computed lazily.
 
 Once a match is found, the rewritten graph can be calculated via the `rewrite` function:
 
@@ -77,7 +83,13 @@ else:
     print("no matches")
 ```
 
-The `rewrite` method is a thin wrapper around the `dpo` function, which will return a new `Match` object that embeds `r.rhs` into the rewritten graph `h`. This is sometimes useful, i.e. for visualising the part of the graph that has been updated or verifying that a rewrite was performed correctly.
+The `rewrite` method is a thin wrapper around the `dpo` function, which will return a new `Match` object that embeds `r.rhs` into the rewritten graph `h`.
+
+```python
+def dpo(r: Rule, m: Match) -> Match
+```
+
+This is sometimes useful, i.e. for visualising the part of the graph that has been updated or verifying that a rewrite was performed correctly.
 
 For times when this embedding isn't required, `rewrite` simply returns the codomain of the embedding, i.e. the rewritten graph itself:
 
@@ -94,9 +106,10 @@ This library is at an early stage, and mainly intended as a testbed for some ide
 
 - [X] building hypergraphs in code
 - [X] hypergraph viewer widget
-- [ ] defining hypergraph rewrite rules
+- [X] defining hypergraph rewrite rules
+- [X] matching and rewriting hypergraphs
 - [ ] GUI graph editing
-- [ ] matching and rewriting hypergraphs
+- [ ] rewriting rules that are not left-linear (i.e. giving multiple results for same match)
 - [ ] load/save hypergraphs and rules
 - [ ] load/save derivations (a la [Quantomatic](http://quantomatic.github.io))?
 - [ ] some basic strategy support?

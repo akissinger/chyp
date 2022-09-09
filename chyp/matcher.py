@@ -217,8 +217,8 @@ class Matches(Iterable):
                 self.match_stack += m.more()
         raise StopIteration
 
-def match_graph(dom: Graph, cod: Graph) -> Matches:
+def match_graph(dom: Graph, cod: Graph) -> Iterable[Match]:
     return Matches(dom, cod)
 
-def match_rule(r: Rule, g: Graph) -> Matches:
+def match_rule(r: Rule, g: Graph) -> Iterable[Match]:
     return Matches(r.lhs, g)
