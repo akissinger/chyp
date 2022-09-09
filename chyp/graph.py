@@ -49,8 +49,8 @@ class Graph:
     def __init__(self) -> None:
         self.vdata: Dict[int, VData] = {}
         self.edata: Dict[int, EData] = {}
-        self.inputs: List[int] = []
-        self.outputs: List[int] = []
+        self._inputs: List[int] = []
+        self._outputs: List[int] = []
         self.vindex = 0
         self.eindex = 0
 
@@ -104,20 +104,26 @@ class Graph:
         return e
 
     def set_inputs(self, inp: List[int]) -> None:
-        self.inputs = inp
+        self._inputs = inp
         for d in self.vdata.values():
             d.in_indices.clear()
 
-        for i,v in enumerate(self.inputs):
+        for i,v in enumerate(self._inputs):
             self.vdata[v].in_indices.add(i)
 
     def set_outputs(self, outp: List[int]) -> None:
-        self.outputs = outp
+        self._outputs = outp
         for d in self.vdata.values():
             d.out_indices.clear()
 
-        for i,v in enumerate(self.outputs):
+        for i,v in enumerate(self._outputs):
             self.vdata[v].out_indices.add(i)
+
+    def inputs(self) -> List[int]:
+        return self._inputs
+
+    def outputs(self) -> List[int]:
+        return self._outputs
 
     def is_input(self, v: int) -> bool:
         return len(self.vdata[v].in_indices) > 0
