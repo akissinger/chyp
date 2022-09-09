@@ -100,10 +100,10 @@ class Graph:
         self.vdata[v] = VData(x, y, value)
         return v
 
-    def add_edge(self, s:List[int], t:List[int], x:float=0, y:float=0, value: Any="") -> int:
+    def add_edge(self, s:List[int], t:List[int], x:float=0, y:float=0, value: Any="", hyper: bool=True) -> int:
         e = self.eindex
         self.eindex += 1
-        self.edata[e] = EData(s, t, x, y, value)
+        self.edata[e] = EData(s, t, x, y, value, hyper)
         for v in s: self.vdata[v].out_edges.add(e)
         for v in t: self.vdata[v].in_edges.add(e)
         return e
@@ -132,8 +132,7 @@ class Graph:
         del self.edata[e]
 
     def add_simple_edge(self, s:int, t:int, value: Any="") -> int:
-        e = self.add_edge([s], [t], value)
-        self.edata[e].hyper = False
+        e = self.add_edge([s], [t], value, hyper=False)
         return e
 
     def set_inputs(self, inp: List[int]) -> None:
