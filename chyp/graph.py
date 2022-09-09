@@ -54,6 +54,16 @@ class Graph:
         self.vindex = 0
         self.eindex = 0
 
+    def copy(self) -> Graph:
+        g = Graph()
+        g.vdata = self.vdata.copy()
+        g.edata = self.edata.copy()
+        g._inputs = self._inputs.copy()
+        g._outputs = self._outputs.copy()
+        g.vindex = self.vindex
+        g.eindex = self.eindex
+        return g
+
     def vertices(self) -> Iterator[int]:
         return iter(self.vdata.keys())
 
@@ -97,6 +107,29 @@ class Graph:
         for v in s: self.vdata[v].out_edges.add(e)
         for v in t: self.vdata[v].in_edges.add(e)
         return e
+
+    def remove_vertex(self, v: int, strict: bool=False) -> None:
+        if strict:
+            if (len(self.vertex_data(v).in_edges)  > 0 or
+                len(self.vertex_data(v).out_edges) > 0):
+                raise Exception("Attempting to remove vertex with adjacent edges")
+            if (v in self.inputs() or v in self.outputs()):
+                raise Exception("Attempting to remove boundary vertex")
+        else:
+            for e in self.vertex_data(v).in_edges:
+                self.edge_data(e).t = [v1 for v1 in self.edge_data(e).t if v1 != v]
+            for e in self.vertex_data(v).out_edges:
+                self.edge_data(e).s = [v1 for v1 in self.edge_data(e).s if v1 != v]
+            self.set_inputs([v1 for v1 in self.inputs() if v1 != v])
+            self.set_outputs([v1 for v1 in self.outputs() if v1 != v])
+        del self.vdata[v]
+
+    def remove_edge(self, e: int) -> None:
+        for v in self.edge_data(e).s:
+            self.vertex_data(v).out_edges.remove(e)
+        for v in self.edge_data(e).t:
+            self.vertex_data(v).in_edges.remove(e)
+        del self.edata[e]
 
     def add_simple_edge(self, s:int, t:int, value: Any="") -> int:
         e = self.add_edge([s], [t], value)
