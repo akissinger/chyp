@@ -1,6 +1,7 @@
 from __future__ import annotations
 from typing import Set, List, Dict, Iterator, Any, Optional, Iterable
 from .graph import Graph
+from .rule import Rule
 
 def match_log(s: str) -> None:
     """Used for debugging the matcher"""
@@ -203,3 +204,6 @@ class Matches(Iterable):
 
 def match_graph(dom: Graph, cod: Graph) -> Matches:
     return Matches(dom, cod)
+
+def match_rule(r: Rule, g: Graph) -> Matches:
+    return Matches(r.lhs, g)

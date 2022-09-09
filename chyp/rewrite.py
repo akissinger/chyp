@@ -1,36 +1,21 @@
 from __future__ import annotations
 from typing import Set, List, Dict, Iterator, Any, Optional, Iterable
-import itertools
 from .graph import Graph
 from .matcher import Match
+from .rule import Rule
 
-class Rule:
-    lhs: Graph
-    rhs: Graph
 
-    def __init__(self, lhs: Graph, rhs: Graph):
-        self.lhs = lhs
-        self.rhs = rhs
+def dpo(r: Rule, m: Match) -> Match:
+    """Do double-pushout rewriting
 
-    def is_left_linear(self) -> bool:
-        """Returns True if boundary on lhs embeds injectively"""
-        verts = set()
-        for v in itertools.chain(self.lhs.inputs(), self.lhs.outputs()):
-            if v in verts: return False
-            verts.add(v)
-        return True
-
-def rewrite(g: Graph, r: Rule, m: Match) -> Match:
-    """Do DPO rewriting
-
-    Given a graph g, a rule r, and match of r.lhs into g, return a match of r.rhs into
+    Given a rule r and match of r.lhs into a graph, return a match of r.rhs into
     the rewritten graph.
     """
     if not r.is_left_linear():
         raise NotImplementedError("Only left linear rules are supported for now")
 
     # this will be the rewritten graph
-    h = g.copy()
+    h = m.cod.copy()
 
     # compute the pushout complement
     for e in r.lhs.edges():
@@ -66,10 +51,10 @@ def rewrite(g: Graph, r: Rule, m: Match) -> Match:
 
     return m1
 
-def rewrite_graph(g: Graph, r: Rule, m: Match) -> Graph:
-    """Apply the given rewrite r to graph g and match m
+def rewrite(r: Rule, m: Match) -> Graph:
+    """Apply the given rewrite r to at match m and return the result
 
-    This is a convience wrapper for `rewrite` for when the matching of
+    This is a convience wrapper for `dpo` for when the matching of
     the rhs into the rewritten graph is not needed."""
-    m1 = rewrite(g, r, m)
+    m1 = dpo(r, m)
     return m1.cod
