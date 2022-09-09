@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU General Public License
 # along with Chyp. If not, see <https://www.gnu.org/licenses/>.
 
+
 from . import app
 from .graphview import GraphView
 from .graph import Graph
