@@ -33,5 +33,7 @@ def rewrite(g: Graph, r: Rule, m: Match) -> Graph:
         if not r.lhs.is_boundary(v):
             h.remove_vertex(m.vmap[v])
 
+    # TODO glue in rhs
+
     return h
 
