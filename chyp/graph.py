@@ -203,19 +203,23 @@ class Graph:
         return self.is_input(v) or self.is_output(v)
 
 def load_graph(path: str) -> Graph:
+    """Load a .chyp graph file from the given path"""
+
     with open(path) as f:
         g = graph_from_json(f.read())
     return g
 
 def graph_from_json(json_string: str) -> Graph:
+    """Load a graph from the given JSON string"""
+
     j = json.loads(json_string)
     g = Graph()
-    for v,vd in j.vertices.items():
+    for v,vd in j["vertices"].items():
         g.add_vertex(x=float(vd["x"] if "x" in vd else 0.0),
                      y=float(vd["y"] if "y" in vd else 0.0),
                      value=vd["value"] if "value" in vd else "",
                      name=int(v))
-    for e,ed in j.edges.items():
+    for e,ed in j["edges"].items():
         g.add_edge(s=[int(v) for v in ed["s"]],
                    t=[int(v) for v in ed["t"]],
                    x=float(ed["x"]) if "x" in ed else 0.0,
@@ -224,7 +228,7 @@ def graph_from_json(json_string: str) -> Graph:
                    hyper=bool(ed["hyper"]) if "hyper" in ed else True,
                    name=int(e))
 
-    g.set_inputs([int(v) for v in j.inputs])
-    g.set_outputs([int(v) for v in j.inputs])
+    g.set_inputs([int(v) for v in j["inputs"]])
+    g.set_outputs([int(v) for v in j["outputs"]])
     g.update_indices()
     return g
