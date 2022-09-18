@@ -15,6 +15,7 @@
 
 from __future__ import annotations
 from typing import Set, List, Dict, Iterator, Any, Optional
+import json
 
 class VData:
     def __init__(self, x: float=0, y: float=0, value: Any="") -> None:
@@ -94,15 +95,46 @@ class Graph:
     def target(self, e: int) -> List[int]:
         return self.edata[e].t
 
-    def add_vertex(self, x:float=0, y:float=0, value: Any="") -> int:
-        v = self.vindex
-        self.vindex += 1
+    def add_vertex(self, x:float=0, y:float=0, value: Any="", name: int=-1) -> int:
+        """Add a vertex to the graph
+        
+        :param x:     The X coordinate to draw the vertex
+        :param y:     The Y coordinate
+        :param value: The value carried by this vertex. This is the empty string by default.
+        :param name:  An optional name. If this is set to -1, set the name automatically. After
+                      setting names manually, be sure to call `update_indices` to make sure
+                      future automatic names don't clash.
+        """
+        if name == -1:
+            v = self.vindex
+            self.vindex += 1
+        else:
+            v = name
+
         self.vdata[v] = VData(x, y, value)
         return v
 
-    def add_edge(self, s:List[int], t:List[int], x:float=0, y:float=0, value: Any="", hyper: bool=True) -> int:
-        e = self.eindex
-        self.eindex += 1
+    def add_edge(self, s:List[int], t:List[int], x:float=0, y:float=0, value:Any="", hyper:bool=True, name:int=-1) -> int:
+        """Add an edge to the graph
+        
+        :param s:     A list of source vertices
+        :param t:     A list of target vertices
+        :param x:     The X coordinate to draw the box representing this hyperedge
+        :param y:     The Y coordinate
+        :param value: The value carried by this edge (typically a string)
+        :param hyper: This is a hint to tell the GUI how to draw this (hyper)edge. If set to
+                      False, ideally it should be drawn simply as a line connected two vertices
+                      rather than as a box.
+        :param name:  An optional name. If this is set to -1, set the name automatically. After
+                      setting names manually, be sure to call `update_indices` to make sure
+                      future automatic names don't clash.
+        """
+        if name == -1:
+            e = self.eindex
+            self.eindex += 1
+        else:
+            e = name
+
         self.edata[e] = EData(s, t, x, y, value, hyper)
         for v in s: self.vdata[v].out_edges.add(e)
         for v in t: self.vdata[v].in_edges.add(e)
@@ -135,6 +167,10 @@ class Graph:
         e = self.add_edge([s], [t], value, hyper=False)
         return e
 
+    def update_indices(self) -> None:
+        self.vindex = max(self.vdata.keys()) + 1 if self.vdata else 0
+        self.eindex = max(self.edata.keys()) + 1 if self.edata else 0
+
     def set_inputs(self, inp: List[int]) -> None:
         self._inputs = inp
         for d in self.vdata.values():
@@ -165,3 +201,30 @@ class Graph:
 
     def is_boundary(self, v: int) -> bool:
         return self.is_input(v) or self.is_output(v)
+
+def load_graph(path: str) -> Graph:
+    with open(path) as f:
+        g = graph_from_json(f.read())
+    return g
+
+def graph_from_json(json_string: str) -> Graph:
+    j = json.loads(json_string)
+    g = Graph()
+    for v,vd in j.vertices.items():
+        g.add_vertex(x=float(vd["x"] if "x" in vd else 0.0),
+                     y=float(vd["y"] if "y" in vd else 0.0),
+                     value=vd["value"] if "value" in vd else "",
+                     name=int(v))
+    for e,ed in j.edges.items():
+        g.add_edge(s=[int(v) for v in ed["s"]],
+                   t=[int(v) for v in ed["t"]],
+                   x=float(ed["x"]) if "x" in ed else 0.0,
+                   y=float(ed["y"]) if "y" in ed else 0.0,
+                   value=ed["value"] if "value" in ed else "",
+                   hyper=bool(ed["hyper"]) if "hyper" in ed else True,
+                   name=int(e))
+
+    g.set_inputs([int(v) for v in j.inputs])
+    g.set_outputs([int(v) for v in j.inputs])
+    g.update_indices()
+    return g
