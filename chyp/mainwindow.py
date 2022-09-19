@@ -21,15 +21,14 @@ import os
 
 from . import app
 from .graphview import GraphView
-from .graph import Graph
+from .graph import Graph, graph_from_json
 from .matcher import match_graph, match_rule
 from .rewrite import Rule, rewrite
 
 class MainWindow(QMainWindow):
-    def __init__(self, a: app.Chyp):
+    def __init__(self) -> None:
         super().__init__()
         conf = QSettings('chyp', 'chyp')
-        self.app = a
 
         # icon = os.path.dirname(__file__) + '/chyp.svg'
         # if os.path.exists(icon):
@@ -46,6 +45,27 @@ class MainWindow(QMainWindow):
         geom = conf.value("main_window_geometry")
         if geom: self.restoreGeometry(geom)
         self.show()
+
+        g = graph_from_json("""
+        {
+          "vertices": {
+            "0": {"x": -4, "y": 1},
+            "1": {"x": -4, "y": -1},
+            "2": {"x": 0, "y": 0},
+            "3": {"x": 4, "y": 2},
+            "4": {"x": 4, "y": 1},
+            "5": {"x": 4, "y": -2}
+          },
+          "edges": {
+            "0": {"s": ["0", "1"], "t": ["2"], "x": -2, "y": 0, "value": "f"},
+            "1": {"s": ["2"], "t": ["3", "4", "5"], "x": 2, "y": 0, "value": "g"},
+            "2": {"s": ["3"], "t": [], "x": 6, "y": 2, "value": "x"},
+            "3": {"s": ["4"], "t": [], "x": 6, "y": 2, "value": "y"}
+          },
+          "inputs": ["0", "1"],
+          "outputs": ["5"]
+        }
+        """)
 
         g = Graph()
         v0 = g.add_vertex(-4, 1)
@@ -86,15 +106,15 @@ class MainWindow(QMainWindow):
         else:
             print("no matches")
 
-        view = GraphView()
-        view.set_graph(g)
-        w.layout().addWidget(view)
+        self.view = GraphView()
+        self.view.set_graph(g)
+        w.layout().addWidget(self.view)
 
         self.graphs = [g, h]
         self.ix = 0
         def show_next() -> None:
             self.ix = (self.ix + 1) % len(self.graphs)
-            view.set_graph(self.graphs[self.ix])
+            self.view.set_graph(self.graphs[self.ix])
 
         button = QPushButton("next graph")
         button.clicked.connect(show_next)

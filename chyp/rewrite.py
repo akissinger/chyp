@@ -14,30 +14,35 @@
 # limitations under the License.
 
 from __future__ import annotations
-from typing import Set, List, Dict, Iterator, Any, Optional, Iterable
+from typing import Set, List, Dict, Iterator, Any, Optional, Iterable, Tuple
 from .graph import Graph
 from .matcher import Match
 from .rule import Rule
 
 
-def dpo(r: Rule, m: Match) -> Match:
+def dpo(r: Rule, m: Match) -> Tuple[Graph,Match]:
     """Do double-pushout rewriting
 
-    Given a rule r and match of r.lhs into a graph, return a match of r.rhs into
-    the rewritten graph.
+    Given a rule r and match of r.lhs into a graph, return the full data associated with
+    the DPO rewrite, namely a context graph coming from the pushout complement and a match
+    of r.rhs into the rewritten graph.
     """
     if not r.is_left_linear():
         raise NotImplementedError("Only left linear rules are supported for now")
 
-    # this will be the rewritten graph
-    h = m.cod.copy()
-
     # compute the pushout complement
+    ctx = m.cod.copy()
     for e in r.lhs.edges():
-        h.remove_edge(m.emap[e])
+        ctx.remove_edge(m.emap[e])
     for v in r.lhs.vertices():
         if not r.lhs.is_boundary(v):
-            h.remove_vertex(m.vmap[v])
+            ctx.remove_vertex(m.vmap[v])
+
+    # this will be the rewritten graph
+    h = ctx.copy()
+
+    ctx.set_outputs(ctx.outputs() + [m.vmap[v] for v in r.lhs.inputs()])
+    ctx.set_inputs(ctx.inputs() + [m.vmap[v] for v in r.lhs.outputs()])
 
     # this will embed r.rhs into h
     m1 = Match(r.rhs, h)
@@ -64,12 +69,12 @@ def dpo(r: Rule, m: Match) -> Match:
         m1.emap[e] = e1
         m1.eimg.add(e1)
 
-    return m1
+    return (ctx, m1)
 
 def rewrite(r: Rule, m: Match) -> Graph:
     """Apply the given rewrite r to at match m and return the result
 
-    This is a convience wrapper for `dpo` for when the matching of
-    the rhs into the rewritten graph is not needed."""
-    m1 = dpo(r, m)
-    return m1.cod
+    This is a convience wrapper for `dpo` for when the extra rewrite data
+    isn't needed."""
+
+    return dpo(r, m)[1].cod

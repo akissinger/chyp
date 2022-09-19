@@ -35,7 +35,7 @@ class Chyp(QApplication):
         super().__init__(sys.argv)
         self.setApplicationName('chyp')
         self.setDesktopFileName("chyp")
-        self.main_window = mainwindow.MainWindow(self)
+        self.main_window = mainwindow.MainWindow()
         self.lastWindowClosed.connect(self.quit)
 
 
