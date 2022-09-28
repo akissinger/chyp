@@ -20,11 +20,10 @@ from .matcher import Match
 from .rule import Rule
 
 
-def dpo(r: Rule, m: Match) -> Iterable[Tuple[Graph,Match]]:
+def dpo(r: Rule, m: Match) -> Iterable[Match]:
     """Do double-pushout rewriting
 
-    Given a rule r and match of r.lhs into a graph, return the full data associated with
-    the DPO rewrite, namely a context graph coming from the pushout complement and a match
+    Given a rule r and match of r.lhs into a graph, return a match
     of r.rhs into the rewritten graph.
     """
     if not r.is_left_linear():
@@ -39,10 +38,12 @@ def dpo(r: Rule, m: Match) -> Iterable[Tuple[Graph,Match]]:
             ctx.remove_vertex(m.vmap[v])
 
     # this will be the rewritten graph
-    h = ctx.copy()
+    h = ctx
 
-    ctx.set_outputs(ctx.outputs() + [m.vmap[v] for v in r.lhs.inputs()])
-    ctx.set_inputs(ctx.inputs() + [m.vmap[v] for v in r.lhs.outputs()])
+    # TODO: we should make a copy of ctx if we intend to keep it
+    # ctx = ctx.copy()
+    # ctx.set_outputs(ctx.outputs() + [m.vmap[v] for v in r.lhs.inputs()])
+    # ctx.set_inputs(ctx.inputs() + [m.vmap[v] for v in r.lhs.outputs()])
 
     # this will embed r.rhs into h
     m1 = Match(r.rhs, h)
@@ -69,7 +70,7 @@ def dpo(r: Rule, m: Match) -> Iterable[Tuple[Graph,Match]]:
         m1.emap[e] = e1
         m1.eimg.add(e1)
 
-    return [(ctx, m1)]
+    return [(m1)]
 
 def rewrite(r: Rule, m: Match) -> Graph:
     """Apply the given rewrite r to at match m and return the first result
@@ -78,7 +79,7 @@ def rewrite(r: Rule, m: Match) -> Graph:
     isn't needed."""
 
     try:
-        ctx, result = next(iter(dpo(r, m)))
+        result = next(iter(dpo(r, m)))
         return result.cod
     except StopIteration:
         raise RuntimeError("Rewrite has no valid context")

@@ -83,10 +83,10 @@ else:
     print("no matches")
 ```
 
-The `rewrite` method is a thin wrapper around the `dpo` function, which will return a new `Match` object that embeds `r.rhs` into the rewritten graph `h`.
+The `rewrite` method is a thin wrapper around the `dpo` function, which returns a sequence of rewrites possible for rule `r` at match `m`. If `r` is left-linear, this will always return just one rewrite. A "rewrite" here means a new `Match` object that embeds `r.rhs` into the rewritten graph `h`. 
 
 ```python
-def dpo(r: Rule, m: Match) -> Match
+def dpo(r: Rule, m: Match) -> Iterable[Match]
 ```
 
 This is sometimes useful, i.e. for visualising the part of the graph that has been updated or verifying that a rewrite was performed correctly.
@@ -95,8 +95,8 @@ For times when this embedding isn't required, `rewrite` simply returns the codom
 
 ```python
 def rewrite(r: Rule, m: Match) -> Graph:
-    m1 = dpo(r, m)
-    return m1.cod
+    result = next(iter(dpo(r, m))
+    return result.cod
 ```
 
 
