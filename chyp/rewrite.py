@@ -20,7 +20,7 @@ from .matcher import Match
 from .rule import Rule
 
 
-def dpo(r: Rule, m: Match) -> Tuple[Graph,Match]:
+def dpo(r: Rule, m: Match) -> Iterable[Tuple[Graph,Match]]:
     """Do double-pushout rewriting
 
     Given a rule r and match of r.lhs into a graph, return the full data associated with
@@ -69,12 +69,17 @@ def dpo(r: Rule, m: Match) -> Tuple[Graph,Match]:
         m1.emap[e] = e1
         m1.eimg.add(e1)
 
-    return (ctx, m1)
+    return [(ctx, m1)]
 
 def rewrite(r: Rule, m: Match) -> Graph:
-    """Apply the given rewrite r to at match m and return the result
+    """Apply the given rewrite r to at match m and return the first result
 
     This is a convience wrapper for `dpo` for when the extra rewrite data
     isn't needed."""
 
-    return dpo(r, m)[1].cod
+    try:
+        ctx, result = next(iter(dpo(r, m)))
+        return result.cod
+    except StopIteration:
+        raise RuntimeError("Rewrite has no valid context")
+
