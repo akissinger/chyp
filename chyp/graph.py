@@ -16,6 +16,7 @@
 from __future__ import annotations
 from typing import Set, List, Dict, Iterator, Any, Optional
 import json
+import copy
 
 class VData:
     def __init__(self, x: float=0, y: float=0, value: Any="") -> None:
@@ -57,8 +58,8 @@ class Graph:
 
     def copy(self) -> Graph:
         g = Graph()
-        g.vdata = self.vdata.copy()
-        g.edata = self.edata.copy()
+        g.vdata = copy.deepcopy(self.vdata)
+        g.edata = copy.deepcopy(self.edata)
         g._inputs = self._inputs.copy()
         g._outputs = self._outputs.copy()
         g.vindex = self.vindex

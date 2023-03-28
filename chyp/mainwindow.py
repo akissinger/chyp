@@ -24,6 +24,7 @@ from .graphview import GraphView
 from .graph import Graph, graph_from_json
 from .matcher import match_graph, match_rule
 from .rewrite import Rule, rewrite
+from .layout import layer_layout
 
 class MainWindow(QMainWindow):
     def __init__(self) -> None:
@@ -68,26 +69,40 @@ class MainWindow(QMainWindow):
         """)
 
         g = Graph()
-        v0 = g.add_vertex(-4, 1)
-        v1 = g.add_vertex(-4, -1)
-        v2 = g.add_vertex(0, 0)
-        v3 = g.add_vertex(4, 2)
-        v4 = g.add_vertex(4, 0)
-        v5 = g.add_vertex(4, -2)
+        v0 = g.add_vertex()
+        v1 = g.add_vertex()
+        v2 = g.add_vertex()
+        v3 = g.add_vertex()
+        v4 = g.add_vertex()
+        v5 = g.add_vertex()
+        # v0 = g.add_vertex(-4, 1)
+        # v1 = g.add_vertex(-4, -1)
+        # v2 = g.add_vertex(0, 0)
+        # v3 = g.add_vertex(4, 2)
+        # v4 = g.add_vertex(4, 0)
+        # v5 = g.add_vertex(4, -2)
         g.add_edge([v0, v1], [v2], -2, 0, "f")
         g.add_edge([v2], [v3,v4,v5], 2, 0, "g")
         g.add_edge([v3], [], 6, 2, "x")
         g.add_edge([v4], [], 6, 0, "y")
+        g.set_inputs([v0,v1])
+        g.set_outputs([v5])
+        layer_layout(g)
 
         g1 = Graph()
-        w0 = g1.add_vertex(0, 0)
-        w1 = g1.add_vertex(2, 1)
-        w2 = g1.add_vertex(2, 0)
-        w3 = g1.add_vertex(2, -1)
+        # w0 = g1.add_vertex(0, 0)
+        # w1 = g1.add_vertex(2, 1)
+        # w2 = g1.add_vertex(2, 0)
+        # w3 = g1.add_vertex(2, -1)
+        w0 = g1.add_vertex()
+        w1 = g1.add_vertex()
+        w2 = g1.add_vertex()
+        w3 = g1.add_vertex()
         g1.add_edge([w0], [w1, w2, w3], 1, 0, "g")
         g1.add_edge([w1], [], 2, 0, "x")
         g1.set_inputs([w0])
         g1.set_outputs([w2, w3])
+        layer_layout(g1)
 
         g2 = Graph()
         w0 = g2.add_vertex(0, 0)
@@ -107,6 +122,8 @@ class MainWindow(QMainWindow):
             print("no matches")
             h = g
 
+        h = h.copy()
+        layer_layout(h)
         self.view = GraphView()
         self.view.set_graph(g)
         w.layout().addWidget(self.view)

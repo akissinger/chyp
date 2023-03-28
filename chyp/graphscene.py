@@ -14,25 +14,25 @@
 # limitations under the License.
 
 from __future__ import annotations
-from PyQt6.QtCore import Qt, QPointF, QRectF
+from PyQt6.QtCore import Qt, QPointF
 from PyQt6.QtGui import *
 from PyQt6.QtWidgets import *
 from typing import Optional, List, Tuple
 
 from .graph import Graph
 
-SCALE = 64.0
+SCALE = 50.0
 
 class EItem(QGraphicsRectItem):
     def __init__(self, g: Graph, e: int):
-        super().__init__(-0.5 * SCALE, -1.25 * SCALE, SCALE, 2.5 * SCALE)
+        super().__init__(-0.4 * SCALE, -0.8 * SCALE, 0.8 * SCALE, 1.6 * SCALE)
         self.g = g
         self.e = e
         ed = g.edge_data(e)
         self.num_s = len(ed.s)
         self.num_t = len(ed.t)
         if self.num_s <= 1 and self.num_t <= 1:
-            self.setRect(-0.5 * SCALE, -0.5 * SCALE, SCALE, SCALE)
+            self.setRect(-0.4 * SCALE, -0.4 * SCALE, 0.8 * SCALE, 0.8 * SCALE)
         self.setPos(ed.x * SCALE, -ed.y * SCALE)
         self.setPen(QPen(QColor(0,0,0)))
         self.setBrush(QBrush(QColor(200,200,255)))
@@ -66,17 +66,18 @@ class TItem(QGraphicsPathItem):
 
         if self.src:
             if self.eitem.num_s == 1: offset = 0.0
-            else: offset = (2 * self.i / (self.eitem.num_s - 1) - 1) * SCALE
+            else:
+                offset = (2 * self.i / (self.eitem.num_s - 1) - 1) * SCALE * 0.5
 
             p1x = self.vitem.pos().x()
             p1y = self.vitem.pos().y()
-            p2x = self.eitem.pos().x() - 0.5 * SCALE
+            p2x = self.eitem.pos().x() - 0.4 * SCALE
             p2y = self.eitem.pos().y() + offset
         else:
             if self.eitem.num_t == 1: offset = 0
-            else: offset = (2 * self.i / (self.eitem.num_t - 1) - 1) * SCALE
+            else: offset = (2 * self.i / (self.eitem.num_t - 1) - 1) * SCALE * 0.5
 
-            p1x = self.eitem.pos().x() + 0.5 * SCALE
+            p1x = self.eitem.pos().x() + 0.4 * SCALE
             p1y = self.eitem.pos().y() + offset
             p2x = self.vitem.pos().x()
             p2y = self.vitem.pos().y()
@@ -149,6 +150,6 @@ class GraphScene(QGraphicsScene):
                         it.refresh()
                         break
 
-    def mouseReleaseEvent(self, e: QGraphicsSceneMouseEvent) -> None:
+    def mouseReleaseEvent(self, _: QGraphicsSceneMouseEvent) -> None:
         self.drag_items = []
 
