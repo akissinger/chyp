@@ -14,14 +14,15 @@
 # limitations under the License.
 
 from __future__ import annotations
-from typing import Set, List, Dict, Iterator, Any, Optional, Iterable
+from typing import Set, List, Dict, Iterator, Optional, Iterable
 from .graph import Graph
 from .rule import Rule
 
+DEBUG_MATCH = False
 def match_log(s: str) -> None:
     """Used for debugging the matcher"""
-    pass
-    # print(s)
+    if DEBUG_MATCH:
+        print(s)
 
 class Match:
     dom: Graph
@@ -31,7 +32,7 @@ class Match:
     emap: Dict[int,int]
     eimg: Set[int]
 
-    def __init__(self, dom: Graph=None, cod: Graph=None, m: Match=None) -> None:
+    def __init__(self, dom: Optional[Graph]=None, cod: Optional[Graph]=None, m: Optional[Match]=None) -> None:
         if m:
             self.dom = m.dom
             self.cod = m.cod

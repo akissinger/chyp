@@ -105,6 +105,7 @@ class MainWindow(QMainWindow):
             h = rewrite(r, ms[0])
         else:
             print("no matches")
+            h = g
 
         self.view = GraphView()
         self.view.set_graph(g)

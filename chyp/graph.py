@@ -33,8 +33,8 @@ class VData:
 
 class EData:
     def __init__(self,
-            s: List[int]=None,
-            t: List[int]=None,
+            s: Optional[List[int]]=None,
+            t: Optional[List[int]]=None,
             x: float=0,
             y: float=0,
             value: Any="",

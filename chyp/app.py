@@ -18,9 +18,7 @@ from PyQt6.QtCore import *
 from PyQt6.QtWidgets import *
 # from PyQt6.QtWebEngineCore import QWebEngineUrlScheme
 import sys
-import os
-import subprocess
-from typing import Optional, Literal
+# from typing import Optional, Literal
 
 from . import mainwindow
 
@@ -37,7 +35,6 @@ class Chyp(QApplication):
         self.setDesktopFileName("chyp")
         self.main_window = mainwindow.MainWindow()
         self.lastWindowClosed.connect(self.quit)
-
 
 
 def main() -> None:
