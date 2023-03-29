@@ -31,11 +31,19 @@ class EItem(QGraphicsRectItem):
         ed = g.edge_data(e)
         self.num_s = len(ed.s)
         self.num_t = len(ed.t)
-        if self.num_s <= 1 and self.num_t <= 1:
-            self.setRect(-0.4 * SCALE, -0.4 * SCALE, 0.8 * SCALE, 0.8 * SCALE)
+        self.is_id = isinstance(ed.value, str) and str(ed.value) == 'id'
+
         self.setPos(ed.x * SCALE, -ed.y * SCALE)
-        self.setPen(QPen(QColor(0,0,0)))
-        self.setBrush(QBrush(QColor(200,200,255)))
+
+        if self.is_id:
+            self.setRect(-0.0625 * SCALE, -0.0625 * SCALE, 0.125 * SCALE, 0.125 * SCALE)
+            self.setPen(QPen(QColor(200,200,200)))
+            self.setBrush(QBrush(QColor(200,200,200)))
+        else:
+            if self.num_s <= 1 and self.num_t <= 1:
+                self.setRect(-0.4 * SCALE, -0.4 * SCALE, 0.8 * SCALE, 0.8 * SCALE)
+            self.setPen(QPen(QColor(0,0,0)))
+            self.setBrush(QBrush(QColor(200,200,255)))
 
     def paint(self, painter: QPainter, option: QStyleOptionGraphicsItem, widget: Optional[QWidget]=None) -> None:
         super().paint(painter, option, widget)
@@ -64,21 +72,26 @@ class TItem(QGraphicsPathItem):
     def refresh(self) -> None:
         path = QPainterPath()
 
+        x_shift = (0.0625 if self.eitem.is_id else 0.4) * SCALE
+
         if self.src:
-            if self.eitem.num_s == 1: offset = 0.0
+            if self.eitem.num_s == 1:
+                y_shift = 0.0
             else:
-                offset = (2 * self.i / (self.eitem.num_s - 1) - 1) * SCALE * 0.5
+                y_shift = (2 * self.i / (self.eitem.num_s - 1) - 1) * SCALE * 0.5
 
             p1x = self.vitem.pos().x()
             p1y = self.vitem.pos().y()
-            p2x = self.eitem.pos().x() - 0.4 * SCALE
-            p2y = self.eitem.pos().y() + offset
+            p2x = self.eitem.pos().x() - x_shift
+            p2y = self.eitem.pos().y() + y_shift
         else:
-            if self.eitem.num_t == 1: offset = 0
-            else: offset = (2 * self.i / (self.eitem.num_t - 1) - 1) * SCALE * 0.5
+            if self.eitem.num_t == 1:
+                y_shift = 0
+            else:
+                y_shift = (2 * self.i / (self.eitem.num_t - 1) - 1) * SCALE * 0.5
 
-            p1x = self.eitem.pos().x() + 0.4 * SCALE
-            p1y = self.eitem.pos().y() + offset
+            p1x = self.eitem.pos().x() + x_shift
+            p1y = self.eitem.pos().y() + y_shift
             p2x = self.vitem.pos().x()
             p2y = self.vitem.pos().y()
 
@@ -102,6 +115,7 @@ class GraphScene(QGraphicsScene):
         self.g = g
         self.clear()
         self.add_items()
+        self.invalidate()
 
     def add_items(self) -> None:
         vi = {}

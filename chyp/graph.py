@@ -36,9 +36,9 @@ class EData:
     def __init__(self,
             s: Optional[List[int]]=None,
             t: Optional[List[int]]=None,
+            value: Any="",
             x: float=0,
             y: float=0,
-            value: Any="",
             hyper: bool=True) -> None:
         self.value = value
         self.x = x
@@ -46,6 +46,13 @@ class EData:
         self.s = [] if s is None else s
         self.t = [] if t is None else t
         self.hyper = hyper
+
+    def box_size(self) -> int:
+        """Returns the number of 'units' of width the box should have to display nicely.
+
+        The simple rule is if both inputs and outputs are <= 1, draw as a small (size 1) box, otherwise
+        draw as a larger (size 2) box."""
+        return 1 if len(self.s) <= 1 and len(self.t) <= 1 else 2
 
 class Graph:
     def __init__(self) -> None:
@@ -115,14 +122,14 @@ class Graph:
         self.vdata[v] = VData(x, y, value)
         return v
 
-    def add_edge(self, s:List[int], t:List[int], x:float=0, y:float=0, value:Any="", hyper:bool=True, name:int=-1) -> int:
+    def add_edge(self, s:List[int], t:List[int], value:Any="", x:float=0, y:float=0, hyper:bool=True, name:int=-1) -> int:
         """Add an edge to the graph
         
         :param s:     A list of source vertices
         :param t:     A list of target vertices
+        :param value: The value carried by this edge (typically a string)
         :param x:     The X coordinate to draw the box representing this hyperedge
         :param y:     The Y coordinate
-        :param value: The value carried by this edge (typically a string)
         :param hyper: This is a hint to tell the GUI how to draw this (hyper)edge. If set to
                       False, ideally it should be drawn simply as a line connected two vertices
                       rather than as a box.
@@ -136,7 +143,7 @@ class Graph:
         else:
             e = name
 
-        self.edata[e] = EData(s, t, x, y, value, hyper)
+        self.edata[e] = EData(s, t, value, x, y, hyper)
         for v in s: self.vdata[v].out_edges.add(e)
         for v in t: self.vdata[v].in_edges.add(e)
         return e
@@ -202,6 +209,21 @@ class Graph:
 
     def is_boundary(self, v: int) -> bool:
         return self.is_input(v) or self.is_output(v)
+
+    def insert_id_after(self, v: int) -> int:
+        """Insert a new identity hyperedge with source at the given vertex and redirect any out-edges or
+        outputs to the target of the new hyperedge."""
+        vd = self.vertex_data(v)
+        w = self.add_vertex(vd.x + 3, vd.y, vd.value)
+        wd = self.vertex_data(w)
+        self.set_outputs([x if x != v else w for x in self.outputs()])
+        for e in vd.out_edges:
+            ed = self.edge_data(e)
+            ed.s = [x if x != v else w for x in ed.s]
+            wd.out_edges.add(e)
+        vd.out_edges.clear()
+
+        return self.add_edge([v], [w], "id", vd.x + 1.5, vd.y)
 
 def load_graph(path: str) -> Graph:
     """Load a .chyp graph file from the given path"""
