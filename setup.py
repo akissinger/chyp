@@ -29,7 +29,7 @@ setuptools.setup(
     packages=["chyp"],
     package_data={'': ['*.svg']},
     data_files=data_files,
-    install_requires=["PyQt6>=6.2", "lark>=1.1.5"],
+    install_requires=["PyQt5>=5.14", "lark>=1.1.5"],
     python_requires=">=3.7",
     entry_points={'console_scripts': 'chyp=chyp.app:main'},
 )

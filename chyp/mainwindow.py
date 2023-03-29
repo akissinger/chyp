@@ -14,9 +14,9 @@
 # limitations under the License.
 
 from __future__ import annotations
-from PyQt6.QtCore import Qt, QPointF, QRectF, QSettings
-from PyQt6.QtGui import *
-from PyQt6.QtWidgets import *
+from PyQt5.QtCore import Qt, QPointF, QRectF, QSettings
+from PyQt5.QtGui import *
+from PyQt5.QtWidgets import *
 import os
 
 from . import app

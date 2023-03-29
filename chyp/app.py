@@ -14,8 +14,8 @@
 # limitations under the License.
 
 from __future__ import annotations
-from PyQt6.QtCore import *
-from PyQt6.QtWidgets import *
+from PyQt5.QtCore import *
+from PyQt5.QtWidgets import *
 # from PyQt6.QtWebEngineCore import QWebEngineUrlScheme
 import sys
 # from typing import Optional, Literal

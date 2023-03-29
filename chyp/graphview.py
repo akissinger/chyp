@@ -14,9 +14,9 @@
 # limitations under the License.
 
 from __future__ import annotations
-from PyQt6.QtCore import Qt, QPointF, QRectF
-from PyQt6.QtWidgets import *
-from PyQt6.QtGui import *
+from PyQt5.QtCore import Qt, QPointF, QRectF
+from PyQt5.QtWidgets import *
+from PyQt5.QtGui import *
 
 from .graphscene import GraphScene
 from .graph import Graph

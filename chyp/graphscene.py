@@ -14,9 +14,9 @@
 # limitations under the License.
 
 from __future__ import annotations
-from PyQt6.QtCore import Qt, QPointF
-from PyQt6.QtGui import *
-from PyQt6.QtWidgets import *
+from PyQt5.QtCore import Qt, QPointF
+from PyQt5.QtGui import *
+from PyQt5.QtWidgets import *
 from typing import Optional, List, Tuple
 
 from .graph import Graph
@@ -108,6 +108,7 @@ class GraphScene(QGraphicsScene):
         self.undo_stack = QUndoStack(self)
 
         self.setSceneRect(-2000, -2000, 4000, 4000)
+        self.setBackgroundBrush(QBrush(QColor(255,255,255)))
         self.drag_start = QPointF(0,0)
         self.drag_items: List[Tuple[QGraphicsItem, QPointF]] = []
 
