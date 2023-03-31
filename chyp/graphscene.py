@@ -33,7 +33,7 @@ class EItem(QGraphicsRectItem):
         self.num_t = len(ed.t)
         self.is_id = isinstance(ed.value, str) and str(ed.value) == 'id'
 
-        self.setPos(ed.x * SCALE, -ed.y * SCALE)
+        self.setPos(ed.x * SCALE, ed.y * SCALE)
 
         if self.is_id:
             self.setRect(-0.0625 * SCALE, -0.0625 * SCALE, 0.125 * SCALE, 0.125 * SCALE)
@@ -57,7 +57,7 @@ class VItem(QGraphicsEllipseItem):
         self.g = g
         self.v = v
         vd = g.vertex_data(v)
-        self.setPos(vd.x * SCALE, -vd.y * SCALE)
+        self.setPos(vd.x * SCALE, vd.y * SCALE)
         self.setBrush(QBrush(QColor(0,0,0)))
 
 class TItem(QGraphicsPathItem):
@@ -78,7 +78,7 @@ class TItem(QGraphicsPathItem):
             if self.eitem.num_s == 1:
                 y_shift = 0.0
             else:
-                y_shift = (2 * self.i / (self.eitem.num_s - 1) - 1) * SCALE * 0.5
+                y_shift = ((self.i / (self.eitem.num_s - 1)) - 0.5) * SCALE
 
             p1x = self.vitem.pos().x()
             p1y = self.vitem.pos().y()
@@ -88,7 +88,7 @@ class TItem(QGraphicsPathItem):
             if self.eitem.num_t == 1:
                 y_shift = 0
             else:
-                y_shift = (2 * self.i / (self.eitem.num_t - 1) - 1) * SCALE * 0.5
+                y_shift = ((self.i / (self.eitem.num_t - 1)) - 0.5) * SCALE
 
             p1x = self.eitem.pos().x() + x_shift
             p1y = self.eitem.pos().y() + y_shift

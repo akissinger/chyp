@@ -18,6 +18,9 @@ from typing import Set, List, Dict, Iterator, Any, Optional
 import json
 import copy
 
+class GraphError(Exception):
+    pass
+
 class VData:
     def __init__(self, x: float=0, y: float=0, value: Any="") -> None:
         self.value = value
@@ -46,6 +49,9 @@ class EData:
         self.s = [] if s is None else s
         self.t = [] if t is None else t
         self.hyper = hyper
+
+    def __repr__(self) -> str:
+        return "Edge: %s (%d, %d)" % (self.value, self.x, self.y)
 
     def box_size(self) -> int:
         """Returns the number of 'units' of width the box should have to display nicely.
@@ -210,9 +216,34 @@ class Graph:
     def is_boundary(self, v: int) -> bool:
         return self.is_input(v) or self.is_output(v)
 
-    def insert_id_after(self, v: int) -> int:
-        """Insert a new identity hyperedge with source at the given vertex and redirect any out-edges or
-        outputs to the target of the new hyperedge."""
+    def merge_vertices(self, v: int, w: int) -> None:
+        """Identify the two vertices given
+
+        Form the quotient of the graph by identifying v with w. Afterwards, the
+        quotiented vertex will be named v.
+        """
+        
+        # print("merging %s <- %s" % (v, w))
+        for e in self.in_edges(w):
+            ed = self.edge_data(e)
+            ed.t = [v if x == w else x for x in ed.t]
+
+        for e in self.out_edges(w):
+            ed = self.edge_data(e)
+            ed.s = [v if x == w else x for x in ed.s]
+
+        self.set_inputs([v if x == w else x for x in self.inputs()])
+        self.set_outputs([v if x == w else x for x in self.outputs()])
+        self.remove_vertex(w)
+
+    def insert_id_after(self, v: int, reverse: bool = False) -> int:
+        """Insert a new identity hyperedge after the given vertex
+
+        Insert a dummy identity box with source at the given vertex and redirect
+        any out-edges or outputs to the target of the new hyperedge. If `reverse`
+        is True, then flip the source and target of the identity wire. This can be
+        used to break directed cycles, essentially by introducing a cap and cup.
+        """
         vd = self.vertex_data(v)
         w = self.add_vertex(vd.x + 3, vd.y, vd.value)
         wd = self.vertex_data(w)
@@ -223,7 +254,131 @@ class Graph:
             wd.out_edges.add(e)
         vd.out_edges.clear()
 
-        return self.add_edge([v], [w], "id", vd.x + 1.5, vd.y)
+        s, t = ([v], [w]) if not reverse else ([w], [v])
+        return self.add_edge(s, t, "id", vd.x + 1.5, vd.y)
+    
+    def tensor(self, other: Graph):
+        """Take the monoidal product with the given graph
+
+        Calling g.tensor(h) will turn g into g ⊗ h. Use the infix version "g + h" to simply return
+        the tensor product without changing g.
+        """
+        vmap = dict()
+        # emap = dict()
+
+        max_self = max(max((self.vertex_data(v).y for v in self.vertices()), default = 0),
+                       max((self.edge_data(e).y for e in self.edges()), default=0))
+        min_other = min(min((other.vertex_data(v).y for v in other.vertices()), default = 0),
+                        min((other.edge_data(e).y for e in other.edges()), default=0))
+
+        for v in self.vertices(): self.vertex_data(v).y -= max_self
+        for e in self.edges(): self.edge_data(e).y -= max_self
+
+        for v in other.vertices():
+            vd = other.vertex_data(v)
+            vmap[v] = self.add_vertex(vd.x, vd.y - min_other + 1, vd.value)
+
+        for e in other.edges():
+            ed = other.edge_data(e)
+            self.add_edge([vmap[v] for v in ed.s],
+                          [vmap[v] for v in ed.t],
+                          ed.value, ed.x, ed.y - min_other + 1)
+        
+        self.set_inputs(self.inputs() + [vmap[v] for v in other.inputs()])
+        self.set_outputs(self.outputs() + [vmap[v] for v in other.outputs()])
+
+    def __mul__(self, other: Graph):
+        g = self.copy()
+        g.tensor(other)
+        return g
+
+    def compose(self, other: Graph):
+        """Compose with given graph in diagram order"""
+
+        vmap = dict()
+
+        max_self = max(max((self.vertex_data(v).x for v in self.vertices()), default = 0),
+                       max((self.edge_data(e).x for e in self.edges()), default=0))
+        min_other = min(min((other.vertex_data(v).x for v in other.vertices()), default = 0),
+                        min((other.edge_data(e).x for e in other.edges()), default=0))
+
+        for v in self.vertices(): self.vertex_data(v).x -= max_self
+        for e in self.edges(): self.edge_data(e).x -= max_self
+
+        for v in other.vertices():
+            vd = other.vertex_data(v)
+            vmap[v] = self.add_vertex(vd.x - min_other, vd.y, vd.value)
+
+        for e in other.edges():
+            ed = other.edge_data(e)
+            self.add_edge([vmap[v] for v in ed.s],
+                          [vmap[v] for v in ed.t],
+                          ed.value, ed.x - min_other, ed.y)
+        
+        plug1 = self.outputs()
+        plug2 = [vmap[v] for v in other.inputs()]
+        quotient = dict()
+        if len(plug1) != len(plug2):
+            raise GraphError("Attempting to plug a graph with %d outputs into one with %d inputs" % (len(plug1), len(plug2)))
+
+        self.set_outputs([vmap[v] for v in other.outputs()])
+
+        for i in range(len(plug1)):
+            p1 = plug1[i]
+            p2 = plug2[i]
+            while p1 in quotient: p1 = quotient[p1]
+            while p2 in quotient: p2 = quotient[p2]
+            if p1 != p2:
+                self.merge_vertices(p1, p2)
+                quotient[p2] = p1
+
+    def __rshift__(self, other: Graph):
+        g = self.copy()
+        g.compose(other)
+        return g
+
+def gen(value: str, arity: int, coarity: int) -> Graph:
+    g = Graph()
+    inputs = [g.add_vertex(-1.5, i - (arity-1)/2) for i in range(arity)]
+    outputs = [g.add_vertex(1.5, i - (coarity-1)/2) for i in range(coarity)]
+    g.add_edge(inputs, outputs, value)
+    g.set_inputs(inputs)
+    g.set_outputs(outputs)
+    return g
+        
+def perm(p: List[int]) -> Graph:
+    g = Graph()
+    size = len(p)
+    inputs = [g.add_vertex(0, i - (size-1)/2) for i in range(size)]
+    outputs = [inputs[p[i]] for i in range(size)]
+    g.set_inputs(inputs)
+    g.set_outputs(outputs)
+    return g
+
+def i() -> Graph:
+    g = Graph()
+    v = g.add_vertex(0, 0)
+    g.set_inputs([v])
+    g.set_outputs([v])
+    return g
+
+# def wide_id() -> Graph:
+#     return gen("id", 1, 1)
+
+def id_perm(p: List[int]) -> Graph:
+    g = Graph()
+    size = len(p)
+    inputs = [g.add_vertex(-1.5, i - (size-1)/2) for i in range(size)]
+    outputs = [g.add_vertex(1.5, i - (size-1)/2) for i in range(size)]
+
+    for i in range(size):
+        y = i - (size-1)/2
+        g.add_edge([inputs[i]], [outputs[p[i]]], "id", 0, y)
+
+    g.set_inputs(inputs)
+    g.set_outputs(outputs)
+
+    return g
 
 def load_graph(path: str) -> Graph:
     """Load a .chyp graph file from the given path"""
@@ -245,9 +400,9 @@ def graph_from_json(json_string: str) -> Graph:
     for e,ed in j["edges"].items():
         g.add_edge(s=[int(v) for v in ed["s"]],
                    t=[int(v) for v in ed["t"]],
+                   value=ed["value"] if "value" in ed else "",
                    x=float(ed["x"]) if "x" in ed else 0.0,
                    y=float(ed["y"]) if "y" in ed else 0.0,
-                   value=ed["value"] if "value" in ed else "",
                    hyper=bool(ed["hyper"]) if "hyper" in ed else True,
                    name=int(e))
 

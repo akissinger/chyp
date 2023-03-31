@@ -20,7 +20,7 @@ from PyQt5.QtWidgets import *
 import sys
 # from typing import Optional, Literal
 
-from . import mainwindow
+from . import editor
 
 
 class Chyp(QApplication):
@@ -33,7 +33,7 @@ class Chyp(QApplication):
         super().__init__(sys.argv)
         self.setApplicationName('chyp')
         self.setDesktopFileName("chyp")
-        self.main_window = mainwindow.MainWindow()
+        self.main_window = editor.Editor()
         self.lastWindowClosed.connect(self.quit)
 
 
