@@ -18,12 +18,13 @@ from PyQt5.QtCore import Qt, QPointF, QRectF, QSettings
 from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
 
-from chyp.layout import layer_layout
 
 # from . import app
+from .layout import layer_layout
 from .graphview import GraphView
 from .graph import Graph
 from .state import State
+from .codeview import CodeView
 
 class Editor(QMainWindow):
     def __init__(self) -> None:
@@ -49,7 +50,7 @@ class Editor(QMainWindow):
 
         self.state = State()
 
-        self.code_view = QTextEdit()
+        self.code_view = CodeView()
         self.graph_view = GraphView()
         self.splitter.addWidget(self.code_view)
         self.splitter.addWidget(self.graph_view)
@@ -70,8 +71,10 @@ class Editor(QMainWindow):
             g = self.state.graphs[statement[3]].copy()
             layer_layout(g)
             self.graph_view.set_graph(g)
+            self.code_view.set_current_region((statement[0], statement[1]))
 
     def update(self):
+        self.code_view.set_current_region(None)
         self.state.update(self.code_view.toPlainText())
         for err in self.state.errors:
             print("%d: %s" % err)
