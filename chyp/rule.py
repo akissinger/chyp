@@ -17,11 +17,16 @@ from __future__ import annotations
 import itertools
 from .graph import Graph
 
+class RuleError(Exception):
+    pass
+
 class Rule:
     lhs: Graph
     rhs: Graph
 
     def __init__(self, lhs: Graph, rhs: Graph):
+        if len(lhs.inputs()) != len(rhs.inputs()) or len(lhs.outputs()) != len(rhs.outputs()):
+            raise RuleError("Inputs and outputs must match on LHS and RHS of rule")
         self.lhs = lhs
         self.rhs = rhs
 

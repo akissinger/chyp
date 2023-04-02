@@ -1,9 +1,8 @@
-import traceback
-import logging
 from typing import Any, List, Optional, Tuple
 from lark import Lark, Transformer, UnexpectedCharacters, UnexpectedEOF, UnexpectedToken, v_args
 from lark.tree import Meta
-from .graph import GraphError, gen, Graph
+from .graph import Graph, GraphError, gen, perm, identity
+from .rule import Rule, RuleError
 
 # class SemanticError(Exception):
 #     def __init__(self, line: int, message: str):
@@ -16,12 +15,13 @@ grammar = Lark("""
                ?statement : gen | let | rule
                gen : "gen" var ":" num "->" num
                let : "let" var "=" term
-               rule : "rule" var ":" term "=>" term
+               rule : "rule" var ":" term "=" term
                ?term  : par_term | seq
-               ?par_term : "(" term ")" | par | term_ref
+               ?par_term : "(" term ")" | par | perm | id | term_ref
                par : par_term "*" par_term
                seq : term ";" term
                perm : "sw" [ "[" num ("," num)* "]" ]
+               id : "id"
 
                num : INT
                var : CNAME
@@ -80,6 +80,19 @@ class ChypTransformer(Transformer):
     
     def num(self, items):
         return int(items[0])
+
+    def id(self, _):
+        return identity()
+
+    @v_args(meta=True)
+    def perm(self, meta: Meta, items: List[Any]) -> Optional[Graph]:
+        try:
+            if items[0] is None:
+                return perm([1,0])
+            else:
+                return perm([int(i) for i in items])
+        except GraphError as e:
+            self.errors.append((meta.line, str(e)))
     
     @v_args(meta=True)
     def term_ref(self, meta: Meta, items: List[Any]) -> Optional[Graph]:
@@ -90,19 +103,6 @@ class ChypTransformer(Transformer):
             self.errors.append((meta.line, 'Undefined term: ' + s))
             return None
     
-    @v_args(meta=True)
-    def gen(self, meta: Meta, items: List[Any]) -> Tuple[int, int, str, str]:
-        name, arity, coarity = items
-        self.graphs[name] = gen(name, arity, coarity)
-        return (meta.start_pos, meta.end_pos, 'gen', name)
-        
-    @v_args(meta=True)
-    def let(self, meta: Meta, items: List[Any]):
-        name, graph = items
-        if graph:
-            self.graphs[name] = graph
-        return (meta.start_pos, meta.end_pos, 'let', name)
-
     def par(self, items) -> Optional[Graph]:
         if items[0] and items[1]:
             return items[0] * items[1]
@@ -118,3 +118,26 @@ class ChypTransformer(Transformer):
             except GraphError as e:
                 self.errors.append((meta.line, str(e)))
             return g
+
+    @v_args(meta=True)
+    def gen(self, meta: Meta, items: List[Any]) -> Tuple[int, int, str, str]:
+        name, arity, coarity = items
+        self.graphs[name] = gen(name, arity, coarity)
+        return (meta.start_pos, meta.end_pos, 'gen', name)
+        
+    @v_args(meta=True)
+    def let(self, meta: Meta, items: List[Any]):
+        name, graph = items
+        if graph:
+            self.graphs[name] = graph
+        return (meta.start_pos, meta.end_pos, 'let', name)
+
+    @v_args(meta=True)
+    def rule(self, meta: Meta, items: List[Any]):
+        name, lhs, rhs = items
+        if lhs and rhs:
+            try:
+                self.rules[name] = Rule(lhs, rhs)
+            except RuleError as e:
+                self.errors.append((meta.line, str(e)))
+        return (meta.start_pos, meta.end_pos, 'rule', name)

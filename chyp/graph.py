@@ -222,15 +222,19 @@ class Graph:
         Form the quotient of the graph by identifying v with w. Afterwards, the
         quotiented vertex will be named v.
         """
+
+        vd = self.vertex_data(v)
         
         # print("merging %s <- %s" % (v, w))
         for e in self.in_edges(w):
             ed = self.edge_data(e)
             ed.t = [v if x == w else x for x in ed.t]
+            vd.in_edges.add(e)
 
         for e in self.out_edges(w):
             ed = self.edge_data(e)
             ed.s = [v if x == w else x for x in ed.s]
+            vd.out_edges.add(e)
 
         self.set_inputs([v if x == w else x for x in self.inputs()])
         self.set_outputs([v if x == w else x for x in self.outputs()])
@@ -355,7 +359,7 @@ def perm(p: List[int]) -> Graph:
     g.set_outputs(outputs)
     return g
 
-def i() -> Graph:
+def identity() -> Graph:
     g = Graph()
     v = g.add_vertex(0, 0)
     g.set_inputs([v])

@@ -18,104 +18,164 @@ import math
 from typing import Optional, List, Tuple, Set
 
 from .graph import Graph
-
-def ready_edges(g: Graph, edges: Set[int], v_done: Set[int]) -> Set[int]:
-    ready = set()
-    for e in edges:
-        src = g.source(e)
-        if all(v in v_done for v in src):
-            ready.add(e)
-    return ready
+from .term import layer_decomp
 
 def layer_layout(g: Graph):
-    """A simple hypergraph layout into evenly-spaced layers
+    v_layers, e_layers = layer_decomp(g)
+    x = -(len(v_layers) - 1) * 1.5
+    for l in range(len(e_layers)):
+        v_layer = v_layers[l]
+        e_layer = e_layers[l]
+        for i, v in enumerate(v_layer):
+            vd = g.vertex_data(v)
+            vd.x = x
+            vd.y = i - ((len(v_layer) - 1) * 0.5)
 
-    This layout adds identity boxes if wires need to cross more than one layer, and generally places vertices
-    and boxes as early and near the x-axis as possible. It will throw an exception if the given graph is not
-    directed acyclic.
+        # place edges, starting from the middle and working outward
+        end = len(e_layer)
+        start = math.ceil(end/2)
 
-    Currently it assumes graphs are monogamous. Expect strange behaviours if this is not the case.
-    """
-    layer = list(g.inputs())
-    v_done = set(layer)
-    edges = set(g.edges())
-    new_ids = set()
-    
-    x = 0
-    while len(edges) > 0:
-        for i, v in enumerate(layer):
-            g.vertex_data(v).x = x
-            g.vertex_data(v).y = i - (len(layer) - 1)/2
-        
-        new_layer = []
-        for i, e in enumerate(ready_edges(g, edges, v_done)):
-            src = g.source(e)
-            c = sum(g.vertex_data(v).y for v in src) / len(src) if len(src) != 0 else 0
-            new_layer.append((c, e, g.target(e)))
-            edges.remove(e)
-        if all(e in new_ids for _, e, _ in new_layer):
-            raise ValueError("Could not make progress. Is graph acyclic?")
+        max_y = 0 # max y-coordinate for edges above the middle
+        min_y = 0 # min y-coordinate for edges below the middle
 
-        # sort according to center coordinate
-        list.sort(new_layer)
+        # for an odd number of edges, place the middle edge first
+        if start > end/2:
+            i = start-1
+            ed = g.edge_data(e_layer[i])
+            ed.x = x + 1.5
+            ed.y = sum(g.vertex_data(v).y for v in ed.s)/len(ed.s) if len(ed.s) != 0 else 0
+            pad = ed.box_size() * 0.5
+            min_y = pad
+            max_y = -pad
 
-        # for c, e, _ in new_layer:
-        #     print("before " + str(e) + ":" + str(g.edge_data(e)) + " center " + str(c))
+        for i1 in range(start, end):
+            i0 = end - i1 - 1
 
-        min = 0
-        max = 0
-        ctr = -1
+            # place one edge above max_y
+            ed = g.edge_data(e_layer[i0])
+            pad = ed.box_size() * 0.5
+            ed.x = x + 1.5
+            ed.y = min(max_y - pad,
+                       sum(g.vertex_data(v).y for v in ed.s)/len(ed.s)
+                           if len(ed.s) != 0 else 0)
+            max_y = ed.y - pad
 
-        # forward pass, making enough space by shifting things below the x-axis down
-        for i in range(len(new_layer)):
-            c, e, vs = new_layer[i]
-            pad = (g.edge_data(e).box_size() / 2)
-            if ctr == -1:
-                # the center should be the first place we cross the x-axis or the last element in the list
-                if c >= 0 or i == len(new_layer) - 1:
-                    ctr = i
-                    max = c - pad
-                    min = c + pad
-            else:
-                if c < min + pad:
-                    c = min + pad
-                    min = c + pad
-                    new_layer[i] = (c, e, vs)
+            # place one edge below min_y
+            ed = g.edge_data(e_layer[i1])
+            pad = ed.box_size() * 0.5
+            ed.x = x + 1.5
+            ed.y = max(min_y + pad,
+                       sum(g.vertex_data(v).y for v in ed.s)/len(ed.s)
+                           if len(ed.s) != 0 else 0)
+            min_y = ed.y + pad
 
-        # backward pass, shifting things above the x-axis up
-        for i in range(ctr-1, -1, -1):
-            c, e, vs = new_layer[i]
-            pad = (g.edge_data(e).box_size() / 2)
-            if c > max - pad:
-                c = max - pad
-                max = c - pad
-                new_layer[i] = (c, e, vs)
+        x += 3.0
 
-        layer = []
-        for c, e, vs in new_layer:
-            g.edge_data(e).x = x + 1.5
-            g.edge_data(e).y = c
-            # print("after " + str(e) + ":" + str(g.edge_data(e)) + " center " + str(c))
-            for v in vs:
-                layer.append(v)
-                v_done.add(v)
+    for i, v in enumerate(v_layers[-1]):
+        vd = g.vertex_data(v)
+        vd.x = x
+        vd.y = i - ((len(v_layers[-1]) - 1) * 0.5)
 
-        ready = ready_edges(g, edges, v_done)
-        outputs = set(g.outputs())
-        for v in layer:
-            if (v in outputs and len(edges) > 0) or any(e not in ready for e in g.out_edges(v)):
-                id = g.insert_id_after(v)
-                edges.add(id)
-                new_ids.add(id)
 
-        x += 3
 
-    layer = g.outputs()
-    for i, v in enumerate(layer):
-        g.vertex_data(v).x = x
-        g.vertex_data(v).y = i - (len(layer) - 1)/2
 
-    shift = math.floor(x / 2)
-    for v in g.vertices(): g.vertex_data(v).x -= shift
-    for e in g.edges(): g.edge_data(e).x -= shift
-    
+# def ready_edges(g: Graph, edges: Set[int], v_done: Set[int]) -> Set[int]:
+#     ready = set()
+#     for e in edges:
+#         src = g.source(e)
+#         if all(v in v_done for v in src):
+#             ready.add(e)
+#     return ready
+#
+# def layer_layout(g: Graph):
+#     """A simple hypergraph layout into evenly-spaced layers
+#
+#     This layout adds identity boxes if wires need to cross more than one layer, and generally places vertices
+#     and boxes as early and near the x-axis as possible. It will throw an exception if the given graph is not
+#     directed acyclic.
+#
+#     Currently it assumes graphs are monogamous. Expect strange behaviours if this is not the case.
+#     """
+#     layer = list(g.inputs())
+#     v_done = set(layer)
+#     edges = set(g.edges())
+#     new_ids = set()
+#
+#     x = 0
+#     while len(edges) > 0:
+#         for i, v in enumerate(layer):
+#             g.vertex_data(v).x = x
+#             g.vertex_data(v).y = i - (len(layer) - 1)/2
+#
+#         new_layer = []
+#         for i, e in enumerate(ready_edges(g, edges, v_done)):
+#             src = g.source(e)
+#             c = sum(g.vertex_data(v).y for v in src) / len(src) if len(src) != 0 else 0
+#             new_layer.append((c, e, g.target(e)))
+#             edges.remove(e)
+#         if all(e in new_ids for _, e, _ in new_layer):
+#             raise ValueError("Could not make progress. Is graph acyclic?")
+#
+#         # sort according to center coordinate
+#         list.sort(new_layer)
+#
+#         # for c, e, _ in new_layer:
+#         #     print("before " + str(e) + ":" + str(g.edge_data(e)) + " center " + str(c))
+#
+#         min = 0
+#         max = 0
+#         ctr = -1
+#
+#         # forward pass, making enough space by shifting things below the x-axis down
+#         for i in range(len(new_layer)):
+#             c, e, vs = new_layer[i]
+#             pad = (g.edge_data(e).box_size() / 2)
+#             if ctr == -1:
+#                 # the center should be the first place we cross the x-axis or the last element in the list
+#                 if c >= 0 or i == len(new_layer) - 1:
+#                     ctr = i
+#                     max = c - pad
+#                     min = c + pad
+#             else:
+#                 if c < min + pad:
+#                     c = min + pad
+#                     min = c + pad
+#                     new_layer[i] = (c, e, vs)
+#
+#         # backward pass, shifting things above the x-axis up
+#         for i in range(ctr-1, -1, -1):
+#             c, e, vs = new_layer[i]
+#             pad = (g.edge_data(e).box_size() / 2)
+#             if c > max - pad:
+#                 c = max - pad
+#                 max = c - pad
+#                 new_layer[i] = (c, e, vs)
+#
+#         layer = []
+#         for c, e, vs in new_layer:
+#             g.edge_data(e).x = x + 1.5
+#             g.edge_data(e).y = c
+#             # print("after " + str(e) + ":" + str(g.edge_data(e)) + " center " + str(c))
+#             for v in vs:
+#                 layer.append(v)
+#                 v_done.add(v)
+#
+#         ready = ready_edges(g, edges, v_done)
+#         outputs = set(g.outputs())
+#         for v in layer:
+#             if (v in outputs and len(edges) > 0) or any(e not in ready for e in g.out_edges(v)):
+#                 id = g.insert_id_after(v)
+#                 edges.add(id)
+#                 new_ids.add(id)
+#
+#         x += 3
+#
+#     layer = g.outputs()
+#     for i, v in enumerate(layer):
+#         g.vertex_data(v).x = x
+#         g.vertex_data(v).y = i - (len(layer) - 1)/2
+#
+#     shift = math.floor(x / 2)
+#     for v in g.vertices(): g.vertex_data(v).x -= shift
+#     for e in g.edges(): g.edge_data(e).x -= shift
+#

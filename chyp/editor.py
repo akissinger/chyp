@@ -45,15 +45,16 @@ class Editor(QMainWindow):
         self.show()
 
         # save splitter position
-        self.splitter = QSplitter(Qt.Orientation.Horizontal)
+        self.splitter = QSplitter(Qt.Orientation.Vertical)
         w.layout().addWidget(self.splitter)
 
         self.state = State()
 
-        self.code_view = CodeView()
         self.graph_view = GraphView()
-        self.splitter.addWidget(self.code_view)
         self.splitter.addWidget(self.graph_view)
+        self.code_view = CodeView()
+        self.splitter.addWidget(self.code_view)
+        self.code_view.setFocus()
 
         splitter_state = conf.value("editor_splitter_state")
         if splitter_state: self.splitter.restoreState(splitter_state)
