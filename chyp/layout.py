@@ -15,12 +15,103 @@
 
 from __future__ import annotations
 import math
-from typing import Optional, List, Tuple, Set
+import cvxpy as cp
+from cvxpy.expressions.variable import Variable
+from cvxpy.expressions.constants.constant import Constant
+from cvxpy.problems.objective import Minimize
+from cvxpy.problems.problem import Problem
 
 from .graph import Graph
 from .term import layer_decomp
 
+def convex_layout(g: Graph):
+    """A layout based on `layer_decomp` and convex optimisation
+
+    Vertices and edges are placed in layers according to `layer_decomp`. Their
+    y-coordinates are chosen by convex optimation to try to make connections as
+    straight as possible subject to the constraints:
+      1. vertices must be in order and at least 1.0 apart
+      2. edges must be in order and not overlapping
+    """
+    v_layers, e_layers = layer_decomp(g)
+
+    # initialise x-coordinates
+    x = -(len(v_layers) - 1) * 1.5
+    for layer in range(len(v_layers)):
+        for v in v_layers[layer]:
+            g.vertex_data(v).x = x
+        if layer >= len(e_layers): break
+        for e in e_layers[layer]:
+            g.edge_data(e).x = x + 1.5
+        x += 3.0
+
+    # solve for y-coordinates using convex optimisation
+    
+    # variables for the y-coordinates of vertices/edges
+    vy = Variable(g.num_vertices(), 'vy')
+    ey = Variable(g.num_edges(), 'ey')
+
+    # maintain a table from vertex/edge names to variable indices
+    vtab = { v : i for i, v in enumerate(g.vertices()) }
+    etab = { e : i for i, e in enumerate(g.edges()) }
+
+    constr = []
+    opt = []
+    for layer in range(len(v_layers)):
+        v_layer = v_layers[layer]
+        for i in range(len(v_layer)-1):
+            v1 = v_layer[i]
+            v2 = v_layer[i+1]
+            constr.append(vy[vtab[v2]] - vy[vtab[v1]] >= Constant(1))
+
+        # break if this is the final v_layer (hence no more e_layers)
+        if layer >= len(e_layers): break
+        e_layer = e_layers[layer]
+
+        for i in range(len(e_layer)):
+            e1 = e_layer[i]
+            for vlist in (g.source(e1), g.target(e1)):
+                for j, v in enumerate(vlist):
+                    y_shift = Constant(0.0 if len(vlist) <= 1 else ((j / (len(vlist) - 1)) - 0.5))
+                    var1 = vtab[v]
+                    var2 = etab[e1]
+                    opt.append(vy[vtab[v]] - (ey[etab[e1]] + y_shift))
+
+            if i+1 >= len(e_layer): break
+            e2 = e_layer[i+1]
+            dist = (g.edge_data(e1).box_size() + g.edge_data(e2).box_size()) * 0.5
+            constr.append(ey[etab[e2]] - ey[etab[e1]] >= Constant(dist))
+
+    problem = Problem(Minimize(cp.sum_squares(cp.vstack(opt))), constr)
+    problem.solve()
+    min = None
+    max = None
+    for v,i in vtab.items():
+        y = vy.value[i]
+        if min is None or y < min: min = y
+        if max is None or y > max: max = y
+        g.vertex_data(v).y = y
+
+    print(min, max)
+
+    if not min is None and not max is None:
+        yshift = (min + max) * 0.5
+        for v in g.vertices():
+            g.vertex_data(v).y -= yshift
+    else:
+        yshift = 0
+
+    for e,i in etab.items():
+        y = ey.value[i]
+        g.edge_data(e).y = y - yshift
+
+
 def layer_layout(g: Graph):
+    """A simple layout using `layer_decomp`.
+
+    Vertices are evenly spaced around the x-axis and edges are placed
+    as close to the average y-coordinate of their inputs as possible.
+    """
     v_layers, e_layers = layer_decomp(g)
     x = -(len(v_layers) - 1) * 1.5
     for l in range(len(e_layers)):

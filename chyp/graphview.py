@@ -14,7 +14,7 @@
 # limitations under the License.
 
 from __future__ import annotations
-from PyQt5.QtCore import Qt, QPointF, QRectF
+# from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import *
 from PyQt5.QtGui import *
 
@@ -26,6 +26,8 @@ class GraphView(QGraphicsView):
         self.graph_scene = GraphScene()
         super().__init__(self.graph_scene)
         self.setRenderHint(QPainter.RenderHint.Antialiasing)
+        self.setResizeAnchor(QGraphicsView.ViewportAnchor.AnchorViewCenter)
 
     def set_graph(self, g: Graph) -> None:
         self.graph_scene.set_graph(g)
+        self.centerOn(0,0)

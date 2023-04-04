@@ -14,13 +14,13 @@
 # limitations under the License.
 
 from __future__ import annotations
-from PyQt5.QtCore import Qt, QPointF, QRectF, QSettings
+from PyQt5.QtCore import Qt, QSettings
 from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
 
 
 # from . import app
-from .layout import layer_layout
+from .layout import layer_layout, convex_layout
 from .graphview import GraphView
 from .graph import Graph
 from .state import State
@@ -50,11 +50,25 @@ class Editor(QMainWindow):
 
         self.state = State()
 
-        self.graph_view = GraphView()
-        self.splitter.addWidget(self.graph_view)
+        self.lhs_view = GraphView()
+        self.rhs_view = GraphView()
+        self.rhs_view.setVisible(False)
+
+        self.graph_panel = QWidget(self)
+        self.graph_panel.setLayout(QHBoxLayout())
+        self.graph_panel.layout().addWidget(self.lhs_view)
+        self.graph_panel.layout().addWidget(self.rhs_view)
+        self.splitter.addWidget(self.graph_panel)
+
         self.code_view = CodeView()
         self.splitter.addWidget(self.code_view)
         self.code_view.setFocus()
+        self.code_view.setPlainText("""gen f : 2 -> 1
+gen g : 1 -> 2
+let h1 = g * id
+let h2 = id * f
+rule frob: h1 ; h2 = f ; g
+""")
 
         splitter_state = conf.value("editor_splitter_state")
         if splitter_state: self.splitter.restoreState(splitter_state)
@@ -66,13 +80,22 @@ class Editor(QMainWindow):
     def show_at_cursor(self):
         pos = self.code_view.textCursor().position()
         statement = self.state.statement_at(pos)
-        if (statement and
-            (statement[2] == 'let' or statement[2] == 'gen') and
-            statement[3] in self.state.graphs):
-            g = self.state.graphs[statement[3]].copy()
-            layer_layout(g)
-            self.graph_view.set_graph(g)
+        if statement:
             self.code_view.set_current_region((statement[0], statement[1]))
+            if statement[2] in ('let','gen') and statement[3] in self.state.graphs:
+                g = self.state.graphs[statement[3]].copy()
+                convex_layout(g)
+                self.rhs_view.setVisible(False)
+                self.lhs_view.set_graph(g)
+            elif statement[2] == 'rule' and statement[3] in self.state.rules:
+                lhs = self.state.rules[statement[3]].lhs.copy()
+                rhs = self.state.rules[statement[3]].rhs.copy()
+                convex_layout(lhs)
+                convex_layout(rhs)
+                self.rhs_view.setVisible(True)
+                self.lhs_view.set_graph(lhs)
+                self.rhs_view.set_graph(rhs)
+
 
     def update(self):
         self.code_view.set_current_region(None)
@@ -80,7 +103,7 @@ class Editor(QMainWindow):
         for err in self.state.errors:
             print("%d: %s" % err)
 
-        self.graph_view.set_graph(Graph())
+        self.lhs_view.set_graph(Graph())
         self.show_at_cursor()
 
 
