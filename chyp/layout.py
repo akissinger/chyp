@@ -92,8 +92,6 @@ def convex_layout(g: Graph):
         if max is None or y > max: max = y
         g.vertex_data(v).y = y
 
-    print(min, max)
-
     if not min is None and not max is None:
         yshift = (min + max) * 0.5
         for v in g.vertices():

@@ -34,19 +34,21 @@ class CodeHighlighter(QSyntaxHighlighter):
 
     def highlightBlock(self, text: str) -> None:
         ident = '[a-zA-Z_][a-zA-Z0-9_]*'
-        for m in re.finditer('(^|\\W)(let|gen|rule)\\s+(%s)?' % ident, text):
+        for m in re.finditer('(^|\\W)(let|gen|rule|by)\\s+(%s)?' % ident, text):
             x,y = m.span(2)
             self.setFormat(x, y-x, QColor(KEYWORD))
             x,y = m.span(3)
             self.setFormat(x, y-x, QColor(IDENT))
 
-        for m in re.finditer('[>:;*=-]', text):
+        for m in re.finditer('(^|\\W)(rewrite)(\\W|$)', text):
+            x,y = m.span(2)
+            self.setFormat(x, y-x, QColor(KEYWORD))
+
+        for m in re.finditer('[.>:;*=-\\[\\]]', text):
             self.setFormat(m.start(), 1, QColor(OP))
 
-        for m in re.finditer('\\W([0-9]+)\\s*(->)\\s*([0-9]+)', text):
-            x,y = m.span(1)
-            self.setFormat(x, y-x, QColor(NUM))
-            x,y = m.span(3)
+        for m in re.finditer('(\\W|^)([0-9]+)(\\W|$)', text):
+            x,y = m.span(2)
             self.setFormat(x, y-x, QColor(NUM))
 
         # highlight the region that is currently in focus
