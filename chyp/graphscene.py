@@ -95,9 +95,10 @@ class TItem(QGraphicsPathItem):
             p2x = self.vitem.pos().x()
             p2y = self.vitem.pos().y()
 
+        dx = abs(p1x - p2x)
         path.moveTo(p1x, p1y)
-        path.cubicTo(p1x + SCALE, p1y,
-                     p2x - SCALE, p2y,
+        path.cubicTo(p1x + dx * 0.4, p1y,
+                     p2x - dx * 0.4, p2y,
                      p2x, p2y)
         self.setPath(path)
         self.update(-2000,-2000,4000,4000)

@@ -39,7 +39,7 @@ def convex_layout(g: Graph):
     x = -(len(v_layers) - 1) * 1.5
     for layer in range(len(v_layers)):
         for v in v_layers[layer]:
-            g.vertex_data(v).x = x
+            g.vertex_data(v).x = x if layer == 0 or layer == len(v_layers)-1 else x - 0.8
         if layer >= len(e_layers): break
         for e in e_layers[layer]:
             g.edge_data(e).x = x + 1.5
@@ -70,19 +70,18 @@ def convex_layout(g: Graph):
 
         for i in range(len(e_layer)):
             e1 = e_layer[i]
-            for vlist in (g.source(e1), g.target(e1)):
+            for vlist, weight in ((g.source(e1), 1.0), (g.target(e1), 2.0)):
                 for j, v in enumerate(vlist):
                     y_shift = Constant(0.0 if len(vlist) <= 1 else ((j / (len(vlist) - 1)) - 0.5))
-                    var1 = vtab[v]
-                    var2 = etab[e1]
-                    opt.append(vy[vtab[v]] - (ey[etab[e1]] + y_shift))
+                    opt.append(Constant(weight) * (vy[vtab[v]] - (ey[etab[e1]] + y_shift)))
 
             if i+1 >= len(e_layer): break
             e2 = e_layer[i+1]
             dist = (g.edge_data(e1).box_size() + g.edge_data(e2).box_size()) * 0.5
             constr.append(ey[etab[e2]] - ey[etab[e1]] >= Constant(dist))
 
-    problem = Problem(Minimize(cp.sum_squares(cp.vstack(opt))), constr)
+    # problem = Problem(Minimize(cp.sum_squares(cp.vstack(opt))), constr)
+    problem = Problem(Minimize(cp.norm1(cp.vstack(opt))), constr)
     problem.solve()
     min = None
     max = None
