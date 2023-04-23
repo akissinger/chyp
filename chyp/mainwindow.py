@@ -18,12 +18,7 @@ from PyQt5.QtCore import Qt, QPointF, QRectF, QSettings
 from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
 
-from . import app
 from .graphview import GraphView
-from .graph import Graph, graph_from_json
-from .matcher import match_graph, match_rule
-from .rewrite import Rule, rewrite
-from .layout import layer_layout
 
 class MainWindow(QMainWindow):
     def __init__(self) -> None:

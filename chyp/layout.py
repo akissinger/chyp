@@ -35,17 +35,23 @@ def convex_layout(g: Graph):
     """
     v_layers, e_layers = layer_decomp(g)
 
-    # initialise x-coordinates
+    # initialise x-coordinates and rough y-coordinates
     x = -(len(v_layers) - 1) * 1.5
     for layer in range(len(v_layers)):
-        for v in v_layers[layer]:
-            g.vertex_data(v).x = x if layer == 0 or layer == len(v_layers)-1 else x - 0.8
+        for i, v in enumerate(v_layers[layer]):
+            vd = g.vertex_data(v)
+            vd.x = x if layer == 0 or layer == len(v_layers)-1 else x - 0.8
+            vd.y = i - (len(v_layers[layer])-1)/2
         if layer >= len(e_layers): break
-        for e in e_layers[layer]:
-            g.edge_data(e).x = x + 1.5
+        for i, e in enumerate(e_layers[layer]):
+            ed = g.edge_data(e)
+            ed.x = x + 1.5
+            ed.y = 2 * i - (len(e_layers[layer])-1)
         x += 3.0
 
-    # solve for y-coordinates using convex optimisation
+    if g.num_vertices() == 0 or g.num_edges() == 0: return
+
+    # solve for better y-coordinates using convex optimisation
     
     # variables for the y-coordinates of vertices/edges
     vy = Variable(g.num_vertices(), 'vy')

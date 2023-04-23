@@ -18,6 +18,8 @@ from PyQt5.QtCore import Qt, QSettings
 from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
 
+from chyp.term import graph_to_term
+
 
 # from . import app
 from .layout import convex_layout
@@ -25,6 +27,8 @@ from .graphview import GraphView
 from .graph import Graph
 from .state import State
 from .codeview import CodeView
+from .matcher import match_rule
+from .rewrite import rewrite
 
 class Editor(QMainWindow):
     def __init__(self) -> None:
@@ -65,12 +69,12 @@ class Editor(QMainWindow):
         self.code_view.setFocus()
         self.code_view.setPlainText("""gen f : 2 -> 1
 gen g : 1 -> 2
-let h1 = g * id
-let h2 = id * f
 rule frob: g * id ; id * f = f ; g
+let f2 = id * sw * id ; f * f
+let g2 = g * g ; id * sw * id
 
-rewrite f1:
-  f ; g * id ; id * f ; f
+rewrite frob2:
+  g2 * id * id ; id * id * f2
   = ? by frob
   = ? by frob
 """)
@@ -81,6 +85,9 @@ rewrite f1:
         run = QShortcut(QKeySequence(Qt.Modifier.CTRL | Qt.Key.Key_R), self)
         run.activated.connect(self.update)
         self.code_view.cursorPositionChanged.connect(self.show_at_cursor)
+
+        next_rewrite = QShortcut(QKeySequence(Qt.Modifier.CTRL | Qt.Key.Key_N), self)
+        next_rewrite.activated.connect(self.next_rewrite_at_cursor)
 
     def show_at_cursor(self):
         pos = self.code_view.textCursor().position()
@@ -100,7 +107,42 @@ rewrite f1:
                 self.rhs_view.setVisible(True)
                 self.lhs_view.set_graph(lhs)
                 self.rhs_view.set_graph(rhs)
+            elif part[2] == 'rewrite' and part[3] in self.state.rewrites:
+                rw = self.state.rewrites[part[3]]
+                lhs = rw[3].copy() if rw[3] else Graph()
+                rhs = rw[4].copy() if rw[4] else Graph()
+                convex_layout(lhs)
+                convex_layout(rhs)
+                self.rhs_view.setVisible(True)
+                self.lhs_view.set_graph(lhs)
+                self.rhs_view.set_graph(rhs)
 
+    def next_rewrite_at_cursor(self):
+        pos = self.code_view.textCursor().position()
+        part = self.state.part_at(pos)
+        if part and part[2] == 'rewrite' and part[3] in self.state.rewrites:
+            start, end, rule, lhs, _ = self.state.rewrites[part[3]]
+            text = self.code_view.toPlainText()
+            term = text[start:end]
+            if lhs:
+                found_prev = (term == '?')
+                rw_term = None
+                for m in match_rule(rule, lhs):
+                    t = graph_to_term(rewrite(rule, m))
+                    if found_prev and term != t:
+                        rw_term = t
+                        break
+                    elif not rw_term:
+                        rw_term = t
+
+                    found_prev = (term == t)
+
+                if rw_term:
+                    self.code_view.setPlainText(text[:start] + rw_term + text[end:])
+                    cursor = self.code_view.textCursor()
+                    cursor.setPosition(pos)
+                    self.code_view.setTextCursor(cursor)
+                    self.update()
 
     def update(self):
         self.code_view.set_current_region(None)

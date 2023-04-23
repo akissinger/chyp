@@ -16,7 +16,7 @@ grammar = Lark("""
                gen : "gen" var ":" num "->" num
                let : "let" var "=" term
                rule : "rule" var ":" term "=" term
-               rewrite : "rewrite" var ":" term rewrite_part+
+               rewrite : "rewrite" var ":" term rewrite_part*
                rewrite_part : "=" term_hole "by" rule_ref num?
                ?term  : par_term | seq
                ?par_term : "(" term ")" | par | perm | id | term_ref
@@ -43,8 +43,8 @@ class State:
     def __init__(self):
         self.graphs = dict()
         self.rules = dict()
+        self.rewrites = dict()
         self.parts = []
-        self.holes = []
         self.errors = []
 
     def update(self, code: str):
@@ -55,6 +55,7 @@ class State:
 
             self.graphs = tran.graphs
             self.rules = tran.rules
+            self.rewrites = tran.rewrites
             self.parts = parts
             self.errors = tran.errors
         except UnexpectedEOF as e:
@@ -107,6 +108,15 @@ class ChypTransformer(Transformer):
         else:
             self.errors.append((meta.line, 'Undefined term: ' + s))
             return None
+
+    @v_args(meta=True)
+    def rule_ref(self, meta: Meta, items: List[Any]) -> Optional[Graph]:
+        s = str(items[0])
+        if s in self.rules:
+            return self.rules[str(items[0])]
+        else:
+            self.errors.append((meta.line, 'Undefined term: ' + s))
+            return None
     
     def par(self, items) -> Optional[Graph]:
         if items[0] and items[1]:
@@ -153,21 +163,27 @@ class ChypTransformer(Transformer):
         term = items[1]
         rw_parts = items[2:]
 
-        parts = []
-        start = meta.start_pos
-        for i, rw_part in enumerate(rw_parts):
-            end, rw = rw_part
-            parts.append((start, end, "rewrite", name + ":" + str(i)))
-            start = end
-        return parts
+        if len(rw_parts) == 0:
+            parts = [(meta.start_pos, meta.end_pos, "rewrite", name)]
+            self.rewrites[name] = (0, 0, "", term, None)
+        else:
+            parts = []
+            start = meta.start_pos
+            lhs = term
+            for i, rw_part in enumerate(rw_parts):
+                end, (t_start, t_end, rule, rhs) = rw_part
+                self.rewrites[name + ":" + str(i)] = (t_start, t_end, rule, lhs, rhs)
+                lhs = rhs
+                parts.append((start, end, "rewrite", name + ":" + str(i)))
+                start = end
 
+        return parts
 
     @v_args(meta=True)
     def rewrite_part(self, meta: Meta, items: List[Any]):
-        hole = items[0]
+        t_start,t_end,rhs = items[0]
         rule = items[1]
-        i = items[2] if len(items) == 3 else 0
-        return (meta.end_pos, (hole, rule, i))
+        return (meta.end_pos, (t_start, t_end, rule, rhs))
 
 
     @v_args(meta=True)

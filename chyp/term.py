@@ -106,8 +106,9 @@ def graph_to_term(g: Graph) -> str:
     seq = []
     for i in range(len(e_layers)):
         # compute the permulation from the current vertex layer to inputs of the edge layer
+        s_layer = [v for e in e_layers[i] for v in g.source(e)]
         v_pos = { v : j for j,v in enumerate(v_layers[i]) }
-        v_perm = [v_pos[v] for e in e_layers[i] for v in g.source(e)]
+        v_perm = [v_pos[v] for v in s_layer]
 
         # append it as a layer of swap maps
         if v_perm != list(range(len(v_perm))):
@@ -117,6 +118,16 @@ def graph_to_term(g: Graph) -> str:
         # append the parallel composition of the current edge layer
         par = [str(g.edge_data(e).value) for e in e_layers[i]]
         seq.append(' * '.join(par))
+
+        # compute the permulation from the outputs of the edge layer to the next vertex layer
+        t_layer = [v for e in e_layers[i] for v in g.target(e)]
+        v_pos = { v : j for j,v in enumerate(t_layer) }
+        v_perm = [v_pos[v] for v in v_layers[i+1]]
+
+        # append it as a layer of swap maps
+        if v_perm != list(range(len(v_perm))):
+            perms = split_perm(v_perm)
+            seq.append(' * '.join([perm_to_s(p) for p in perms]))
 
     return ' ; '.join(seq)
 
