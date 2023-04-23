@@ -67,3 +67,56 @@ def layer_decomp(g: Graph) -> Tuple[List[List[int]], List[List[int]]]:
     v_layers.append(g.outputs().copy())
     return (v_layers, e_layers)
 
+def perm_to_s(perm: List[int]) -> str:
+    if len(perm) == 1:
+        return 'id'
+    elif len(perm) == 2:
+        return 'sw'
+    else:
+        return 'sw' + str(perm)
+
+def split_perm(perm: List[int]) -> List[List[int]]:
+    """Split a permutation into a tensor product of independent permuations
+    """
+    perms = []
+    rest = perm
+
+    while rest != []:
+        m = 0
+        for i, x in enumerate(rest):
+            m = max(x, m)
+            if m <= i:
+                perms.append(rest[:i+1])
+                rest = [y-(i+1) for y in rest[i+1:]]
+                break
+    return perms
+
+
+def graph_to_term(g: Graph) -> str:
+    """Convert a graph to a term
+
+    This currently only works for monogamous acyclic graphs (and hence symmetric monoidal
+    terms).
+    """
+
+    g = g.copy()
+    v_layers, e_layers = layer_decomp(g)
+
+    # build a list of terms to be sequentially composed
+    seq = []
+    for i in range(len(e_layers)):
+        # compute the permulation from the current vertex layer to inputs of the edge layer
+        v_pos = { v : j for j,v in enumerate(v_layers[i]) }
+        v_perm = [v_pos[v] for e in e_layers[i] for v in g.source(e)]
+
+        # append it as a layer of swap maps
+        if v_perm != list(range(len(v_perm))):
+            perms = split_perm(v_perm)
+            seq.append(' * '.join([perm_to_s(p) for p in perms]))
+
+        # append the parallel composition of the current edge layer
+        par = [str(g.edge_data(e).value) for e in e_layers[i]]
+        seq.append(' * '.join(par))
+
+    return ' ; '.join(seq)
+

@@ -36,9 +36,10 @@ class EItem(QGraphicsRectItem):
         self.setPos(ed.x * SCALE, ed.y * SCALE)
 
         if self.is_id:
-            self.setRect(-0.0625 * SCALE, -0.0625 * SCALE, 0.125 * SCALE, 0.125 * SCALE)
+            self.setRect(-0.2 * SCALE, -0.2 * SCALE, 0.4 * SCALE, 0.4 * SCALE)
             self.setPen(QPen(QColor(200,200,200)))
             self.setBrush(QBrush(QColor(200,200,200)))
+            self.setVisible(False)
         else:
             if self.num_s <= 1 and self.num_t <= 1:
                 self.setRect(-0.4 * SCALE, -0.4 * SCALE, 0.8 * SCALE, 0.8 * SCALE)
@@ -54,6 +55,7 @@ class EItem(QGraphicsRectItem):
 class VItem(QGraphicsEllipseItem):
     def __init__(self, g: Graph, v: int):
         super().__init__(-0.0625 * SCALE, -0.0625 * SCALE, 0.125 * SCALE, 0.125 * SCALE)
+        self.setVisible(False)
         self.g = g
         self.v = v
         vd = g.vertex_data(v)
@@ -72,7 +74,7 @@ class TItem(QGraphicsPathItem):
     def refresh(self) -> None:
         path = QPainterPath()
 
-        x_shift = (0.0625 if self.eitem.is_id else 0.4) * SCALE
+        x_shift = (0 if self.eitem.is_id else 0.4) * SCALE
 
         if self.src:
             if self.eitem.num_s == 1:
@@ -143,10 +145,11 @@ class GraphScene(QGraphicsScene):
         super().mousePressEvent(e)
         
         self.drag_start = e.scenePos()
-        it = self.itemAt(e.scenePos(), QTransform())
 
-        if it and (isinstance(it, EItem) or isinstance(it, VItem)):
-            self.drag_items = [(it, it.scenePos())]
+        for it in self.items(e.scenePos(), deviceTransform=QTransform()):
+            if it and (isinstance(it, EItem) or isinstance(it, VItem)):
+                self.drag_items = [(it, it.scenePos())]
+                break
 
     def mouseMoveEvent(self, e: QGraphicsSceneMouseEvent) -> None:
         p = e.scenePos()
@@ -165,6 +168,12 @@ class GraphScene(QGraphicsScene):
                     if it.vitem == it1 or it.eitem == it1:
                         it.refresh()
                         break
+            elif isinstance(it, VItem) or (isinstance(it, EItem) and it.is_id):
+                if abs(it.pos().x() - p.x()) < 10 and abs(it.pos().y() - p.y()) < 10:
+                    it.setVisible(True)
+                else:
+                    it.setVisible(False)
+
 
     def mouseReleaseEvent(self, _: QGraphicsSceneMouseEvent) -> None:
         self.drag_items = []

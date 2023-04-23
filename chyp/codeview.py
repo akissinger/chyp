@@ -17,6 +17,7 @@ class CodeView(QPlainTextEdit):
     def __init__(self):
         super().__init__()
         self.setFont(QFont("monospace", 14))
+        # self.setFont(QFont("JetBrainsMono Nerd Font", 14))
         self.setStyleSheet("QPlainTextEdit {background-color: %s; color: %s }" % (BG, FG))
         self.highlighter = CodeHighlighter(self.document())
 

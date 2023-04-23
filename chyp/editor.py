@@ -20,7 +20,7 @@ from PyQt5.QtWidgets import *
 
 
 # from . import app
-from .layout import layer_layout, convex_layout
+from .layout import convex_layout
 from .graphview import GraphView
 from .graph import Graph
 from .state import State
@@ -67,7 +67,12 @@ class Editor(QMainWindow):
 gen g : 1 -> 2
 let h1 = g * id
 let h2 = id * f
-rule frob: h1 ; h2 = f ; g
+rule frob: g * id ; id * f = f ; g
+
+rewrite f1:
+  f ; g * id ; id * f ; f
+  = ? by frob
+  = ? by frob
 """)
 
         splitter_state = conf.value("editor_splitter_state")
@@ -79,17 +84,17 @@ rule frob: h1 ; h2 = f ; g
 
     def show_at_cursor(self):
         pos = self.code_view.textCursor().position()
-        statement = self.state.statement_at(pos)
-        if statement:
-            self.code_view.set_current_region((statement[0], statement[1]))
-            if statement[2] in ('let','gen') and statement[3] in self.state.graphs:
-                g = self.state.graphs[statement[3]].copy()
+        part = self.state.part_at(pos)
+        if part:
+            self.code_view.set_current_region((part[0], part[1]))
+            if part[2] in ('let','gen') and part[3] in self.state.graphs:
+                g = self.state.graphs[part[3]].copy()
                 convex_layout(g)
                 self.rhs_view.setVisible(False)
                 self.lhs_view.set_graph(g)
-            elif statement[2] == 'rule' and statement[3] in self.state.rules:
-                lhs = self.state.rules[statement[3]].lhs.copy()
-                rhs = self.state.rules[statement[3]].rhs.copy()
+            elif part[2] == 'rule' and part[3] in self.state.rules:
+                lhs = self.state.rules[part[3]].lhs.copy()
+                rhs = self.state.rules[part[3]].rhs.copy()
                 convex_layout(lhs)
                 convex_layout(rhs)
                 self.rhs_view.setVisible(True)

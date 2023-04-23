@@ -25,6 +25,7 @@ class GraphView(QGraphicsView):
     def __init__(self) -> None:
         self.graph_scene = GraphScene()
         super().__init__(self.graph_scene)
+        self.setMouseTracking(True)
         self.setRenderHint(QPainter.RenderHint.Antialiasing)
         self.setResizeAnchor(QGraphicsView.ViewportAnchor.AnchorViewCenter)
 

@@ -12,10 +12,12 @@ from .rule import Rule, RuleError
 
 grammar = Lark("""
                start : statement*
-               ?statement : gen | let | rule
+               ?statement : gen | let | rule | rewrite
                gen : "gen" var ":" num "->" num
                let : "let" var "=" term
                rule : "rule" var ":" term "=" term
+               rewrite : "rewrite" var ":" term rewrite_part+
+               rewrite_part : "=" term_hole "by" rule_ref num?
                ?term  : par_term | seq
                ?par_term : "(" term ")" | par | perm | id | term_ref
                par : par_term "*" par_term
@@ -27,6 +29,7 @@ grammar = Lark("""
                var : CNAME
                term_ref : CNAME
                rule_ref : CNAME
+               term_hole : term | "?"
 
                %import common.CNAME
                %import common.INT
@@ -40,18 +43,19 @@ class State:
     def __init__(self):
         self.graphs = dict()
         self.rules = dict()
-        self.statements = []
+        self.parts = []
+        self.holes = []
         self.errors = []
 
     def update(self, code: str):
         try:
             tree = grammar.parse(code)
             tran = ChypTransformer()
-            st = tran.transform(tree)
+            parts = tran.transform(tree)
 
             self.graphs = tran.graphs
             self.rules = tran.rules
-            self.statements = st
+            self.parts = parts
             self.errors = tran.errors
         except UnexpectedEOF as e:
             self.errors = [(-1, str(e))]
@@ -60,20 +64,21 @@ class State:
         except UnexpectedCharacters as e:
             self.errors = [(e.line, str(e))]
 
-    def statement_at(self, pos: int) -> Optional[Tuple[int,int,str,str]]:
-        for s in self.statements:
-            if s[0] <= pos and s[1] >= pos:
-                return s
+    def part_at(self, pos: int) -> Optional[Tuple[int,int,str,str]]:
+        for p in self.parts:
+            if p[0] <= pos and p[1] >= pos:
+                return p
         return None
 
 class ChypTransformer(Transformer):
     def __init__(self):
         self.graphs = dict()
         self.rules = dict()
+        self.rewrites = dict()
         self.errors = list()
     
-    def start(self, items: List[Tuple[int,int,str,str]]):
-        return items
+    def start(self, items: List[List[Tuple[int,int,str,str]]]) -> List[Tuple[int,int,str,str]]:
+        return [part for item in items for part in item]
         
     def var(self, items: List[Any]):
         return str(items[0])
@@ -120,17 +125,17 @@ class ChypTransformer(Transformer):
             return g
 
     @v_args(meta=True)
-    def gen(self, meta: Meta, items: List[Any]) -> Tuple[int, int, str, str]:
+    def gen(self, meta: Meta, items: List[Any]):
         name, arity, coarity = items
         self.graphs[name] = gen(name, arity, coarity)
-        return (meta.start_pos, meta.end_pos, 'gen', name)
+        return [(meta.start_pos, meta.end_pos, 'gen', name)]
         
     @v_args(meta=True)
     def let(self, meta: Meta, items: List[Any]):
         name, graph = items
         if graph:
             self.graphs[name] = graph
-        return (meta.start_pos, meta.end_pos, 'let', name)
+        return [(meta.start_pos, meta.end_pos, 'let', name)]
 
     @v_args(meta=True)
     def rule(self, meta: Meta, items: List[Any]):
@@ -140,4 +145,32 @@ class ChypTransformer(Transformer):
                 self.rules[name] = Rule(lhs, rhs)
             except RuleError as e:
                 self.errors.append((meta.line, str(e)))
-        return (meta.start_pos, meta.end_pos, 'rule', name)
+        return [(meta.start_pos, meta.end_pos, 'rule', name)]
+
+    @v_args(meta=True)
+    def rewrite(self, meta: Meta, items: List[Any]):
+        name = items[0]
+        term = items[1]
+        rw_parts = items[2:]
+
+        parts = []
+        start = meta.start_pos
+        for i, rw_part in enumerate(rw_parts):
+            end, rw = rw_part
+            parts.append((start, end, "rewrite", name + ":" + str(i)))
+            start = end
+        return parts
+
+
+    @v_args(meta=True)
+    def rewrite_part(self, meta: Meta, items: List[Any]):
+        hole = items[0]
+        rule = items[1]
+        i = items[2] if len(items) == 3 else 0
+        return (meta.end_pos, (hole, rule, i))
+
+
+    @v_args(meta=True)
+    def term_hole(self, meta: Meta, items: List[Any]):
+        t = items[0] if len(items) != 0 else None
+        return (meta.start_pos, meta.end_pos, t)
