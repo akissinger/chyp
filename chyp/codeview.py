@@ -22,7 +22,17 @@ class CodeView(QPlainTextEdit):
         self.highlighter = CodeHighlighter(self.document())
 
     def set_current_region(self, region: Optional[Tuple[int,int]]):
+        self.blockSignals(True)
         self.highlighter.set_current_region(region)
+        self.blockSignals(False)
+
+    def add_line_below(self, text: str):
+        cursor = self.textCursor()
+        if self.highlighter.region:
+            cursor.setPosition(self.highlighter.region[1])
+        cursor.movePosition(QTextCursor.MoveOperation.EndOfLine)
+        cursor.insertText('\n' + text)
+        self.setTextCursor(cursor)
 
 class CodeHighlighter(QSyntaxHighlighter):
     def __init__(self, doc: QTextDocument):

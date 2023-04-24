@@ -75,8 +75,6 @@ let g2 = g * g ; id * sw * id
 
 rewrite frob2:
   g2 * id * id ; id * id * f2
-  = ? by frob
-  = ? by frob
 """)
 
         splitter_state = conf.value("editor_splitter_state")
@@ -84,12 +82,23 @@ rewrite frob2:
 
         run = QShortcut(QKeySequence(Qt.Modifier.CTRL | Qt.Key.Key_R), self)
         run.activated.connect(self.update)
-        self.code_view.cursorPositionChanged.connect(self.show_at_cursor)
-
         next_rewrite = QShortcut(QKeySequence(Qt.Modifier.CTRL | Qt.Key.Key_N), self)
         next_rewrite.activated.connect(self.next_rewrite_at_cursor)
+        add_rewrite_step = QShortcut(QKeySequence(Qt.Modifier.CTRL | Qt.Key.Key_Return), self)
+        add_rewrite_step.activated.connect(lambda: self.code_view.add_line_below("  = ? by "))
+
+        self.code_view.cursorPositionChanged.connect(self.show_at_cursor)
+        self.code_view.textChanged.connect(self.invalidate_text)
+        self.parsed = True
+
+    def invalidate_text(self):
+        self.parsed = False
+        self.code_view.set_current_region(None)
+
 
     def show_at_cursor(self):
+        if not self.parsed: return
+
         pos = self.code_view.textCursor().position()
         part = self.state.part_at(pos)
         if part:
@@ -118,6 +127,7 @@ rewrite frob2:
                 self.rhs_view.set_graph(rhs)
 
     def next_rewrite_at_cursor(self):
+        self.update()
         pos = self.code_view.textCursor().position()
         part = self.state.part_at(pos)
         if part and part[2] == 'rewrite' and part[3] in self.state.rewrites:
@@ -140,7 +150,7 @@ rewrite frob2:
                 if rw_term:
                     self.code_view.setPlainText(text[:start] + rw_term + text[end:])
                     cursor = self.code_view.textCursor()
-                    cursor.setPosition(pos)
+                    cursor.setPosition(pos + len(rw_term) - len(term))
                     self.code_view.setTextCursor(cursor)
                     self.update()
 
@@ -151,6 +161,8 @@ rewrite frob2:
             print("%d: %s" % err)
 
         self.lhs_view.set_graph(Graph())
+        self.rhs_view.setVisible(False)
+        self.parsed = True
         self.show_at_cursor()
 
 
