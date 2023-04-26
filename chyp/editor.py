@@ -14,7 +14,7 @@
 # limitations under the License.
 
 from __future__ import annotations
-from PyQt5.QtCore import Qt, QSettings
+from PyQt5.QtCore import QFileInfo, Qt, QSettings
 from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
 
@@ -27,6 +27,7 @@ from .graphview import GraphView
 from .graph import Graph
 from .state import State
 from .codeview import CodeView
+from .document import Document
 from .matcher import match_rule
 from .rewrite import rewrite
 
@@ -67,33 +68,91 @@ class Editor(QMainWindow):
         self.code_view = CodeView()
         self.splitter.addWidget(self.code_view)
         self.code_view.setFocus()
-        self.code_view.setPlainText("""gen f : 2 -> 1
-gen g : 1 -> 2
-rule frob: g * id ; id * f = f ; g
-let f2 = id * sw * id ; f * f
-let g2 = g * g ; id * sw * id
+        self.doc = Document(self)
+#         self.code_view.setPlainText("""gen f : 2 -> 1
+# gen g : 1 -> 2
+# rule frob: g * id ; id * f = f ; g
+# let f2 = id * sw * id ; f * f
+# let g2 = g * g ; id * sw * id
+#
+# rewrite frob2:
+#   g2 * id * id ; id * id * f2
+# """)
 
-rewrite frob2:
-  g2 * id * id ; id * id * f2
-""")
+        self.build_menu()
 
         splitter_state = conf.value("editor_splitter_state")
         if splitter_state: self.splitter.restoreState(splitter_state)
-
-        run = QShortcut(QKeySequence(Qt.Modifier.CTRL | Qt.Key.Key_R), self)
-        run.activated.connect(self.update)
-        next_rewrite = QShortcut(QKeySequence(Qt.Modifier.CTRL | Qt.Key.Key_N), self)
-        next_rewrite.activated.connect(self.next_rewrite_at_cursor)
-        add_rewrite_step = QShortcut(QKeySequence(Qt.Modifier.CTRL | Qt.Key.Key_Return), self)
-        add_rewrite_step.activated.connect(lambda: self.code_view.add_line_below("  = ? by "))
 
         self.code_view.cursorPositionChanged.connect(self.show_at_cursor)
         self.code_view.textChanged.connect(self.invalidate_text)
         self.parsed = True
 
+    def build_menu(self):
+        menu = QMenuBar()
+        file_menu = menu.addMenu("&File")
+        edit_menu = menu.addMenu("&Edit")
+        code_menu = menu.addMenu("&Code")
+
+        file_new = file_menu.addAction("&New")
+        file_new.triggered.connect(self.doc.new)
+
+        file_open = file_menu.addAction("&Open")
+        file_open.setShortcut(QKeySequence.StandardKey.Open)
+        file_open.triggered.connect(self.doc.open)
+
+        self.file_open_recent = file_menu.addMenu("Open &Recent")
+        self.update_open_recent()
+
+        file_menu.addSeparator()
+
+        file_save = file_menu.addAction("&Save")
+        file_save.setShortcut(QKeySequence.StandardKey.Save)
+        file_save.triggered.connect(self.doc.save)
+
+        file_save_as = file_menu.addAction("Save &As")
+        file_save_as.setShortcut(QKeySequence.StandardKey.SaveAs)
+        file_save_as.triggered.connect(self.doc.save_as)
+
+        file_menu.addSeparator()
+
+        file_exit = file_menu.addAction("E&xit")
+        file_exit.setShortcut(QKeySequence.StandardKey.Quit)
+        file_exit.triggered.connect(QApplication.instance().quit)
+
+        edit_undo = edit_menu.addAction(self.tr("&Undo"))
+        edit_undo.setShortcut(QKeySequence.StandardKey.Undo)
+        edit_undo.triggered.connect(self.code_view.undo)
+
+        edit_redo = edit_menu.addAction(self.tr("&Redo"))
+        edit_redo.setShortcut(QKeySequence.StandardKey.Redo)
+        edit_redo.triggered.connect(self.code_view.redo)
+
+        code_run = code_menu.addAction("&Run")
+        code_run.setShortcut(QKeySequence(Qt.Modifier.CTRL | Qt.Key.Key_R))
+        code_run.triggered.connect(self.update)
+
+        code_add_rewrite_step = code_menu.addAction("&Add Rewrite Step")
+        code_add_rewrite_step.setShortcut(QKeySequence(Qt.Modifier.CTRL | Qt.Key.Key_Return))
+        code_add_rewrite_step.triggered.connect(lambda: self.code_view.add_line_below("  = ? by "))
+
+        code_next_rewrite = code_menu.addAction("&Next Rewrite")
+        code_next_rewrite.setShortcut(QKeySequence(Qt.Modifier.CTRL | Qt.Key.Key_N))
+        code_next_rewrite.triggered.connect(self.next_rewrite_at_cursor)
+
+        self.setMenuBar(menu)
+
+    def update_open_recent(self):
+        self.file_open_recent.clear()
+        for f in self.doc.recent_files():
+            fi = QFileInfo(f)
+            action = self.file_open_recent.addAction(fi.fileName())
+            action.triggered.connect(lambda: self.doc.load(f))
+
     def invalidate_text(self):
         self.parsed = False
         self.code_view.set_current_region(None)
+        self.update(quiet=True)
 
 
     def show_at_cursor(self):
@@ -154,16 +213,19 @@ rewrite frob2:
                     self.code_view.setTextCursor(cursor)
                     self.update()
 
-    def update(self):
+    def update(self, quiet=False):
         self.code_view.set_current_region(None)
         self.state.update(self.code_view.toPlainText())
-        for err in self.state.errors:
-            print("%d: %s" % err)
 
-        self.lhs_view.set_graph(Graph())
-        self.rhs_view.setVisible(False)
-        self.parsed = True
-        self.show_at_cursor()
+        if len(self.state.errors) == 0:
+            self.lhs_view.set_graph(Graph())
+            self.rhs_view.setVisible(False)
+            self.parsed = True
+            self.show_at_cursor()
+        elif not quiet:
+            for err in self.state.errors:
+                print("%d: %s" % err)
+
 
 
     def closeEvent(self, e: QCloseEvent) -> None:

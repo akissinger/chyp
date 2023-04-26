@@ -51,11 +51,7 @@ class CodeHighlighter(QSyntaxHighlighter):
             x,y = m.span(3)
             self.setFormat(x, y-x, QColor(IDENT))
 
-        # for m in re.finditer('(^|\\W)(rewrite)(\\W|$)', text):
-        #     x,y = m.span(2)
-        #     self.setFormat(x, y-x, QColor(KEYWORD))
-
-        for m in re.finditer('[.>:;*=\\-\\[\\]]', text):
+        for m in re.finditer('[?.>:;*=\\-\\[\\]]', text):
             self.setFormat(m.start(), 1, QColor(OP))
 
         for m in re.finditer('(\\W|^)([0-9]+)(\\W|$)', text):

@@ -66,10 +66,13 @@ class State:
             self.errors = [(e.line, str(e))]
 
     def part_at(self, pos: int) -> Optional[Tuple[int,int,str,str]]:
+        p0 = None
         for p in self.parts:
-            if p[0] <= pos and p[1] >= pos:
-                return p
-        return None
+            if p[0] <= pos:
+                p0 = p
+                if p[1] >= pos:
+                    return p
+        return p0
 
 class ChypTransformer(Transformer):
     def __init__(self):
