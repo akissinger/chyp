@@ -24,11 +24,12 @@ class Rule:
     lhs: Graph
     rhs: Graph
 
-    def __init__(self, lhs: Graph, rhs: Graph):
+    def __init__(self, lhs: Graph, rhs: Graph, name: str=''):
         if len(lhs.inputs()) != len(rhs.inputs()) or len(lhs.outputs()) != len(rhs.outputs()):
             raise RuleError("Inputs and outputs must match on LHS and RHS of rule")
         self.lhs = lhs
         self.rhs = rhs
+        self.name = name
 
     def is_left_linear(self) -> bool:
         """Returns True if boundary on lhs embeds injectively"""

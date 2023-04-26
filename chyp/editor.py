@@ -69,15 +69,6 @@ class Editor(QMainWindow):
         self.splitter.addWidget(self.code_view)
         self.code_view.setFocus()
         self.doc = Document(self)
-#         self.code_view.setPlainText("""gen f : 2 -> 1
-# gen g : 1 -> 2
-# rule frob: g * id ; id * f = f ; g
-# let f2 = id * sw * id ; f * f
-# let g2 = g * g ; id * sw * id
-#
-# rewrite frob2:
-#   g2 * id * id ; id * id * f2
-# """)
 
         self.build_menu()
 
@@ -135,6 +126,10 @@ class Editor(QMainWindow):
         code_add_rewrite_step = code_menu.addAction("&Add Rewrite Step")
         code_add_rewrite_step.setShortcut(QKeySequence(Qt.Modifier.CTRL | Qt.Key.Key_Return))
         code_add_rewrite_step.triggered.connect(lambda: self.code_view.add_line_below("  = ? by "))
+
+        code_add_rewrite_step = code_menu.addAction("&Repeat Rewrite Step")
+        code_add_rewrite_step.setShortcut(QKeySequence(Qt.Modifier.CTRL | Qt.Modifier.SHIFT | Qt.Key.Key_Return))
+        code_add_rewrite_step.triggered.connect(self.repeat_step_at_cursor)
 
         code_next_rewrite = code_menu.addAction("&Next Rewrite")
         code_next_rewrite.setShortcut(QKeySequence(Qt.Modifier.CTRL | Qt.Key.Key_N))
@@ -212,6 +207,16 @@ class Editor(QMainWindow):
                     cursor.setPosition(pos + len(rw_term) - len(term))
                     self.code_view.setTextCursor(cursor)
                     self.update()
+
+    def repeat_step_at_cursor(self):
+        self.update()
+        pos = self.code_view.textCursor().position()
+        part = self.state.part_at(pos)
+        if part and part[2] == 'rewrite' and part[3] in self.state.rewrites:
+            rule = self.state.rewrites[part[3]][2]
+            self.code_view.add_line_below('  = ? by ' + rule.name)
+            self.update()
+            self.next_rewrite_at_cursor()
 
     def update(self, quiet=False):
         self.code_view.set_current_region(None)

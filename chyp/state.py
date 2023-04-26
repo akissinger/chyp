@@ -113,7 +113,7 @@ class ChypTransformer(Transformer):
             return None
 
     @v_args(meta=True)
-    def rule_ref(self, meta: Meta, items: List[Any]) -> Optional[Graph]:
+    def rule_ref(self, meta: Meta, items: List[Any]) -> Optional[Rule]:
         s = str(items[0])
         if s in self.rules:
             return self.rules[str(items[0])]
@@ -155,7 +155,7 @@ class ChypTransformer(Transformer):
         name, lhs, rhs = items
         if lhs and rhs:
             try:
-                self.rules[name] = Rule(lhs, rhs)
+                self.rules[name] = Rule(lhs, rhs, name=name)
             except RuleError as e:
                 self.errors.append((meta.line, str(e)))
         return [(meta.start_pos, meta.end_pos, 'rule', name)]
