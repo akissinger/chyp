@@ -201,6 +201,20 @@ class Match:
     def is_injective(self) -> bool:
         return len(self.vmap) == len(self.vimg)
 
+    def is_cospan_iso(self) -> bool:
+        d_in = self.dom.inputs()
+        d_out = self.dom.outputs()
+        c_in = self.cod.inputs()
+        c_out = self.cod.outputs()
+
+        return (len(d_in) == len(c_in) and
+                len(d_out) == len(c_out) and
+                all(self.vmap[d_in[i]] == c_in[i] for i in range(len(d_in))) and
+                all(self.vmap[d_out[i]] == c_out[i] for i in range(len(d_out))) and
+                self.is_injective() and self.is_surjective())
+
+
+
 class Matches(Iterable):
     def __init__(self, dom: Graph, cod: Graph) -> None:
         self.match_stack = [Match(dom=dom, cod=cod)]

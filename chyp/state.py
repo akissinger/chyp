@@ -1,6 +1,9 @@
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Callable, Dict, List, Optional, Tuple
 from lark import Lark, Transformer, UnexpectedCharacters, UnexpectedEOF, UnexpectedToken, v_args
 from lark.tree import Meta
+from chyp.matcher import match_graph, match_rule
+
+from chyp.rewrite import dpo
 from .graph import Graph, GraphError, gen, perm, identity
 from .rule import Rule, RuleError
 
@@ -45,12 +48,28 @@ class RewriteState:
     VALID = 2
     INVALID = 3
 
-    def __init__(self, term_pos: Tuple[int,int], rule: Optional[Rule], lhs: Graph, rhs: Optional[Graph]):
+    def __init__(self, term_pos: Tuple[int,int], rule: Optional[Rule], lhs: Optional[Graph], rhs: Optional[Graph]):
         self.status = RewriteState.UNCHECKED
         self.term_pos = term_pos
         self.rule = rule if rule else Rule(Graph(), Graph())
-        self.lhs = lhs
+        self.lhs = lhs if lhs else Graph()
         self.rhs = rhs if rhs else Graph()
+
+    def check(self):
+        for m_lhs in match_rule(self.rule, self.lhs):
+            for m_rhs in dpo(self.rule, m_lhs):
+                for m in match_graph(m_rhs.cod, self.rhs):
+                    if m.is_cospan_iso():
+                        self.status = RewriteState.VALID
+                        for e in m_lhs.dom.edges():
+                            self.lhs.edge_data(m_lhs.emap[e]).highlight = True
+                        for e in m_rhs.dom.edges():
+                            self.rhs.edge_data(m.emap[m_rhs.emap[e]]).highlight = True
+
+                        break
+
+        if self.status != RewriteState.VALID:
+            self.status = RewriteState.INVALID
 
 class State:
     def __init__(self):
@@ -189,7 +208,7 @@ class ChypTransformer(Transformer):
             for i, rw_part in enumerate(rw_parts):
                 end, (t_start, t_end, rule, rhs) = rw_part
                 self.rewrites[name + ":" + str(i)] = RewriteState((t_start, t_end), rule, lhs, rhs)
-                lhs = rhs
+                lhs = rhs.copy() if rhs else None
                 parts.append((start, end, "rewrite", name + ":" + str(i)))
                 start = end
 

@@ -43,12 +43,20 @@ class EItem(QGraphicsRectItem):
         else:
             if self.num_s <= 1 and self.num_t <= 1:
                 self.setRect(-0.4 * SCALE, -0.4 * SCALE, 0.8 * SCALE, 0.8 * SCALE)
-            self.setPen(QPen(QColor(0,0,0)))
+
             self.setBrush(QBrush(QColor(200,200,255)))
+            if ed.highlight:
+                # pen = QPen(QColor(0,150,0))
+                pen = self.pen()
+                pen.setWidth(3)
+                self.setPen(pen)
+            else:
+                self.setPen(QPen(QColor(0,0,0)))
 
     def paint(self, painter: QPainter, option: QStyleOptionGraphicsItem, widget: Optional[QWidget]=None) -> None:
         super().paint(painter, option, widget)
         ed = self.g.edge_data(self.e)
+
         painter.setFont(QFont("sans", 14))
         painter.drawText(self.boundingRect(), Qt.AlignmentFlag.AlignCenter, str(ed.value))
 

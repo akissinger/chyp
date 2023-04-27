@@ -14,7 +14,9 @@
 # limitations under the License.
 
 from __future__ import annotations
-from PyQt5.QtCore import QFileInfo, Qt, QSettings
+from subprocess import check_output
+from typing import Optional
+from PyQt5.QtCore import QFileInfo, QObject, QThread, Qt, QSettings
 from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
 
@@ -25,7 +27,7 @@ from chyp.term import graph_to_term
 from .layout import convex_layout
 from .graphview import GraphView
 from .graph import Graph
-from .state import State
+from .state import RewriteState, State
 from .codeview import CodeView
 from .document import Document
 from .matcher import match_rule
@@ -181,6 +183,15 @@ class Editor(QMainWindow):
                 self.rhs_view.set_graph(rhs)
             elif part[2] == 'rewrite' and part[3] in self.state.rewrites:
                 rw = self.state.rewrites[part[3]]
+                if rw.status == RewriteState.UNCHECKED:
+                    rw.status = RewriteState.CHECKING
+                    check_thread = CheckThread(rw, self)
+                    check_thread.finished.connect(self.show_at_cursor)
+                    check_thread.start()
+                elif rw.status == RewriteState.VALID:
+                    self.code_view.set_current_region((part[0], part[1]), status=CodeView.STATUS_GOOD)
+                elif rw.status == RewriteState.INVALID:
+                    self.code_view.set_current_region((part[0], part[1]), status=CodeView.STATUS_BAD)
                 lhs = rw.lhs.copy()
                 rhs = rw.rhs.copy()
                 convex_layout(lhs)
@@ -191,6 +202,8 @@ class Editor(QMainWindow):
 
     def next_rewrite_at_cursor(self):
         self.update()
+        if not self.parsed: return
+
         pos = self.code_view.textCursor().position()
         part = self.state.part_at(pos)
         if part and part[2] == 'rewrite' and part[3] in self.state.rewrites:
@@ -241,10 +254,16 @@ class Editor(QMainWindow):
             for err in self.state.errors:
                 print("%d: %s" % err)
 
-
-
     def closeEvent(self, e: QCloseEvent) -> None:
         conf = QSettings('chyp', 'chyp')
         conf.setValue("editor_window_geometry", self.saveGeometry())
         conf.setValue("editor_splitter_state", self.splitter.saveState())
         e.accept()
+
+class CheckThread(QThread):
+    def __init__(self, rw: RewriteState, parent: Optional[QObject] = None):
+        super().__init__(parent)
+        self.rw = rw
+
+    def run(self):
+        self.rw.check()
