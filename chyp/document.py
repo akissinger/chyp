@@ -39,7 +39,7 @@ class Document(QObject):
         recent_files.insert(0, file_name)
         recent_files = recent_files[:10]
         conf.setValue('recent_files', recent_files)
-        self.editor.update_open_recent()
+        self.editor.update_file()
 
     def new(self):
         self.file_name = ''
@@ -50,12 +50,14 @@ class Document(QObject):
         with open(file_name) as f:
             self.code_view.setPlainText(f.read())
         self.add_to_recent_files(self.file_name)
+        self.editor.update_file()
 
     def save(self):
         if self.file_name:
             with open(self.file_name, 'w') as f:
                 f.write(self.code_view.toPlainText())
             self.add_to_recent_files(self.file_name)
+            self.editor.update_file()
         else:
             self.save_as()
 

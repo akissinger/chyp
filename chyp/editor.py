@@ -93,7 +93,7 @@ class Editor(QMainWindow):
         file_open.triggered.connect(self.doc.open)
 
         self.file_open_recent = file_menu.addMenu("Open &Recent")
-        self.update_open_recent()
+        self.update_file()
 
         file_menu.addSeparator()
 
@@ -137,12 +137,21 @@ class Editor(QMainWindow):
 
         self.setMenuBar(menu)
 
-    def update_open_recent(self):
+    def update_file(self):
+        if self.doc.file_name:
+            fi = QFileInfo(self.doc.file_name)
+            self.setWindowTitle('chyp - ' + fi.fileName())
+        else:
+            self.setWindowTitle('chyp')
+
+        def open_rec(f):
+            return lambda: self.doc.load(f)
+
         self.file_open_recent.clear()
         for f in self.doc.recent_files():
             fi = QFileInfo(f)
             action = self.file_open_recent.addAction(fi.fileName())
-            action.triggered.connect(lambda: self.doc.load(f))
+            action.triggered.connect(open_rec(f))
 
     def invalidate_text(self):
         self.parsed = False
@@ -172,8 +181,8 @@ class Editor(QMainWindow):
                 self.rhs_view.set_graph(rhs)
             elif part[2] == 'rewrite' and part[3] in self.state.rewrites:
                 rw = self.state.rewrites[part[3]]
-                lhs = rw[3].copy() if rw[3] else Graph()
-                rhs = rw[4].copy() if rw[4] else Graph()
+                lhs = rw.lhs.copy()
+                rhs = rw.rhs.copy()
                 convex_layout(lhs)
                 convex_layout(rhs)
                 self.rhs_view.setVisible(True)
@@ -185,35 +194,36 @@ class Editor(QMainWindow):
         pos = self.code_view.textCursor().position()
         part = self.state.part_at(pos)
         if part and part[2] == 'rewrite' and part[3] in self.state.rewrites:
-            start, end, rule, lhs, _ = self.state.rewrites[part[3]]
+            rw = self.state.rewrites[part[3]]
+            start, end = rw.term_pos
             text = self.code_view.toPlainText()
             term = text[start:end]
-            if lhs:
-                found_prev = (term == '?')
-                rw_term = None
-                for m in match_rule(rule, lhs):
-                    t = graph_to_term(rewrite(rule, m))
-                    if found_prev and term != t:
-                        rw_term = t
-                        break
-                    elif not rw_term:
-                        rw_term = t
 
-                    found_prev = (term == t)
+            found_prev = (term == '?')
+            rw_term = None
+            for m in match_rule(rw.rule, rw.lhs):
+                t = graph_to_term(rewrite(rw.rule, m))
+                if found_prev and term != t:
+                    rw_term = t
+                    break
+                elif not rw_term:
+                    rw_term = t
 
-                if rw_term:
-                    self.code_view.setPlainText(text[:start] + rw_term + text[end:])
-                    cursor = self.code_view.textCursor()
-                    cursor.setPosition(pos + len(rw_term) - len(term))
-                    self.code_view.setTextCursor(cursor)
-                    self.update()
+                found_prev = (term == t)
+
+            if rw_term:
+                self.code_view.setPlainText(text[:start] + rw_term + text[end:])
+                cursor = self.code_view.textCursor()
+                cursor.setPosition(pos + len(rw_term) - len(term))
+                self.code_view.setTextCursor(cursor)
+                self.update()
 
     def repeat_step_at_cursor(self):
         self.update()
         pos = self.code_view.textCursor().position()
         part = self.state.part_at(pos)
         if part and part[2] == 'rewrite' and part[3] in self.state.rewrites:
-            rule = self.state.rewrites[part[3]][2]
+            rule = self.state.rewrites[part[3]].rule
             self.code_view.add_line_below('  = ? by ' + rule.name)
             self.update()
             self.next_rewrite_at_cursor()

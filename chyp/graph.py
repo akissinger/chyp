@@ -26,6 +26,7 @@ class VData:
         self.value = value
         self.x = x
         self.y = y
+        self.highlight = False
 
         # for quickly finding edges in the nhd of v
         self.in_edges: Set[int] = set()
@@ -44,6 +45,7 @@ class EData:
             y: float=0,
             hyper: bool=True) -> None:
         self.value = value
+        self.highlight = False
         self.x = x
         self.y = y
         self.s = [] if s is None else s

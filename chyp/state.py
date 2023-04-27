@@ -1,4 +1,4 @@
-from typing import Any, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 from lark import Lark, Transformer, UnexpectedCharacters, UnexpectedEOF, UnexpectedToken, v_args
 from lark.tree import Meta
 from .graph import Graph, GraphError, gen, perm, identity
@@ -39,11 +39,24 @@ grammar = Lark("""
                parser='lalr',
                propagate_positions=True)
 
+class RewriteState:
+    UNCHECKED = 0
+    CHECKING = 1
+    VALID = 2
+    INVALID = 3
+
+    def __init__(self, term_pos: Tuple[int,int], rule: Optional[Rule], lhs: Graph, rhs: Optional[Graph]):
+        self.status = RewriteState.UNCHECKED
+        self.term_pos = term_pos
+        self.rule = rule if rule else Rule(Graph(), Graph())
+        self.lhs = lhs
+        self.rhs = rhs if rhs else Graph()
+
 class State:
     def __init__(self):
-        self.graphs = dict()
-        self.rules = dict()
-        self.rewrites = dict()
+        self.graphs: Dict[str, Graph] = dict()
+        self.rules: Dict[str, Rule] = dict()
+        self.rewrites: Dict[str, RewriteState] = dict()
         self.parts = []
         self.errors = []
 
@@ -168,14 +181,14 @@ class ChypTransformer(Transformer):
 
         if len(rw_parts) == 0:
             parts = [(meta.start_pos, meta.end_pos, "rewrite", name)]
-            self.rewrites[name] = (0, 0, "", term, None)
+            self.rewrites[name] = RewriteState((0, 0), rule=None, lhs=term, rhs=None)
         else:
             parts = []
             start = meta.start_pos
             lhs = term
             for i, rw_part in enumerate(rw_parts):
                 end, (t_start, t_end, rule, rhs) = rw_part
-                self.rewrites[name + ":" + str(i)] = (t_start, t_end, rule, lhs, rhs)
+                self.rewrites[name + ":" + str(i)] = RewriteState((t_start, t_end), rule, lhs, rhs)
                 lhs = rhs
                 parts.append((start, end, "rewrite", name + ":" + str(i)))
                 start = end
