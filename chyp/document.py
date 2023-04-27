@@ -80,6 +80,8 @@ class Document(QObject):
                                                    last_dir,
                                                    'chyp files (*.chyp)')
         if file_name:
+            if QFileInfo(file_name).suffix() == '':
+                file_name += '.chyp'
             self.file_name = file_name
             conf.setValue('last_dir', QFileInfo(file_name).absolutePath())
             self.save()

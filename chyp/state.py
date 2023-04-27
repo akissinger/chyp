@@ -48,12 +48,13 @@ class RewriteState:
     VALID = 2
     INVALID = 3
 
-    def __init__(self, term_pos: Tuple[int,int], rule: Optional[Rule], lhs: Optional[Graph], rhs: Optional[Graph]):
+    def __init__(self, term_pos: Tuple[int,int] = (0,0), rule: Optional[Rule]=None, lhs: Optional[Graph]=None, rhs: Optional[Graph]=None, stub=False):
         self.status = RewriteState.UNCHECKED
         self.term_pos = term_pos
         self.rule = rule if rule else Rule(Graph(), Graph())
         self.lhs = lhs if lhs else Graph()
         self.rhs = rhs if rhs else Graph()
+        self.stub = stub
 
     def check(self):
         for m_lhs in match_rule(self.rule, self.lhs):
@@ -61,8 +62,14 @@ class RewriteState:
                 for m in match_graph(m_rhs.cod, self.rhs):
                     if m.is_cospan_iso():
                         self.status = RewriteState.VALID
+
+                        for v in m_lhs.dom.vertices():
+                            self.lhs.vertex_data(m_lhs.vmap[v]).highlight = True
                         for e in m_lhs.dom.edges():
                             self.lhs.edge_data(m_lhs.emap[e]).highlight = True
+
+                        for v in m_rhs.dom.vertices():
+                            self.rhs.vertex_data(m.vmap[m_rhs.vmap[v]]).highlight = True
                         for e in m_rhs.dom.edges():
                             self.rhs.edge_data(m.emap[m_rhs.emap[e]]).highlight = True
 
@@ -97,14 +104,18 @@ class State:
         except UnexpectedCharacters as e:
             self.errors = [(e.line, str(e))]
 
-    def part_at(self, pos: int) -> Optional[Tuple[int,int,str,str]]:
+    def part_with_index_at(self, pos: int) -> Optional[Tuple[int, Tuple[int,int,str,str]]]:
         p0 = None
-        for p in self.parts:
+        for (i,p) in enumerate(self.parts):
             if p[0] <= pos:
-                p0 = p
+                p0 = (i,p)
                 if p[1] >= pos:
-                    return p
+                    return (i,p)
         return p0
+
+    def part_at(self, pos: int) -> Optional[Tuple[int,int,str,str]]:
+        p = self.part_with_index_at(pos)
+        return p[1] if p else None
 
 class ChypTransformer(Transformer):
     def __init__(self):
@@ -200,7 +211,7 @@ class ChypTransformer(Transformer):
 
         if len(rw_parts) == 0:
             parts = [(meta.start_pos, meta.end_pos, "rewrite", name)]
-            self.rewrites[name] = RewriteState((0, 0), rule=None, lhs=term, rhs=None)
+            self.rewrites[name] = RewriteState(lhs=term, stub=True)
         else:
             parts = []
             start = meta.start_pos

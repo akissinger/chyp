@@ -253,6 +253,7 @@ class Graph:
         vd = self.vertex_data(v)
         w = self.add_vertex(vd.x + 3, vd.y, vd.value)
         wd = self.vertex_data(w)
+        wd.highlight = vd.highlight
         self.set_outputs([x if x != v else w for x in self.outputs()])
         for e in vd.out_edges:
             ed = self.edge_data(e)
@@ -261,7 +262,9 @@ class Graph:
         vd.out_edges.clear()
 
         s, t = ([v], [w]) if not reverse else ([w], [v])
-        return self.add_edge(s, t, "id", vd.x + 1.5, vd.y)
+        e = self.add_edge(s, t, "id", vd.x + 1.5, vd.y)
+        self.edge_data(e).highlight = vd.highlight
+        return e
     
     def tensor(self, other: Graph):
         """Take the monoidal product with the given graph

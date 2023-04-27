@@ -14,7 +14,6 @@
 # limitations under the License.
 
 from __future__ import annotations
-from subprocess import check_output
 from typing import Optional
 from PyQt5.QtCore import QFileInfo, QObject, QThread, Qt, QSettings
 from PyQt5.QtGui import *
@@ -137,6 +136,16 @@ class Editor(QMainWindow):
         code_next_rewrite.setShortcut(QKeySequence(Qt.Modifier.CTRL | Qt.Key.Key_N))
         code_next_rewrite.triggered.connect(self.next_rewrite_at_cursor)
 
+        code_menu.addSeparator()
+
+        code_next_part = code_menu.addAction("Next &Part")
+        code_next_part.setShortcut(QKeySequence(Qt.Modifier.CTRL | Qt.Key.Key_J))
+        code_next_part.triggered.connect(lambda: self.next_part(step=1))
+
+        code_previous_part = code_menu.addAction("Previous &Part")
+        code_previous_part.setShortcut(QKeySequence(Qt.Modifier.CTRL | Qt.Key.Key_K))
+        code_previous_part.triggered.connect(lambda: self.next_part(step=-1))
+
         self.setMenuBar(menu)
 
     def update_file(self):
@@ -160,6 +169,20 @@ class Editor(QMainWindow):
         self.code_view.set_current_region(None)
         self.update(quiet=True)
 
+    def next_part(self, step=1):
+        if not self.parsed: return
+
+        cursor = self.code_view.textCursor()
+        pos = cursor.position()
+        p = self.state.part_with_index_at(pos)
+        i = p[0] if p else 0
+        i += step
+
+        if i >= 0 and i < len(self.state.parts):
+            p1 = self.state.parts[i]
+            cursor.setPosition(p1[1])
+            self.code_view.setTextCursor(cursor)
+            
 
     def show_at_cursor(self):
         if not self.parsed: return
@@ -183,15 +206,18 @@ class Editor(QMainWindow):
                 self.rhs_view.set_graph(rhs)
             elif part[2] == 'rewrite' and part[3] in self.state.rewrites:
                 rw = self.state.rewrites[part[3]]
-                if rw.status == RewriteState.UNCHECKED:
-                    rw.status = RewriteState.CHECKING
-                    check_thread = CheckThread(rw, self)
-                    check_thread.finished.connect(self.show_at_cursor)
-                    check_thread.start()
-                elif rw.status == RewriteState.VALID:
-                    self.code_view.set_current_region((part[0], part[1]), status=CodeView.STATUS_GOOD)
-                elif rw.status == RewriteState.INVALID:
-                    self.code_view.set_current_region((part[0], part[1]), status=CodeView.STATUS_BAD)
+
+                if not rw.stub:
+                    if rw.status == RewriteState.UNCHECKED:
+                        rw.status = RewriteState.CHECKING
+                        check_thread = CheckThread(rw, self)
+                        check_thread.finished.connect(self.show_at_cursor)
+                        check_thread.start()
+                    elif rw.status == RewriteState.VALID:
+                        self.code_view.set_current_region((part[0], part[1]), status=CodeView.STATUS_GOOD)
+                    elif rw.status == RewriteState.INVALID:
+                        self.code_view.set_current_region((part[0], part[1]), status=CodeView.STATUS_BAD)
+
                 lhs = rw.lhs.copy()
                 rhs = rw.rhs.copy()
                 convex_layout(lhs)
@@ -251,6 +277,7 @@ class Editor(QMainWindow):
             self.parsed = True
             self.show_at_cursor()
         elif not quiet:
+            print('**********************************************************************')
             for err in self.state.errors:
                 print("%d: %s" % err)
 

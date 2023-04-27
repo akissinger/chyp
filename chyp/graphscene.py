@@ -72,11 +72,17 @@ class VItem(QGraphicsEllipseItem):
 
 class TItem(QGraphicsPathItem):
     def __init__(self, vitem: VItem, eitem: EItem, i: int, src: bool):
+        super().__init__()
+        g = vitem.g
         self.vitem = vitem
         self.eitem = eitem
+        if (g.vertex_data(vitem.v).highlight or
+            g.edge_data(eitem.e).highlight):
+            pen = QPen()
+            pen.setWidth(3)
+            self.setPen(pen)
         self.i = i
         self.src = src
-        super().__init__()
         self.refresh()
 
     def refresh(self) -> None:
