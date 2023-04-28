@@ -1,7 +1,7 @@
-from typing import Any, Callable, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 from lark import Lark, Transformer, UnexpectedCharacters, UnexpectedEOF, UnexpectedToken, v_args
 from lark.tree import Meta
-from chyp.matcher import match_graph, match_rule
+from chyp.matcher import find_iso, match_rule
 
 from chyp.rewrite import dpo
 from .graph import Graph, GraphError, gen, perm, identity
@@ -59,21 +59,21 @@ class RewriteState:
     def check(self):
         for m_lhs in match_rule(self.rule, self.lhs):
             for m_rhs in dpo(self.rule, m_lhs):
-                for m in match_graph(m_rhs.cod, self.rhs):
-                    if m.is_cospan_iso():
-                        self.status = RewriteState.VALID
+                iso = find_iso(m_rhs.cod, self.rhs)
+                if iso:
+                    self.status = RewriteState.VALID
 
-                        for v in m_lhs.dom.vertices():
-                            self.lhs.vertex_data(m_lhs.vmap[v]).highlight = True
-                        for e in m_lhs.dom.edges():
-                            self.lhs.edge_data(m_lhs.emap[e]).highlight = True
+                    for v in m_lhs.dom.vertices():
+                        self.lhs.vertex_data(m_lhs.vmap[v]).highlight = True
+                    for e in m_lhs.dom.edges():
+                        self.lhs.edge_data(m_lhs.emap[e]).highlight = True
 
-                        for v in m_rhs.dom.vertices():
-                            self.rhs.vertex_data(m.vmap[m_rhs.vmap[v]]).highlight = True
-                        for e in m_rhs.dom.edges():
-                            self.rhs.edge_data(m.emap[m_rhs.emap[e]]).highlight = True
+                    for v in m_rhs.dom.vertices():
+                        self.rhs.vertex_data(iso.vmap[m_rhs.vmap[v]]).highlight = True
+                    for e in m_rhs.dom.edges():
+                        self.rhs.edge_data(iso.emap[m_rhs.emap[e]]).highlight = True
 
-                        break
+                    break
 
         if self.status != RewriteState.VALID:
             self.status = RewriteState.INVALID

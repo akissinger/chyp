@@ -60,6 +60,11 @@ class Match:
         match_log("trying to add vertex {} -> {} to match:".format(v, cod_v))
         match_log(str(self))
 
+        # if the vertex is already mapped, only check the new mapping is consistent
+        if v in self.vmap:
+            match_log("vertex already mapped to {}".format(self.vmap[v]))
+            return self.vmap[v] == cod_v
+
         v_val = self.dom.vertex_data(v).value
         cod_v_val = self.cod.vertex_data(cod_v).value
 
@@ -201,23 +206,24 @@ class Match:
     def is_injective(self) -> bool:
         return len(self.vmap) == len(self.vimg)
 
-    def is_cospan_iso(self) -> bool:
-        d_in = self.dom.inputs()
-        d_out = self.dom.outputs()
-        c_in = self.cod.inputs()
-        c_out = self.cod.outputs()
-
-        return (len(d_in) == len(c_in) and
-                len(d_out) == len(c_out) and
-                all(self.vmap[d_in[i]] == c_in[i] for i in range(len(d_in))) and
-                all(self.vmap[d_out[i]] == c_out[i] for i in range(len(d_out))) and
-                self.is_injective() and self.is_surjective())
+    # def is_cospan_iso(self) -> bool:
+    #     d_in = self.dom.inputs()
+    #     d_out = self.dom.outputs()
+    #     c_in = self.cod.inputs()
+    #     c_out = self.cod.outputs()
+    #
+    #     return (len(d_in) == len(c_in) and
+    #             len(d_out) == len(c_out) and
+    #             all(self.vmap[d_in[i]] == c_in[i] for i in range(len(d_in))) and
+    #             all(self.vmap[d_out[i]] == c_out[i] for i in range(len(d_out))) and
+    #             self.is_injective() and self.is_surjective())
 
 
 
 class Matches(Iterable):
-    def __init__(self, dom: Graph, cod: Graph) -> None:
-        self.match_stack = [Match(dom=dom, cod=cod)]
+    def __init__(self, dom: Graph, cod: Graph, initial_match: Optional[Match] = None) -> None:
+        if initial_match is None: initial_match = Match(dom=dom, cod=cod) 
+        self.match_stack = [initial_match]
 
     def __iter__(self) -> Iterator:
         return self
@@ -237,3 +243,21 @@ def match_graph(dom: Graph, cod: Graph) -> Iterable[Match]:
 
 def match_rule(r: Rule, g: Graph) -> Iterable[Match]:
     return Matches(r.lhs, g)
+
+def find_iso(g: Graph, h: Graph) -> Optional[Match]:
+    g_in = g.inputs()
+    g_out = g.outputs()
+    h_in = h.inputs()
+    h_out = h.outputs()
+    if len(g_in) != len(h_in) or len(g_out) != len(h_out): return None
+
+    m0 = Match(dom=g, cod=h)
+    for i in range(len(g_in)):
+        if not m0.try_add_vertex(g_in[i], h_in[i]): return None
+    for i in range(len(g_out)):
+        if not m0.try_add_vertex(g_out[i], h_out[i]): return None
+
+    for m in Matches(dom=g, cod=h, initial_match=m0):
+        if m.is_surjective(): return m
+
+    return None

@@ -79,6 +79,8 @@ class Editor(QMainWindow):
         self.code_view.cursorPositionChanged.connect(self.show_at_cursor)
         self.code_view.textChanged.connect(self.invalidate_text)
         self.parsed = True
+
+        # keep a cache of graphs that have already been laid out
         self.graph_cache : Dict[int, Tuple[Graph, Optional[Graph]]] = dict()
 
     def build_menu(self):
