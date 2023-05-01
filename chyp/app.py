@@ -14,8 +14,8 @@
 # limitations under the License.
 
 from __future__ import annotations
-from PyQt5.QtCore import *
-from PyQt5.QtWidgets import *
+from PySide2.QtCore import *
+from PySide2.QtWidgets import *
 # from PyQt6.QtWebEngineCore import QWebEngineUrlScheme
 import sys
 # from typing import Optional, Literal
@@ -41,4 +41,4 @@ def main() -> None:
     """Main entry point for chyp"""
 
     chyp = Chyp()
-    chyp.exec()
+    chyp.exec_()

@@ -15,9 +15,9 @@
 
 from __future__ import annotations
 from typing import Dict, Optional, Tuple
-from PyQt5.QtCore import QFileInfo, QObject, QThread, Qt, QSettings
-from PyQt5.QtGui import *
-from PyQt5.QtWidgets import *
+from PySide2.QtCore import QByteArray, QFileInfo, QObject, QThread, Qt, QSettings
+from PySide2.QtGui import *
+from PySide2.QtWidgets import *
 
 from chyp.term import graph_to_term
 
@@ -47,7 +47,7 @@ class Editor(QMainWindow):
         self.resize(1600, 800)
         
         geom = conf.value("editor_window_geometry")
-        if geom: self.restoreGeometry(geom)
+        if geom and isinstance(geom, QByteArray): self.restoreGeometry(geom)
         self.show()
 
         # save splitter position
@@ -74,7 +74,7 @@ class Editor(QMainWindow):
         self.build_menu()
 
         splitter_state = conf.value("editor_splitter_state")
-        if splitter_state: self.splitter.restoreState(splitter_state)
+        if splitter_state and isinstance(splitter_state, QByteArray): self.splitter.restoreState(splitter_state)
 
         self.code_view.cursorPositionChanged.connect(self.show_at_cursor)
         self.code_view.textChanged.connect(self.invalidate_text)
@@ -93,7 +93,7 @@ class Editor(QMainWindow):
         file_new.triggered.connect(self.doc.new)
 
         file_open = file_menu.addAction("&Open")
-        file_open.setShortcut(QKeySequence.StandardKey.Open)
+        file_open.setShortcut(QKeySequence(QKeySequence.StandardKey.Open))
         file_open.triggered.connect(self.doc.open)
 
         self.file_open_recent = file_menu.addMenu("Open &Recent")
@@ -102,51 +102,54 @@ class Editor(QMainWindow):
         file_menu.addSeparator()
 
         file_save = file_menu.addAction("&Save")
-        file_save.setShortcut(QKeySequence.StandardKey.Save)
+        file_save.setShortcut(QKeySequence(QKeySequence.StandardKey.Save))
         file_save.triggered.connect(self.doc.save)
 
         file_save_as = file_menu.addAction("Save &As")
-        file_save_as.setShortcut(QKeySequence.StandardKey.SaveAs)
+        file_save_as.setShortcut(QKeySequence(QKeySequence.StandardKey.SaveAs))
         file_save_as.triggered.connect(self.doc.save_as)
 
         file_menu.addSeparator()
 
         file_exit = file_menu.addAction("E&xit")
-        file_exit.setShortcut(QKeySequence.StandardKey.Quit)
-        file_exit.triggered.connect(QApplication.instance().quit)
+        file_exit.setShortcut(QKeySequence(QKeySequence.StandardKey.Quit))
 
-        edit_undo = edit_menu.addAction(self.tr("&Undo"))
-        edit_undo.setShortcut(QKeySequence.StandardKey.Undo)
+        app = QApplication.instance()
+        if app:
+            file_exit.triggered.connect(app.quit)
+
+        edit_undo = edit_menu.addAction("&Undo")
+        edit_undo.setShortcut(QKeySequence(QKeySequence.StandardKey.Undo))
         edit_undo.triggered.connect(self.code_view.undo)
 
-        edit_redo = edit_menu.addAction(self.tr("&Redo"))
-        edit_redo.setShortcut(QKeySequence.StandardKey.Redo)
+        edit_redo = edit_menu.addAction("&Redo")
+        edit_redo.setShortcut(QKeySequence(QKeySequence.StandardKey.Redo))
         edit_redo.triggered.connect(self.code_view.redo)
 
         code_run = code_menu.addAction("&Run")
-        code_run.setShortcut(QKeySequence(Qt.Modifier.CTRL | Qt.Key.Key_R))
+        code_run.setShortcut(QKeySequence("Ctrl+R"))
         code_run.triggered.connect(self.update)
 
         code_add_rewrite_step = code_menu.addAction("&Add Rewrite Step")
-        code_add_rewrite_step.setShortcut(QKeySequence(Qt.Modifier.CTRL | Qt.Key.Key_Return))
+        code_add_rewrite_step.setShortcut(QKeySequence("Ctrl+Return"))
         code_add_rewrite_step.triggered.connect(lambda: self.code_view.add_line_below("  = ? by "))
 
         code_add_rewrite_step = code_menu.addAction("&Repeat Rewrite Step")
-        code_add_rewrite_step.setShortcut(QKeySequence(Qt.Modifier.CTRL | Qt.Modifier.SHIFT | Qt.Key.Key_Return))
+        code_add_rewrite_step.setShortcut(QKeySequence("Ctrl+Shift+Return"))
         code_add_rewrite_step.triggered.connect(self.repeat_step_at_cursor)
 
         code_next_rewrite = code_menu.addAction("&Next Rewrite")
-        code_next_rewrite.setShortcut(QKeySequence(Qt.Modifier.CTRL | Qt.Key.Key_N))
+        code_next_rewrite.setShortcut(QKeySequence("Ctrl+N"))
         code_next_rewrite.triggered.connect(self.next_rewrite_at_cursor)
 
         code_menu.addSeparator()
 
         code_next_part = code_menu.addAction("Next &Part")
-        code_next_part.setShortcut(QKeySequence(Qt.Modifier.CTRL | Qt.Key.Key_J))
+        code_next_part.setShortcut(QKeySequence("Ctrl+J"))
         code_next_part.triggered.connect(lambda: self.next_part(step=1))
 
         code_previous_part = code_menu.addAction("Previous &Part")
-        code_previous_part.setShortcut(QKeySequence(Qt.Modifier.CTRL | Qt.Key.Key_K))
+        code_previous_part.setShortcut(QKeySequence("Ctrl+K"))
         code_previous_part.triggered.connect(lambda: self.next_part(step=-1))
 
         self.setMenuBar(menu)

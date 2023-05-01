@@ -14,9 +14,9 @@
 # limitations under the License.
 
 from __future__ import annotations
-from PyQt5.QtCore import Qt, QPointF, QRectF, QSettings
-from PyQt5.QtGui import *
-from PyQt5.QtWidgets import *
+from PySide2.QtCore import QByteArray, Qt, QPointF, QRectF, QSettings
+from PySide2.QtGui import *
+from PySide2.QtWidgets import *
 
 from .graphview import GraphView
 
@@ -35,7 +35,7 @@ class MainWindow(QMainWindow):
         self.resize(1600, 800)
         
         geom = conf.value("main_window_geometry")
-        if geom: self.restoreGeometry(geom)
+        if geom and isinstance(geom, QByteArray): self.restoreGeometry(geom)
         self.show()
 
         self.view = GraphView()

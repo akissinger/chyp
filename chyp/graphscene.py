@@ -14,9 +14,9 @@
 # limitations under the License.
 
 from __future__ import annotations
-from PyQt5.QtCore import Qt, QPointF
-from PyQt5.QtGui import *
-from PyQt5.QtWidgets import *
+from PySide2.QtCore import Qt, QPointF
+from PySide2.QtGui import *
+from PySide2.QtWidgets import *
 from typing import Optional, List, Tuple
 
 from .graph import Graph
@@ -58,7 +58,7 @@ class EItem(QGraphicsRectItem):
         ed = self.g.edge_data(self.e)
 
         painter.setFont(QFont("sans", 14))
-        painter.drawText(self.boundingRect(), Qt.AlignmentFlag.AlignCenter, str(ed.value))
+        painter.drawText(self.boundingRect(), Qt.AlignmentFlag.AlignCenter, str(ed.value)) # type:ignore
 
 class VItem(QGraphicsEllipseItem):
     def __init__(self, g: Graph, v: int):

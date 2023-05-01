@@ -15,9 +15,9 @@
 
 from __future__ import annotations
 from typing import List
-from PyQt5.QtCore import QDir, QFileInfo, Qt, QSettings, QObject, pyqtSlot
-from PyQt5.QtGui import *
-from PyQt5.QtWidgets import *
+from PySide2.QtCore import QDir, QFileInfo, Qt, QSettings, QObject
+from PySide2.QtGui import *
+from PySide2.QtWidgets import *
 
 from . import editor
 
@@ -30,11 +30,13 @@ class Document(QObject):
 
     def recent_files(self) -> List[str]:
         conf = QSettings('chyp', 'chyp')
-        return conf.value('recent_files', [])
+        o = conf.value('recent_files', [])
+        return o if isinstance(o, list) else []
 
     def add_to_recent_files(self, file_name: str):
         conf = QSettings('chyp', 'chyp')
-        recent_files: List[str] = conf.value('recent_files', [])
+        o = conf.value('recent_files', [])
+        recent_files: List[str] = o if isinstance(o, list) else [] 
         recent_files = [f for f in recent_files if f != file_name]
         recent_files.insert(0, file_name)
         recent_files = recent_files[:10]
@@ -63,9 +65,10 @@ class Document(QObject):
 
     def open(self):
         conf = QSettings('chyp', 'chyp')
-        last_dir = conf.value('last_dir', QDir.home().absolutePath())
+        o = conf.value('last_dir')
+        last_dir = o if isinstance(o, str) else QDir.home().absolutePath()
         file_name, _ = QFileDialog.getOpenFileName(self.editor,
-                                                   self.tr("Open File"),
+                                                   "Open File",
                                                    last_dir,
                                                    'chyp files (*.chyp)')
         if file_name:
@@ -74,9 +77,10 @@ class Document(QObject):
 
     def save_as(self):
         conf = QSettings('chyp', 'chyp')
-        last_dir = conf.value('last_dir', QDir.home().absolutePath())
+        o = conf.value('last_dir')
+        last_dir = o if isinstance(o, str) else QDir.home().absolutePath()
         file_name, _ = QFileDialog.getSaveFileName(self.editor,
-                                                   self.tr("Save File"),
+                                                   "Save File",
                                                    last_dir,
                                                    'chyp files (*.chyp)')
         if file_name:
