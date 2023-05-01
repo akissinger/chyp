@@ -131,12 +131,11 @@ par : par_term "*" par_term
 seq : term ";" term
 perm : "sw" [ "[" num ("," num)* "]" ]
 id : "id"
+term_hole : term | "?"
 
 num : INT
 var : IDENTIFIER
 term_ref : IDENTIFIER
 rule_ref : IDENTIFIER
-term_hole : term | "?"
-
 
 ```
