@@ -1,18 +1,32 @@
-# chyp
-
-`chyp` (pronounced "chip") is an interactive theorem prover for symmetric monoidal categories (SMCs), a.k.a. process theories. Symmetric monoidal categories are a very general way to reason about processes that can be composed in sequence or in parallel. String diagrams are a convenient notation for maps in an SMC, where processes are represented as boxes connected to each other by wires.
+`Chyp` (pronounced "chip") is an interactive theorem prover for symmetric monoidal categories (SMCs), a.k.a. process theories. Symmetric monoidal categories are a very general way to reason about processes that can be composed in sequence or in parallel. String diagrams are a convenient notation for maps in an SMC, where processes are represented as boxes connected to each other by wires.
 
 ![Chyp screenshot](https://github.com/akissinger/chyp/raw/master/chyp-screen.png)
 
-For those interested in the mathematics behind this tool: hypergraphs with boundaries are the combinatoric cousins of _string diagrams_, a graphical notation for morphisms in a symmetric monoidal category. By switching to a combinatoric structure based on hypergraphs, we obtain a convenient rewrite theory for string diagrams. This is developed over a series of papers:
+Chyp is short for _Composing HYPergraphs_, which refers to how string diagrams are represented and plugged together formally in the tool. By switching to a combinatoric structure based on hypergraphs, we obtain a convenient rewrite theory for string diagrams. There is a lot of theory behind this, which has been developed over a series of papers:
 
 * [String Diagram Rewrite Theory I: Rewriting with Frobenius Structure](https://arxiv.org/abs/2012.01847)
 * [String Diagram Rewrite Theory II: Rewriting with Symmetric Monoidal Structure](https://arxiv.org/abs/2104.14686)
 * [String diagram rewrite theory III: Confluence with and without Frobenius](https://discovery.ucl.ac.uk/id/eprint/10151067/1/string-diagram-rewrite-theory-iii-confluence-with-and-without-frobenius.pdf)
 
-## Library usage
+# Installation
 
-Here's an example of building a small hypergraph using the `Graph` datatype, and drawing it with the PyQt6 `GraphView` widget, assuming `w` is the Qt widget where you want to add the `GraphView`.
+Chyp can be installed using `pip` as follows:
+
+```bash
+git clone https://github.com/akissinger/chyp.git
+cd chyp
+pip install .
+```
+
+It can then be run by running `chyp` from the command line or `python3 -m chyp` from inside the source directory.
+
+
+
+# Using `chyp` as a library
+
+While the main purpose of `chyp` is to be a standalone interactive theorem prover, it is also designed to be a useful library for hacking and experimenting with hypergraph/SMC rewriting, and drawing the results.
+
+Here's an example of building a small hypergraph using the `Graph` datatype, and drawing it with the PyQt5 `GraphView` widget, assuming `w` is the Qt widget where you want to add the `GraphView`.
 
 ```python
 from chyp import *
