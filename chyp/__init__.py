@@ -18,7 +18,7 @@
 
 
 from . import app
-from .graphview import GraphView
+from .gui.graphview import GraphView
 from .graph import Graph
 from .rule import Rule
 from .state import State
