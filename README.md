@@ -114,7 +114,7 @@ How to we know it's a normal form? Pressing `CTRL+SHIFT+Enter` one more time wil
 
 # Grammar
 
-The Chyp language is very small. The full grammar, which can also be found in [parser.py](https://github.com/akissinger/chyp/blob/master/chyp/parser.py), is the following:
+The Chyp language is very small. The full grammar, which is essentially the one used in [chyp/parser.py](https://github.com/akissinger/chyp/blob/master/chyp/parser.py), is the following:
 
 ```lark
 
