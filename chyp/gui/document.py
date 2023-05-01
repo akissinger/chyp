@@ -15,7 +15,7 @@
 
 from __future__ import annotations
 from typing import List
-from PySide2.QtCore import QDir, QFileInfo, Qt, QSettings, QObject
+from PySide2.QtCore import QDir, QFileInfo, QSettings, QObject
 from PySide2.QtGui import *
 from PySide2.QtWidgets import *
 

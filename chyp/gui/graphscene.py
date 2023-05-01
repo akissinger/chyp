@@ -19,7 +19,7 @@ from PySide2.QtGui import *
 from PySide2.QtWidgets import *
 from typing import Optional, List, Tuple
 
-from .graph import Graph
+from ..graph import Graph
 
 SCALE = 50.0
 

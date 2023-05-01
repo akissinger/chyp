@@ -21,16 +21,15 @@ from PySide2.QtWidgets import *
 
 from chyp.term import graph_to_term
 
+from ..layout import convex_layout
+from ..graph import Graph
+from ..state import RewriteState, State
+from ..matcher import match_rule
+from ..rewrite import rewrite
 
-# from . import app
-from .layout import convex_layout
 from .graphview import GraphView
-from .graph import Graph
-from .state import RewriteState, State
 from .codeview import CodeView
 from .document import Document
-from .matcher import match_rule
-from .rewrite import rewrite
 
 class Editor(QMainWindow):
     def __init__(self) -> None:

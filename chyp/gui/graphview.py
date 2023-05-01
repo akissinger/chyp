@@ -17,8 +17,8 @@ from __future__ import annotations
 from PySide2.QtWidgets import *
 from PySide2.QtGui import *
 
+from ..graph import Graph
 from .graphscene import GraphScene
-from .graph import Graph
 
 class GraphView(QGraphicsView):
     def __init__(self) -> None:
