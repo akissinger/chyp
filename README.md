@@ -8,6 +8,9 @@ Chyp is short for _Composing HYPergraphs_, which refers to how string diagrams a
 * [String Diagram Rewrite Theory II: Rewriting with Symmetric Monoidal Structure](https://arxiv.org/abs/2104.14686)
 * [String diagram rewrite theory III: Confluence with and without Frobenius](https://discovery.ucl.ac.uk/id/eprint/10151067/1/string-diagram-rewrite-theory-iii-confluence-with-and-without-frobenius.pdf)
 
+Currently, Chyp implements the theory described in part II, using monogamous acyclic hypergraphs to represent morphisms in a symmetric monoidal category. Fancier types of rewriting (e.g. rewriting modulo Frobenius structure) is planned for the future.
+
+
 # Installation
 
 Chyp can be installed using `pip` as follows:
@@ -23,7 +26,7 @@ It can then be run by running `chyp` from the command line or `python3 -m chyp` 
 
 # Using Chyp
 
-The main was you interact with Chyp is by writing `*.chyp` prover files. These are source files written in a simple declarative language that lets you:
+The main way to interact with Chyp is by writing `*.chyp` prover files. These are source files written in a simple declarative language that lets you:
 1. define generators,
 2. build terms by composing generators,
 3. define rewrite rules (i.e. axioms), and
@@ -109,3 +112,31 @@ Then press `CTRL+N`, followed by `CTRL+SHIFT+Enter` 3 times, and Chyp will compu
 
 How to we know it's a normal form? Pressing `CTRL+SHIFT+Enter` one more time will result in a red line that reads `  = ? by bialg`, which means Chyp wasn't able to find any more matchings of the `bialg` rule.
 
+# Grammar
+
+The Chyp language is very small. The full grammar, which can also be found in [parser.py](https://github.com/akissinger/chyp/blob/master/chyp/parser.py), is the following:
+
+```lark
+
+start : statement*
+statement : gen | let | rule | rewrite
+gen : "gen" var ":" num "->" num
+let : "let" var "=" term
+rule : "rule" var ":" term "=" term
+rewrite : "rewrite" var ":" term rewrite_part*
+rewrite_part : "=" term_hole "by" rule_ref num?
+term  : par_term | seq
+par_term : "(" term ")" | par | perm | id | term_ref
+par : par_term "*" par_term
+seq : term ";" term
+perm : "sw" [ "[" num ("," num)* "]" ]
+id : "id"
+
+num : INT
+var : IDENTIFIER
+term_ref : IDENTIFIER
+rule_ref : IDENTIFIER
+term_hole : term | "?"
+
+
+```
