@@ -1,7 +1,7 @@
 from typing import Optional, Tuple
-from PySide2.QtCore import Qt
-from PySide2.QtGui import *
-from PySide2.QtWidgets import *
+from PySide6.QtCore import Qt
+from PySide6.QtGui import *
+from PySide6.QtWidgets import *
 import re
 
 # palette from: https://github.com/catppuccin/catppuccin

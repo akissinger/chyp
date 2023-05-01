@@ -18,7 +18,8 @@ cd chyp
 pip install .
 ```
 
-It can then be run by running `chyp` from the command line or `python3 -m chyp` from inside the source directory.
+It can then be run by running `chyp` from the command line or `python3 -m chyp` from inside the source directory. This will automatically install dependencies: [PySide6](https://pypi.org/project/PySide6/) (Qt6 GUI bindings), [cvxpy](https://www.cvxpy.org/) (convex solver for diagram layout), and [lark](https://github.com/lark-parser/lark) (parser library).
+
 
 
 

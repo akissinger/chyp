@@ -15,9 +15,9 @@
 
 from __future__ import annotations
 from typing import Dict, Optional, Tuple
-from PySide2.QtCore import QByteArray, QFileInfo, QObject, QThread, Qt, QSettings
-from PySide2.QtGui import *
-from PySide2.QtWidgets import *
+from PySide6.QtCore import QByteArray, QFileInfo, QObject, QThread, Qt, QSettings
+from PySide6.QtGui import *
+from PySide6.QtWidgets import *
 
 from chyp.term import graph_to_term
 

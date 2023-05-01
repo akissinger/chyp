@@ -14,8 +14,8 @@
 # limitations under the License.
 
 from __future__ import annotations
-from PySide2.QtWidgets import *
-from PySide2.QtGui import *
+from PySide6.QtWidgets import *
+from PySide6.QtGui import *
 
 from ..graph import Graph
 from .graphscene import GraphScene
