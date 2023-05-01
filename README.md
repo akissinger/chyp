@@ -1,4 +1,4 @@
-`Chyp` (pronounced "chip") is an interactive theorem prover for symmetric monoidal categories (SMCs), a.k.a. process theories. Symmetric monoidal categories are a very general way to reason about processes that can be composed in sequence or in parallel. String diagrams are a convenient notation for maps in an SMC, where processes are represented as boxes connected to each other by wires.
+Chyp (pronounced "chip") is an interactive theorem prover for symmetric monoidal categories (SMCs), a.k.a. process theories. Symmetric monoidal categories are a very general way to reason about processes that can be composed in sequence or in parallel. String diagrams are a convenient notation for maps in an SMC, where processes are represented as boxes connected to each other by wires.
 
 ![Chyp screenshot](https://github.com/akissinger/chyp/raw/master/chyp-screen.png)
 
@@ -21,9 +21,22 @@ pip install .
 It can then be run by running `chyp` from the command line or `python3 -m chyp` from inside the source directory. This will automatically install dependencies: [PySide6](https://pypi.org/project/PySide6/) (Qt6 GUI bindings), [cvxpy](https://www.cvxpy.org/) (convex solver for diagram layout), and [lark](https://github.com/lark-parser/lark) (parser library).
 
 
+# Using Chyp
 
+The main was you interact with Chyp is by writing `*.chyp` prover files. These are source files written in a simple declarative language that lets you:
+1. define generators,
+2. build terms by composing generators,
+3. define rewrite rules (i.e. axioms), and
+4. prove new rules by rewriting.
 
-# Using `chyp` as a library
+Generators are defined via the `gen` command, which takes a name, a number of input wires, and a number of output wires. For example, we can define two new generators `f` and `g` as follows:
+
+    gen f : 2 -> 1
+    gen g : 1 -> 2
+
+These can be combined via parallel composition `*` and sequential composition `;`. Any terms can be combined in parallel, but for sequential composition `S ; T` the number of outputs of `S` must match the number of inputs of `T`. There are also special generators `id : 1 -> 1` and `sw : 2 -> 2` corresponding to the identity and swap maps respectively.
+
+# Using Chyp as a library
 
 While the main purpose of `chyp` is to be a standalone interactive theorem prover, it is also designed to be a useful library for hacking and experimenting with hypergraph/SMC rewriting, and drawing the results.
 
