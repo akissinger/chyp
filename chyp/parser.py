@@ -134,12 +134,15 @@ class ChypParseData(Transformer):
         else:
             start = meta.start_pos
             lhs = term
+            rhs = None
             for i, rw_part in enumerate(rw_parts):
                 end, t_start, t_end, rule, rhs = rw_part
                 self.rewrites[name + ":" + str(i)] = (t_start, t_end, rule, lhs, rhs)
                 lhs = rhs.copy() if rhs else None
                 self.parts.append((start, end, "rewrite", name + ":" + str(i)))
                 start = end
+            if rhs:
+                self.rules[name] = Rule(term, rhs, name)
 
     @v_args(meta=True)
     def rewrite_part(self, meta: Meta, items: List[Any]):
