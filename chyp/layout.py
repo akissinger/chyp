@@ -62,7 +62,7 @@ def convex_layout(g: Graph):
     etab = { e : i for i, e in enumerate(g.edges()) }
 
     constr = []
-    opt = []
+    opt = [Constant(0.1) * v for v in ey]
     for layer in range(len(v_layers)):
         v_layer = v_layers[layer]
         for i in range(len(v_layer)-1):
