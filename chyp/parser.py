@@ -1,4 +1,4 @@
-from typing import Any, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 from lark import Lark, Transformer, UnexpectedCharacters, UnexpectedEOF, UnexpectedToken, v_args
 from lark.tree import Meta
 
@@ -35,12 +35,13 @@ GRAMMAR = Lark("""
     propagate_positions=True)
 
 class ChypParseData(Transformer):
-    def __init__(self):
-        self.graphs = dict()
-        self.rules = dict()
-        self.rewrites = dict()
-        self.errors = list()
-        self.parts = list()
+
+    def __init__(self) -> None:
+        self.graphs: Dict[str, Graph] = dict()
+        self.rules: Dict[str, Rule] = dict()
+        self.rewrites: Dict[str, Tuple[int, int, Optional[Rule], Optional[Graph], Optional[Graph]]] = dict()
+        self.errors: List[Tuple[int, str]] = list()
+        self.parts: List[Tuple[int, int, str, str]] = list()
         self.parsed = False
     
     # def start(self, items: List[List[Tuple[int,int,str,str]]]):
@@ -49,10 +50,10 @@ class ChypParseData(Transformer):
     def var(self, items: List[Any]) -> str:
         return str(items[0])
     
-    def num(self, items) -> int:
+    def num(self, items: List[Any]) -> int:
         return int(items[0])
 
-    def id(self, _) -> Graph:
+    def id(self, _: List[Any]) -> Graph:
         return identity()
 
     @v_args(meta=True)
@@ -64,6 +65,7 @@ class ChypParseData(Transformer):
                 return perm([int(i) for i in items])
         except GraphError as e:
             self.errors.append((meta.line, str(e)))
+        return None
     
     @v_args(meta=True)
     def term_ref(self, meta: Meta, items: List[Any]) -> Optional[Graph]:
@@ -83,7 +85,7 @@ class ChypParseData(Transformer):
             self.errors.append((meta.line, 'Undefined term: ' + s))
             return None
     
-    def par(self, items) -> Optional[Graph]:
+    def par(self, items: List[Any]) -> Optional[Graph]:
         if items[0] and items[1]:
             return items[0] * items[1]
         else:
@@ -98,22 +100,24 @@ class ChypParseData(Transformer):
             except GraphError as e:
                 self.errors.append((meta.line, str(e)))
             return g
+        else:
+            return None
 
     @v_args(meta=True)
-    def gen(self, meta: Meta, items: List[Any]):
+    def gen(self, meta: Meta, items: List[Any]) -> None:
         name, arity, coarity = items
         self.graphs[name] = gen(name, arity, coarity)
         self.parts.append((meta.start_pos, meta.end_pos, 'gen', name))
         
     @v_args(meta=True)
-    def let(self, meta: Meta, items: List[Any]):
+    def let(self, meta: Meta, items: List[Any]) -> None:
         name, graph = items
         if graph:
             self.graphs[name] = graph
         self.parts.append((meta.start_pos, meta.end_pos, 'let', name))
 
     @v_args(meta=True)
-    def rule(self, meta: Meta, items: List[Any]):
+    def rule(self, meta: Meta, items: List[Any]) -> None:
         name, lhs, rhs = items
         if lhs and rhs:
             try:
@@ -123,7 +127,7 @@ class ChypParseData(Transformer):
         self.parts.append((meta.start_pos, meta.end_pos, 'rule', name))
 
     @v_args(meta=True)
-    def rewrite(self, meta: Meta, items: List[Any]):
+    def rewrite(self, meta: Meta, items: List[Any]) -> None:
         name = items[0]
         term = items[1]
         rw_parts = items[2:]
@@ -145,14 +149,14 @@ class ChypParseData(Transformer):
                 self.rules[name] = Rule(term, rhs, name)
 
     @v_args(meta=True)
-    def rewrite_part(self, meta: Meta, items: List[Any]):
+    def rewrite_part(self, meta: Meta, items: List[Any]) -> Tuple[int, int, int, Rule, Graph]:
         t_start,t_end,rhs = items[0]
         rule = items[1]
         return (meta.end_pos, t_start, t_end, rule, rhs)
 
 
     @v_args(meta=True)
-    def term_hole(self, meta: Meta, items: List[Any]):
+    def term_hole(self, meta: Meta, items: List[Any]) -> Tuple[int, int, Optional[Graph]]:
         t = items[0] if len(items) != 0 else None
         return (meta.start_pos, meta.end_pos, t)
 
