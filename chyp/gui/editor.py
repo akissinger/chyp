@@ -278,9 +278,13 @@ class Editor(QMainWindow):
                 found_prev = (term == t)
 
             if rw_term:
-                self.code_view.setPlainText(text[:start] + rw_term + text[end:])
+                # self.code_view.setPlainText(text[:start] + rw_term + text[end:])
+                # cursor.setPosition(pos + len(rw_term) - len(term))
                 cursor = self.code_view.textCursor()
-                cursor.setPosition(pos + len(rw_term) - len(term))
+                cursor.clearSelection()
+                cursor.setPosition(start)
+                cursor.setPosition(end, mode=QTextCursor.MoveMode.KeepAnchor)
+                cursor.insertText(rw_term)
                 self.code_view.setTextCursor(cursor)
                 self.update()
 
