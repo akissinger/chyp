@@ -24,7 +24,7 @@ from cvxpy.problems.problem import Problem
 from .graph import Graph
 from .term import layer_decomp
 
-def convex_layout(g: Graph):
+def convex_layout(g: Graph) -> None:
     """A layout based on `layer_decomp` and convex optimisation
 
     Vertices and edges are placed in layers according to `layer_decomp`. Their
@@ -62,7 +62,7 @@ def convex_layout(g: Graph):
     etab = { e : i for i, e in enumerate(g.edges()) }
 
     constr = []
-    opt = [Constant(0.1) * v for v in ey]
+    opt = [Constant(0.1) * vy[i] for i in range(g.num_edges())]
     for layer in range(len(v_layers)):
         v_layer = v_layers[layer]
         for i in range(len(v_layer)-1):
@@ -109,7 +109,7 @@ def convex_layout(g: Graph):
         g.edge_data(e).y = y - yshift
 
 
-def layer_layout(g: Graph):
+def layer_layout(g: Graph) -> None:
     """A simple layout using `layer_decomp`.
 
     Vertices are evenly spaced around the x-axis and edges are placed
@@ -129,8 +129,8 @@ def layer_layout(g: Graph):
         end = len(e_layer)
         start = math.ceil(end/2)
 
-        max_y = 0 # max y-coordinate for edges above the middle
-        min_y = 0 # min y-coordinate for edges below the middle
+        max_y = 0.0 # max y-coordinate for edges above the middle
+        min_y = 0.0 # min y-coordinate for edges below the middle
 
         # for an odd number of edges, place the middle edge first
         if start > end/2:

@@ -266,7 +266,7 @@ class Graph:
         self.edge_data(e).highlight = vd.highlight
         return e
     
-    def tensor(self, other: Graph):
+    def tensor(self, other: Graph) -> None:
         """Take the monoidal product with the given graph
 
         Calling g.tensor(h) will turn g into g ⊗ h. Use the infix version "g + h" to simply return
@@ -296,12 +296,12 @@ class Graph:
         self.set_inputs(self.inputs() + [vmap[v] for v in other.inputs()])
         self.set_outputs(self.outputs() + [vmap[v] for v in other.outputs()])
 
-    def __mul__(self, other: Graph):
+    def __mul__(self, other: Graph) -> Graph:
         g = self.copy()
         g.tensor(other)
         return g
 
-    def compose(self, other: Graph):
+    def compose(self, other: Graph) -> None:
         """Compose with given graph in diagram order"""
 
         vmap = dict()
@@ -326,7 +326,7 @@ class Graph:
         
         plug1 = self.outputs()
         plug2 = [vmap[v] for v in other.inputs()]
-        quotient = dict()
+        quotient: Dict[int,int] = dict()
         if len(plug1) != len(plug2):
             raise GraphError("Attempting to plug a graph with %d outputs into one with %d inputs" % (len(plug1), len(plug2)))
 
@@ -341,7 +341,7 @@ class Graph:
                 self.merge_vertices(p1, p2)
                 quotient[p2] = p1
 
-    def __rshift__(self, other: Graph):
+    def __rshift__(self, other: Graph) -> Graph:
         g = self.copy()
         g.compose(other)
         return g
