@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Dict, Optional, Tuple
+from typing import Dict, List, Optional, Tuple
 
 from .matcher import find_iso, match_rule
 from .parser import parse
@@ -34,7 +34,12 @@ class RewriteState:
     VALID = 2
     INVALID = 3
 
-    def __init__(self, term_pos: Tuple[int,int] = (0,0), rule: Optional[Rule]=None, lhs: Optional[Graph]=None, rhs: Optional[Graph]=None, stub=False):
+    def __init__(self,
+                 term_pos: Tuple[int,int] = (0,0),
+                 rule: Optional[Rule]=None,
+                 lhs: Optional[Graph]=None,
+                 rhs: Optional[Graph]=None,
+                 stub: bool=False) -> None:
         self.status = RewriteState.UNCHECKED
         self.term_pos = term_pos
         self.rule = rule if rule else Rule(Graph(), Graph())
@@ -42,7 +47,7 @@ class RewriteState:
         self.rhs = rhs if rhs else Graph()
         self.stub = stub
 
-    def check(self):
+    def check(self) -> None:
         for m_lhs in match_rule(self.rule, self.lhs):
             for m_rhs in dpo(self.rule, m_lhs):
                 iso = find_iso(m_rhs.cod, self.rhs)
@@ -65,14 +70,14 @@ class RewriteState:
             self.status = RewriteState.INVALID
 
 class State:
-    def __init__(self):
+    def __init__(self) -> None:
         self.graphs: Dict[str, Graph] = dict()
         self.rules: Dict[str, Rule] = dict()
         self.rewrites: Dict[str, RewriteState] = dict()
-        self.parts = []
-        self.errors = []
+        self.parts: List[Tuple[int, int, str, str]] = list()
+        self.errors: List[Tuple[int, str]] = list()
 
-    def update(self, code: str):
+    def update(self, code: str) -> None:
         parse_data = parse(code)
         self.graphs = parse_data.graphs
         self.rules = parse_data.rules

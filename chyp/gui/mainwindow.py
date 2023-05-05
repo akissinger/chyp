@@ -14,9 +14,9 @@
 # limitations under the License.
 
 from __future__ import annotations
-from PySide6.QtCore import QByteArray, Qt, QPointF, QRectF, QSettings
-from PySide6.QtGui import *
-from PySide6.QtWidgets import *
+from PySide6.QtCore import QByteArray, QSettings
+from PySide6.QtGui import QCloseEvent
+from PySide6.QtWidgets import QMainWindow, QVBoxLayout, QWidget
 
 from .graphview import GraphView
 

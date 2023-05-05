@@ -14,17 +14,20 @@
 # limitations under the License.
 
 from __future__ import annotations
-from PySide6.QtCore import Qt, QPointF
-from PySide6.QtGui import *
-from PySide6.QtWidgets import *
 from typing import Optional, List, Tuple
+
+from PySide6.QtCore import Qt, QPointF
+from PySide6.QtGui import QBrush, QColor, QFont, QPainter, QPainterPath, QPen, QTransform, QUndoStack
+from PySide6.QtWidgets import (QGraphicsEllipseItem, QGraphicsItem,
+                               QGraphicsPathItem, QGraphicsRectItem, QGraphicsScene,
+                               QGraphicsSceneMouseEvent, QStyleOptionGraphicsItem, QWidget)
 
 from ..graph import Graph
 
 SCALE = 50.0
 
 class EItem(QGraphicsRectItem):
-    def __init__(self, g: Graph, e: int):
+    def __init__(self, g: Graph, e: int) -> None:
         super().__init__(-0.4 * SCALE, -0.8 * SCALE, 0.8 * SCALE, 1.6 * SCALE)
         self.g = g
         self.e = e
@@ -61,7 +64,7 @@ class EItem(QGraphicsRectItem):
         painter.drawText(self.boundingRect(), Qt.AlignmentFlag.AlignCenter, str(ed.value)) # type:ignore
 
 class VItem(QGraphicsEllipseItem):
-    def __init__(self, g: Graph, v: int):
+    def __init__(self, g: Graph, v: int) -> None:
         super().__init__(-0.0625 * SCALE, -0.0625 * SCALE, 0.125 * SCALE, 0.125 * SCALE)
         self.setVisible(False)
         self.g = g
@@ -71,7 +74,7 @@ class VItem(QGraphicsEllipseItem):
         self.setBrush(QBrush(QColor(0,0,0)))
 
 class TItem(QGraphicsPathItem):
-    def __init__(self, vitem: VItem, eitem: EItem, i: int, src: bool):
+    def __init__(self, vitem: VItem, eitem: EItem, i: int, src: bool) -> None:
         super().__init__()
         g = vitem.g
         self.vitem = vitem

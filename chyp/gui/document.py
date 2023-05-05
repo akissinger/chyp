@@ -16,13 +16,12 @@
 from __future__ import annotations
 from typing import List
 from PySide6.QtCore import QDir, QFileInfo, QSettings, QObject
-from PySide6.QtGui import *
-from PySide6.QtWidgets import *
+from PySide6.QtWidgets import QFileDialog
 
 from . import editor
 
 class Document(QObject):
-    def __init__(self, editor: "editor.Editor"):
+    def __init__(self, editor: "editor.Editor") -> None:
         super().__init__()
         self.editor = editor
         self.code_view = editor.code_view
@@ -33,7 +32,7 @@ class Document(QObject):
         o = conf.value('recent_files', [])
         return o if isinstance(o, list) else []
 
-    def add_to_recent_files(self, file_name: str):
+    def add_to_recent_files(self, file_name: str) -> None:
         conf = QSettings('chyp', 'chyp')
         o = conf.value('recent_files', [])
         recent_files: List[str] = o if isinstance(o, list) else [] 
@@ -43,18 +42,18 @@ class Document(QObject):
         conf.setValue('recent_files', recent_files)
         self.editor.update_file()
 
-    def new(self):
+    def new(self) -> None:
         self.file_name = ''
         self.code_view.setPlainText('')
 
-    def load(self, file_name: str):
+    def load(self, file_name: str) -> None:
         self.file_name = file_name
         with open(file_name) as f:
             self.code_view.setPlainText(f.read())
         self.add_to_recent_files(self.file_name)
         self.editor.update_file()
 
-    def save(self):
+    def save(self) -> None:
         if self.file_name:
             with open(self.file_name, 'w') as f:
                 f.write(self.code_view.toPlainText())
@@ -63,7 +62,7 @@ class Document(QObject):
         else:
             self.save_as()
 
-    def open(self):
+    def open(self) -> None:
         conf = QSettings('chyp', 'chyp')
         o = conf.value('last_dir')
         last_dir = o if isinstance(o, str) else QDir.home().absolutePath()
@@ -75,7 +74,7 @@ class Document(QObject):
             conf.setValue('last_dir', QFileInfo(file_name).absolutePath())
             self.load(file_name)
 
-    def save_as(self):
+    def save_as(self) -> None:
         conf = QSettings('chyp', 'chyp')
         o = conf.value('last_dir')
         last_dir = o if isinstance(o, str) else QDir.home().absolutePath()

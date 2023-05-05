@@ -1,8 +1,8 @@
 from typing import Optional, Tuple
-from PySide6.QtCore import Qt
-from PySide6.QtGui import *
-from PySide6.QtWidgets import *
 import re
+
+from PySide6.QtGui import QColor, QFont, QSyntaxHighlighter, QTextCursor, QTextDocument
+from PySide6.QtWidgets import QPlainTextEdit
 
 # palette from: https://github.com/catppuccin/catppuccin
 FG =      '#cad3f5'
@@ -20,19 +20,19 @@ class CodeView(QPlainTextEdit):
     STATUS_GOOD = 1
     STATUS_BAD = 2
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__()
         self.setFont(QFont("monospace", 14))
         # self.setFont(QFont("JetBrainsMono Nerd Font", 14))
         self.setStyleSheet("QPlainTextEdit {background-color: %s; color: %s}" % (BG, FG))
         self.highlighter = CodeHighlighter(self.document())
 
-    def set_current_region(self, region: Optional[Tuple[int,int]], status: int = NO_STATUS):
+    def set_current_region(self, region: Optional[Tuple[int,int]], status: int = NO_STATUS) -> None:
         self.blockSignals(True)
         self.highlighter.set_current_region(region, status)
         self.blockSignals(False)
 
-    def add_line_below(self, text: str):
+    def add_line_below(self, text: str) -> None:
         cursor = self.textCursor()
         if self.highlighter.region:
             cursor.setPosition(self.highlighter.region[1])
@@ -41,12 +41,12 @@ class CodeView(QPlainTextEdit):
         self.setTextCursor(cursor)
 
 class CodeHighlighter(QSyntaxHighlighter):
-    def __init__(self, doc: QTextDocument):
+    def __init__(self, doc: QTextDocument) -> None:
         super().__init__(doc)
-        self.region = None
+        self.region: Optional[Tuple[int,int]] = None
         self.region_status = CodeView.NO_STATUS
 
-    def set_current_region(self, region: Optional[Tuple[int,int]], status: int):
+    def set_current_region(self, region: Optional[Tuple[int,int]], status: int) -> None:
         self.region = region
         self.region_status = status
         self.rehighlight()
