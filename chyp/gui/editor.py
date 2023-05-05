@@ -14,10 +14,10 @@
 # limitations under the License.
 
 from __future__ import annotations
-from typing import Dict, Optional, Tuple
+from typing import Callable, Dict, Optional, Tuple
 from PySide6.QtCore import QByteArray, QFileInfo, QObject, QThread, Qt, QSettings
-from PySide6.QtGui import *
-from PySide6.QtWidgets import *
+from PySide6.QtGui import QCloseEvent, QKeySequence, QTextCursor
+from PySide6.QtWidgets import QApplication, QHBoxLayout, QMainWindow, QMenuBar, QSplitter, QVBoxLayout, QWidget
 
 from chyp.term import graph_to_term
 
@@ -82,7 +82,7 @@ class Editor(QMainWindow):
         # keep a cache of graphs that have already been laid out
         self.graph_cache : Dict[int, Tuple[Graph, Optional[Graph]]] = dict()
 
-    def build_menu(self):
+    def build_menu(self) -> None:
         menu = QMenuBar()
         file_menu = menu.addMenu("&File")
         edit_menu = menu.addMenu("&Edit")
@@ -153,29 +153,29 @@ class Editor(QMainWindow):
 
         self.setMenuBar(menu)
 
-    def update_file(self):
+    def update_file(self) -> None:
         if self.doc.file_name:
             fi = QFileInfo(self.doc.file_name)
             self.setWindowTitle('chyp - ' + fi.fileName())
         else:
             self.setWindowTitle('chyp')
 
-        def open_rec(f):
+        def open_recent(f: str) -> Callable:
             return lambda: self.doc.load(f)
 
         self.file_open_recent.clear()
         for f in self.doc.recent_files():
             fi = QFileInfo(f)
             action = self.file_open_recent.addAction(fi.fileName())
-            action.triggered.connect(open_rec(f))
+            action.triggered.connect(open_recent(f))
 
-    def invalidate_text(self):
+    def invalidate_text(self) -> None:
         self.parsed = False
         self.graph_cache = dict()
         self.code_view.set_current_region(None)
-        self.update(quiet=True)
+        self.update_state(quiet=True)
 
-    def next_part(self, step=1):
+    def next_part(self, step:int=1) -> None:
         if not self.parsed: return
 
         cursor = self.code_view.textCursor()
@@ -190,7 +190,7 @@ class Editor(QMainWindow):
             self.code_view.setTextCursor(cursor)
             
 
-    def show_at_cursor(self):
+    def show_at_cursor(self) -> None:
         if not self.parsed: return
 
         pos = self.code_view.textCursor().position()
@@ -215,18 +215,20 @@ class Editor(QMainWindow):
                     convex_layout(rhs)
                     self.graph_cache[i] = (lhs, rhs)
                 else:
-                    lhs, rhs = self.graph_cache[i]
+                    lhs, rhs0 = self.graph_cache[i]
+                    if not rhs0: raise ValueError("Rule in graph_cache should have RHS")
+                    rhs = rhs0
                 self.rhs_view.setVisible(True)
                 self.lhs_view.set_graph(lhs)
-                if rhs: self.rhs_view.set_graph(rhs)
+                self.rhs_view.set_graph(rhs)
             elif part[2] == 'rewrite' and part[3] in self.state.rewrites:
                 rw = self.state.rewrites[part[3]]
                 if i not in self.graph_cache:
                     if not rw.stub:
                         if rw.status == RewriteState.UNCHECKED:
                             rw.status = RewriteState.CHECKING
-                            def check_finished(i):
-                                def f():
+                            def check_finished(i: int) -> Callable:
+                                def f() -> None:
                                     self.graph_cache.pop(i, None)
                                     self.show_at_cursor()
                                 return f
@@ -241,7 +243,9 @@ class Editor(QMainWindow):
                     convex_layout(rhs)
                     self.graph_cache[i] = (lhs, rhs)
                 else:
-                    lhs, rhs = self.graph_cache[i]
+                    lhs, rhs0 = self.graph_cache[i]
+                    if not rhs0: raise ValueError("Rewrite step in graph_cache should have RHS")
+                    rhs = rhs0
 
                 if rw.status == RewriteState.VALID:
                     self.code_view.set_current_region((part[0], part[1]), status=CodeView.STATUS_GOOD)
@@ -253,8 +257,8 @@ class Editor(QMainWindow):
                 if rhs: self.rhs_view.set_graph(rhs)
 
 
-    def next_rewrite_at_cursor(self):
-        self.update()
+    def next_rewrite_at_cursor(self) -> None:
+        self.update_state()
         if not self.parsed: return
 
         pos = self.code_view.textCursor().position()
@@ -284,19 +288,19 @@ class Editor(QMainWindow):
                 cursor.setPosition(end, mode=QTextCursor.MoveMode.KeepAnchor)
                 cursor.insertText(rw_term)
                 self.code_view.setTextCursor(cursor)
-                self.update()
+                self.update_state()
 
-    def repeat_step_at_cursor(self):
-        self.update()
+    def repeat_step_at_cursor(self) -> None:
+        self.update_state()
         pos = self.code_view.textCursor().position()
         part = self.state.part_at(pos)
         if part and part[2] == 'rewrite' and part[3] in self.state.rewrites:
             rule = self.state.rewrites[part[3]].rule
             self.code_view.add_line_below('  = ? by ' + rule.name)
-            self.update()
+            self.update_state()
             self.next_rewrite_at_cursor()
 
-    def update(self, quiet=False):
+    def update_state(self, quiet: bool=False) -> None:
         self.code_view.set_current_region(None)
         self.state.update(self.code_view.toPlainText())
 
@@ -317,9 +321,9 @@ class Editor(QMainWindow):
         e.accept()
 
 class CheckThread(QThread):
-    def __init__(self, rw: RewriteState, parent: Optional[QObject] = None):
+    def __init__(self, rw: RewriteState, parent: Optional[QObject] = None) -> None:
         super().__init__(parent)
         self.rw = rw
 
-    def run(self):
+    def run(self) -> None:
         self.rw.check()
