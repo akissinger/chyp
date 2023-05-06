@@ -17,7 +17,7 @@ from __future__ import annotations
 from typing import List
 from PySide6.QtCore import QDir, QFileInfo, QSettings, Signal
 from PySide6.QtGui import QFont, QTextDocument
-from PySide6.QtWidgets import QFileDialog, QPlainTextDocumentLayout, QWidget
+from PySide6.QtWidgets import QDialog, QFileDialog, QMessageBox, QPlainTextDocumentLayout, QWidget
 
 from .highlighter import ChypHighlighter
 
@@ -47,45 +47,74 @@ class ChypDocument(QTextDocument):
         recent_files = recent_files[:10]
         conf.setValue('recent_files', recent_files)
         self.recentFilesChanged.emit()
-        # self.editor.update_open_recent()
+
+    def confirm_close(self) -> bool:
+        if self.isModified():
+            text = "Do you wish to save changes to {}?".format(
+                    self.file_name if self.file_name != '' else 'Untitled')
+            res = QMessageBox.question(self.parent_widget,
+                                       "Save changes",
+                                       text,
+                                       QMessageBox.StandardButton.Yes |
+                                         QMessageBox.StandardButton.No |
+                                         QMessageBox.StandardButton.Cancel,
+                                       QMessageBox.StandardButton.Yes)
+
+            if res == QMessageBox.StandardButton.Yes:
+                return self.save()
+            elif res == QMessageBox.StandardButton.No:
+                return True
+            else:
+                return False
+        else:
+            return True
 
     def new(self) -> None:
-        self.file_name = ''
-        self.setPlainText('')
-        self.setModified(False)
-        self.fileNameChanged.emit()
+        if self.confirm_close():
+            self.file_name = ''
+            self.setPlainText('')
+            self.setModified(False)
+            self.fileNameChanged.emit()
 
-    def load(self, file_name: str) -> None:
-        self.file_name = file_name
-        with open(file_name) as f:
-            self.setPlainText(f.read())
-        self.add_to_recent_files(self.file_name)
-        self.setModified(False)
-        self.fileNameChanged.emit()
+    # def load(self, file_name: str) -> None:
+    #     self.file_name = file_name
+    #     with open(file_name) as f:
+    #         self.setPlainText(f.read())
+    #     self.add_to_recent_files(self.file_name)
+    #     self.setModified(False)
+    #     self.fileNameChanged.emit()
 
-    def save(self) -> None:
+    def save(self) -> bool:
         if self.file_name:
             with open(self.file_name, 'w') as f:
                 f.write(self.toPlainText())
             self.add_to_recent_files(self.file_name)
             self.setModified(False)
             self.fileNameChanged.emit()
+            return True
         else:
-            self.save_as()
+            return self.save_as()
 
-    def open(self) -> None:
-        conf = QSettings('chyp', 'chyp')
-        o = conf.value('last_dir')
-        last_dir = o if isinstance(o, str) else QDir.home().absolutePath()
-        file_name, _ = QFileDialog.getOpenFileName(self.parent_widget,
-                                                   "Open File",
-                                                   last_dir,
-                                                   'chyp files (*.chyp)')
-        if file_name:
-            conf.setValue('last_dir', QFileInfo(file_name).absolutePath())
-            self.load(file_name)
+    def open(self, file_name: str='') -> None:
+        if self.confirm_close():
+            conf = QSettings('chyp', 'chyp')
+            if file_name == '':
+                o = conf.value('last_dir')
+                last_dir = o if isinstance(o, str) else QDir.home().absolutePath()
+                file_name, _ = QFileDialog.getOpenFileName(self.parent_widget,
+                                                           "Open File",
+                                                           last_dir,
+                                                           'chyp files (*.chyp)')
+            if file_name:
+                conf.setValue('last_dir', QFileInfo(file_name).absolutePath())
+                self.file_name = file_name
+                with open(file_name) as f:
+                    self.setPlainText(f.read())
+                self.add_to_recent_files(self.file_name)
+                self.setModified(False)
+                self.fileNameChanged.emit()
 
-    def save_as(self) -> None:
+    def save_as(self) -> bool:
         conf = QSettings('chyp', 'chyp')
         o = conf.value('last_dir')
         last_dir = o if isinstance(o, str) else QDir.home().absolutePath()
@@ -98,6 +127,8 @@ class ChypDocument(QTextDocument):
                 file_name += '.chyp'
             self.file_name = file_name
             conf.setValue('last_dir', QFileInfo(file_name).absolutePath())
-            self.save()
+            return self.save()
+        else:
+            return False
 
 

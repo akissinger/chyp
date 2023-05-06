@@ -100,7 +100,7 @@ class Editor(QMainWindow):
 
         file_open = file_menu.addAction("&Open")
         file_open.setShortcut(QKeySequence(QKeySequence.StandardKey.Open))
-        file_open.triggered.connect(self.doc.open)
+        file_open.triggered.connect(lambda: self.doc.open())
 
         self.file_open_recent = file_menu.addMenu("Open &Recent")
         self.update_recent_files()
@@ -175,7 +175,7 @@ class Editor(QMainWindow):
 
     def update_recent_files(self) -> None:
         def open_recent(f: str) -> Callable:
-            return lambda: self.doc.load(f)
+            return lambda: self.doc.open(f)
 
         self.file_open_recent.clear()
         for f in self.doc.recent_files():
@@ -329,10 +329,13 @@ class Editor(QMainWindow):
                 print("%d: %s" % err)
 
     def closeEvent(self, e: QCloseEvent) -> None:
-        conf = QSettings('chyp', 'chyp')
-        conf.setValue("editor_window_geometry", self.saveGeometry())
-        conf.setValue("editor_splitter_state", self.splitter.saveState())
-        e.accept()
+        if self.doc.confirm_close():
+            conf = QSettings('chyp', 'chyp')
+            conf.setValue("editor_window_geometry", self.saveGeometry())
+            conf.setValue("editor_splitter_state", self.splitter.saveState())
+            e.accept()
+        else:
+            e.ignore()
 
 class CheckThread(QThread):
     def __init__(self, rw: RewriteState, parent: Optional[QObject] = None) -> None:
