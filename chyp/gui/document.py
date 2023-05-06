@@ -17,7 +17,7 @@ from __future__ import annotations
 from typing import List
 from PySide6.QtCore import QDir, QFileInfo, QSettings, Signal
 from PySide6.QtGui import QFont, QTextDocument
-from PySide6.QtWidgets import QDialog, QFileDialog, QMessageBox, QPlainTextDocumentLayout, QWidget
+from PySide6.QtWidgets import QFileDialog, QMessageBox, QPlainTextDocumentLayout, QWidget
 
 from .highlighter import ChypHighlighter
 
@@ -76,25 +76,6 @@ class ChypDocument(QTextDocument):
             self.setModified(False)
             self.fileNameChanged.emit()
 
-    # def load(self, file_name: str) -> None:
-    #     self.file_name = file_name
-    #     with open(file_name) as f:
-    #         self.setPlainText(f.read())
-    #     self.add_to_recent_files(self.file_name)
-    #     self.setModified(False)
-    #     self.fileNameChanged.emit()
-
-    def save(self) -> bool:
-        if self.file_name:
-            with open(self.file_name, 'w') as f:
-                f.write(self.toPlainText())
-            self.add_to_recent_files(self.file_name)
-            self.setModified(False)
-            self.fileNameChanged.emit()
-            return True
-        else:
-            return self.save_as()
-
     def open(self, file_name: str='') -> None:
         if self.confirm_close():
             conf = QSettings('chyp', 'chyp')
@@ -114,10 +95,24 @@ class ChypDocument(QTextDocument):
                 self.setModified(False)
                 self.fileNameChanged.emit()
 
+    def save(self) -> bool:
+        if self.file_name:
+            with open(self.file_name, 'w') as f:
+                f.write(self.toPlainText())
+            self.add_to_recent_files(self.file_name)
+            self.setModified(False)
+            self.fileNameChanged.emit()
+            return True
+        else:
+            return self.save_as()
+
     def save_as(self) -> bool:
         conf = QSettings('chyp', 'chyp')
         o = conf.value('last_dir')
         last_dir = o if isinstance(o, str) else QDir.home().absolutePath()
+
+        # open save-as box. note we confirm overwrite manually because the GTK/linux native
+        # dialog doesn't do this correctly.
         file_name, _ = QFileDialog.getSaveFileName(self.parent_widget,
                                                    "Save File",
                                                    last_dir,
