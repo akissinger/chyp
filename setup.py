@@ -10,10 +10,10 @@ data_files = []
 
 setuptools.setup(
     name="chyp",
-    version="0.2",
+    version="0.2.2",
     author="Aleks Kissinger",
     author_email="aleks0@gmail.com",
-    description="A compositional hypergraph library",
+    description="An interactive theorem prover for monoidal categories",
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/akissinger/chyp",

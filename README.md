@@ -13,16 +13,23 @@ Currently, Chyp implements the theory described in part II, using monogamous acy
 
 # Installation
 
-Chyp can be installed using `pip` as follows:
+The latest release of Chyp can be installed via [pip](https://pypi.org/project/chyp/) and run from the command line as follows:
+
+```bash
+pip install chyp
+chyp
+```
+
+This will automatically install dependencies: [PySide6](https://pypi.org/project/PySide6/) (Qt6 GUI bindings), [cvxpy](https://www.cvxpy.org/) (a convex solver used for diagram layout), and [lark](https://github.com/lark-parser/lark) (parser library).
+
+To run the latest git version, execute the following commands:
 
 ```bash
 git clone https://github.com/akissinger/chyp.git
 cd chyp
 pip install .
+python3 -m chyp
 ```
-
-It can then be run by running `chyp` from the command line or `python3 -m chyp` from inside the source directory. This will automatically install dependencies: [PySide6](https://pypi.org/project/PySide6/) (Qt6 GUI bindings), [cvxpy](https://www.cvxpy.org/) (convex solver for diagram layout), and [lark](https://github.com/lark-parser/lark) (parser library).
-
 
 # Using Chyp
 
