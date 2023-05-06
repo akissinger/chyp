@@ -15,18 +15,26 @@
 
 from __future__ import annotations
 from typing import List
-from PySide6.QtCore import QDir, QFileInfo, QSettings, QObject
-from PySide6.QtWidgets import QFileDialog
+from PySide6.QtCore import QDir, QFileInfo, QSettings, Signal
+from PySide6.QtGui import QFont, QTextDocument
+from PySide6.QtWidgets import QFileDialog, QPlainTextDocumentLayout
+
+from .highlighter import ChypHighlighter
 
 from . import editor
 
-class Document(QObject):
-    def __init__(self, editor: "editor.Editor") -> None:
-        super().__init__()
-        self.editor = editor
-        self.code_view = editor.code_view
-        self.file_name = ''
+class ChypDocument(QTextDocument):
+    recentFilesChanged = Signal()
+    fileNameChanged = Signal()
 
+    def __init__(self, editor: "editor.Editor") -> None:
+        super().__init__(parent=editor)
+        self.setDefaultFont(QFont("monospace", 14))
+        self.setDocumentLayout(QPlainTextDocumentLayout(self))
+        self.highlighter = ChypHighlighter(self)
+        self.editor = editor
+        self.file_name = ''
+        
     def recent_files(self) -> List[str]:
         conf = QSettings('chyp', 'chyp')
         o = conf.value('recent_files', [])
@@ -40,25 +48,30 @@ class Document(QObject):
         recent_files.insert(0, file_name)
         recent_files = recent_files[:10]
         conf.setValue('recent_files', recent_files)
-        self.editor.update_file()
+        self.recentFilesChanged.emit()
+        # self.editor.update_open_recent()
 
     def new(self) -> None:
         self.file_name = ''
-        self.code_view.setPlainText('')
+        self.setPlainText('')
+        self.setModified(False)
+        self.fileNameChanged.emit()
 
     def load(self, file_name: str) -> None:
         self.file_name = file_name
         with open(file_name) as f:
-            self.code_view.setPlainText(f.read())
+            self.setPlainText(f.read())
         self.add_to_recent_files(self.file_name)
-        self.editor.update_file()
+        self.setModified(False)
+        self.fileNameChanged.emit()
 
     def save(self) -> None:
         if self.file_name:
             with open(self.file_name, 'w') as f:
-                f.write(self.code_view.toPlainText())
+                f.write(self.toPlainText())
             self.add_to_recent_files(self.file_name)
-            self.editor.update_file()
+            self.setModified(False)
+            self.fileNameChanged.emit()
         else:
             self.save_as()
 

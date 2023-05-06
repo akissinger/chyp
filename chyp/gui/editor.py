@@ -29,7 +29,8 @@ from ..rewrite import rewrite
 
 from .graphview import GraphView
 from .codeview import CodeView
-from .document import Document
+from .document import ChypDocument
+from .highlighter import STATUS_GOOD, STATUS_BAD
 
 class Editor(QMainWindow):
     def __init__(self) -> None:
@@ -66,9 +67,15 @@ class Editor(QMainWindow):
         self.splitter.addWidget(self.graph_panel)
 
         self.code_view = CodeView()
+        self.doc = ChypDocument(self)
+        self.code_view.setDocument(self.doc)
+        self.doc.fileNameChanged.connect(self.update_file_name)
+        self.doc.modificationChanged.connect(self.update_file_name)
+        self.doc.recentFilesChanged.connect(self.update_recent_files)
+        self.update_file_name()
+
         self.splitter.addWidget(self.code_view)
         self.code_view.setFocus()
-        self.doc = Document(self)
 
         self.build_menu()
 
@@ -96,7 +103,7 @@ class Editor(QMainWindow):
         file_open.triggered.connect(self.doc.open)
 
         self.file_open_recent = file_menu.addMenu("Open &Recent")
-        self.update_file()
+        self.update_recent_files()
 
         file_menu.addSeparator()
 
@@ -153,13 +160,20 @@ class Editor(QMainWindow):
 
         self.setMenuBar(menu)
 
-    def update_file(self) -> None:
+    def update_file_name(self) -> None:
+        title = 'chyp - '
         if self.doc.file_name:
             fi = QFileInfo(self.doc.file_name)
-            self.setWindowTitle('chyp - ' + fi.fileName())
+            title += fi.fileName()
         else:
-            self.setWindowTitle('chyp')
+            title += 'Untitled'
 
+        if self.doc.isModified():
+            title += '*'
+
+        self.setWindowTitle(title)
+
+    def update_recent_files(self) -> None:
         def open_recent(f: str) -> Callable:
             return lambda: self.doc.load(f)
 
@@ -248,9 +262,9 @@ class Editor(QMainWindow):
                     rhs = rhs0
 
                 if rw.status == RewriteState.VALID:
-                    self.code_view.set_current_region((part[0], part[1]), status=CodeView.STATUS_GOOD)
+                    self.code_view.set_current_region((part[0], part[1]), status=STATUS_GOOD)
                 elif rw.status == RewriteState.INVALID:
-                    self.code_view.set_current_region((part[0], part[1]), status=CodeView.STATUS_BAD)
+                    self.code_view.set_current_region((part[0], part[1]), status=STATUS_BAD)
 
                 self.rhs_view.setVisible(True)
                 self.lhs_view.set_graph(lhs)
