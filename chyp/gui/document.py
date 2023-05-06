@@ -121,10 +121,20 @@ class ChypDocument(QTextDocument):
         file_name, _ = QFileDialog.getSaveFileName(self.parent_widget,
                                                    "Save File",
                                                    last_dir,
-                                                   'chyp files (*.chyp)')
+                                                   'chyp files (*.chyp)',
+                                                   'chyp files (*.chyp)',
+                                                   QFileDialog.Option.DontConfirmOverwrite)
         if file_name:
             if QFileInfo(file_name).suffix() == '':
                 file_name += '.chyp'
+
+            fi = QFileInfo(file_name)
+            if fi.exists():
+                res = QMessageBox.question(self.parent_widget,
+                                           "Confirm overwrite",
+                                           "File {} exists, do you wish to overwrite it?".format(fi.fileName()))
+                if res == QMessageBox.StandardButton.No:
+                    return False
             self.file_name = file_name
             conf.setValue('last_dir', QFileInfo(file_name).absolutePath())
             return self.save()

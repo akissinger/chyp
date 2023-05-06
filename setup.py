@@ -10,7 +10,7 @@ data_files = []
 
 setuptools.setup(
     name="chyp",
-    version="0.1",
+    version="0.2",
     author="Aleks Kissinger",
     author_email="aleks0@gmail.com",
     description="A compositional hypergraph library",
@@ -26,10 +26,10 @@ setuptools.setup(
         "License :: OSI Approved :: Apache Software License",
         "Operating System :: OS Independent",
     ],
-    packages=["chyp"],
+    packages=["chyp", "chyp.gui"],
     package_data={'': ['*.svg']},
     data_files=data_files,
     install_requires=["PySide6>=6.4.3", "lark>=1.1.5", "cvxpy>=1.3.1"],
     python_requires=">=3.7",
-    entry_points={'console_scripts': 'chyp=chyp.app:main'},
+    entry_points={'console_scripts': 'chyp=chyp.gui.app:main'},
 )
