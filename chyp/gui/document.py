@@ -17,22 +17,20 @@ from __future__ import annotations
 from typing import List
 from PySide6.QtCore import QDir, QFileInfo, QSettings, Signal
 from PySide6.QtGui import QFont, QTextDocument
-from PySide6.QtWidgets import QFileDialog, QPlainTextDocumentLayout
+from PySide6.QtWidgets import QFileDialog, QPlainTextDocumentLayout, QWidget
 
 from .highlighter import ChypHighlighter
-
-from . import editor
 
 class ChypDocument(QTextDocument):
     recentFilesChanged = Signal()
     fileNameChanged = Signal()
 
-    def __init__(self, editor: "editor.Editor") -> None:
-        super().__init__(parent=editor)
+    def __init__(self, parent: QWidget) -> None:
+        super().__init__(parent)
+        self.parent_widget = parent
         self.setDefaultFont(QFont("monospace", 14))
         self.setDocumentLayout(QPlainTextDocumentLayout(self))
         self.highlighter = ChypHighlighter(self)
-        self.editor = editor
         self.file_name = ''
         
     def recent_files(self) -> List[str]:
@@ -79,7 +77,7 @@ class ChypDocument(QTextDocument):
         conf = QSettings('chyp', 'chyp')
         o = conf.value('last_dir')
         last_dir = o if isinstance(o, str) else QDir.home().absolutePath()
-        file_name, _ = QFileDialog.getOpenFileName(self.editor,
+        file_name, _ = QFileDialog.getOpenFileName(self.parent_widget,
                                                    "Open File",
                                                    last_dir,
                                                    'chyp files (*.chyp)')
@@ -91,7 +89,7 @@ class ChypDocument(QTextDocument):
         conf = QSettings('chyp', 'chyp')
         o = conf.value('last_dir')
         last_dir = o if isinstance(o, str) else QDir.home().absolutePath()
-        file_name, _ = QFileDialog.getSaveFileName(self.editor,
+        file_name, _ = QFileDialog.getSaveFileName(self.parent_widget,
                                                    "Save File",
                                                    last_dir,
                                                    'chyp files (*.chyp)')
