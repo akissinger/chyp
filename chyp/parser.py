@@ -157,10 +157,15 @@ class ChypParseData(Transformer):
     @v_args(meta=True)
     def rewrite_part(self, meta: Meta, items: List[Any]) -> Tuple[int, int, int, Rule, Graph]:
         t_start,t_end,rhs = items[0]
-        inverse = items[1]
-        rule = items[2]
+
+        if len(items) == 3:
+            inverse = True
+            rule = items[2]
+        else:
+            inverse = False
+            rule = items[1]
         
-        if inverse:
+        if rule and inverse:
             rule.invert()
             rule.name = '-' + rule.name
 
