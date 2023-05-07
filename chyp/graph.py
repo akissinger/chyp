@@ -14,7 +14,7 @@
 # limitations under the License.
 
 from __future__ import annotations
-from typing import Set, List, Dict, Iterator, Any, Optional
+from typing import Set, List, Dict, Iterator, Any, Optional, Tuple
 import json
 import copy
 
@@ -241,6 +241,45 @@ class Graph:
         self.set_inputs([v if x == w else x for x in self.inputs()])
         self.set_outputs([v if x == w else x for x in self.outputs()])
         self.remove_vertex(w)
+
+    def explode_vertex(self, v: int) -> Tuple[List[int], List[int]]:
+        """Split a vertex into one copy for each input, in-tentacle, output, and out-tentacle
+
+        This is used for computing pushout complements of rules that aren't left-linear. Returns
+        a pair of lists containing the new input-like and output-like vertices, respectively.
+        """
+
+        new_vs: Tuple[List[int], List[int]] = ([], [])
+        vd = self.vertex_data(v)
+        def fresh(j: int) -> int:
+            v1 = self.add_vertex(vd.x, vd.y, vd.value)
+            new_vs[j].append(v1)
+            return v1
+
+        self.set_inputs([v1 if v1 != v else fresh(0) for v1 in self.inputs()])
+
+        for e in vd.in_edges:
+            ed = self.edge_data(e)
+            for i in range(len(ed.t)):
+                if ed.t[i] == v:
+                    ed.t[i] = fresh(0)
+                    self.vertex_data(ed.t[i]).in_edges.add(e)
+
+        self.set_outputs([v1 if v1 != v else fresh(1) for v1 in self.outputs()])
+
+        for e in vd.out_edges:
+            ed = self.edge_data(e)
+            for i in range(len(ed.s)):
+                if ed.s[i] == v:
+                    ed.s[i] = fresh(1)
+                    self.vertex_data(ed.s[i]).out_edges.add(e)
+
+
+        vd.in_edges = set()
+        vd.out_edges = set()
+        self.remove_vertex(v, strict=True)
+
+        return new_vs
 
     def insert_id_after(self, v: int, reverse: bool = False) -> int:
         """Insert a new identity hyperedge after the given vertex
