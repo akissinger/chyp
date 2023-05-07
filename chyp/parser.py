@@ -1,5 +1,5 @@
 from typing import Any, Dict, List, Optional, Tuple
-from lark import Lark, Transformer, UnexpectedCharacters, UnexpectedEOF, UnexpectedToken, v_args
+from lark import Lark, Transformer, UnexpectedCharacters, UnexpectedEOF, UnexpectedInput, UnexpectedToken, v_args
 from lark.tree import Meta
 
 from .graph import Graph, GraphError, gen, perm, identity
@@ -12,7 +12,8 @@ GRAMMAR = Lark("""
     let : "let" var "=" term
     rule : "rule" var ":" term "=" term
     rewrite : "rewrite" var ":" term rewrite_part*
-    rewrite_part : "=" term_hole "by" rule_ref num?
+    rewrite_part : "=" term_hole "by" inverse? rule_ref
+    inverse : "-"
     ?term  : par_term | seq
     ?par_term : "(" term ")" | par | perm | id | term_ref
     par : par_term "*" par_term
@@ -28,8 +29,10 @@ GRAMMAR = Lark("""
 
     %import common.CNAME
     %import common.INT
-    %ignore " "
-    %ignore "\\n"
+    %import common.WS
+    %import common.SH_COMMENT
+    %ignore WS
+    %ignore SH_COMMENT
     """,
     parser='lalr',
     propagate_positions=True)
@@ -82,7 +85,7 @@ class ChypParseData(Transformer):
         if s in self.rules:
             return self.rules[str(items[0])]
         else:
-            self.errors.append((meta.line, 'Undefined term: ' + s))
+            self.errors.append((meta.line, 'Undefined rule: ' + s))
             return None
     
     def par(self, items: List[Any]) -> Optional[Graph]:
@@ -145,13 +148,22 @@ class ChypParseData(Transformer):
                 lhs = rhs.copy() if rhs else None
                 self.parts.append((start, end, "rewrite", name + ":" + str(i)))
                 start = end
-            if rhs:
-                self.rules[name] = Rule(term, rhs, name)
+            if term and rhs:
+                try:
+                    self.rules[name] = Rule(term, rhs, name=name)
+                except RuleError as e:
+                    self.errors.append((meta.line, str(e)))
 
     @v_args(meta=True)
     def rewrite_part(self, meta: Meta, items: List[Any]) -> Tuple[int, int, int, Rule, Graph]:
         t_start,t_end,rhs = items[0]
-        rule = items[1]
+        inverse = items[1]
+        rule = items[2]
+        
+        if inverse:
+            rule.invert()
+            rule.name = '-' + rule.name
+
         return (meta.end_pos, t_start, t_end, rule, rhs)
 
 
@@ -167,11 +179,11 @@ def parse(code: str) -> ChypParseData:
         parse_data.transform(tree)
         parse_data.parsed = True
     except UnexpectedEOF as e:
-        parse_data.errors += [(-1, str(e))]
+        parse_data.errors += [(e.line, "Parse error, unexpected end of file:\n" + e.get_context(code))]
     except UnexpectedToken as e:
-        parse_data.errors += [(e.token.line, str(e))]
+        parse_data.errors += [(e.line, "Parse error, unexpected token:\n" + e.get_context(code))]
     except UnexpectedCharacters as e:
-        parse_data.errors += [(e.line, str(e))]
+        parse_data.errors += [(e.line, "Parse error, unexpected characters:\n" + e.get_context(code))]
 
     return parse_data
 

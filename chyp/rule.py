@@ -15,6 +15,8 @@
 
 from __future__ import annotations
 import itertools
+
+from numpy import invert
 from .graph import Graph
 
 class RuleError(Exception):
@@ -24,12 +26,19 @@ class Rule:
     lhs: Graph
     rhs: Graph
 
-    def __init__(self, lhs: Graph, rhs: Graph, name: str=''):
+    def __init__(self, lhs: Graph, rhs: Graph, name: str='', invertable: bool=True):
         if len(lhs.inputs()) != len(rhs.inputs()) or len(lhs.outputs()) != len(rhs.outputs()):
             raise RuleError("Inputs and outputs must match on LHS and RHS of rule")
         self.lhs = lhs
         self.rhs = rhs
         self.name = name
+        self.invertable = invertable
+
+    def invert(self):
+        if self.invertable:
+            self.lhs, self.rhs = (self.rhs, self.lhs)
+        else:
+            raise ValueError("Attempted to invert non-invertable rule.")
 
     def is_left_linear(self) -> bool:
         """Returns True if boundary on lhs embeds injectively"""

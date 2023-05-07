@@ -134,7 +134,7 @@ class Editor(QMainWindow):
 
         code_run = code_menu.addAction("&Run")
         code_run.setShortcut(QKeySequence("Ctrl+R"))
-        code_run.triggered.connect(self.update)
+        code_run.triggered.connect(self.update_state)
 
         code_add_rewrite_step = code_menu.addAction("&Add Rewrite Step")
         code_add_rewrite_step.setShortcut(QKeySequence("Ctrl+Return"))

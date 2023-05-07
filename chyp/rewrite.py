@@ -51,27 +51,28 @@ def dpo(r: Rule, m: Match) -> Iterable[Match]:
                     raise NotImplementedError("Rewriting modulo Frobenius not yet supported.")
             elif in_c > 1 or out_c > 1:
                 raise NotImplementedError("Rewriting modulo Frobenius not yet supported.")
-                
         else:
             ctx.remove_vertex(v1)
 
     # this will be the rewritten graph
-    h = ctx.copy()
-
-    # TODO: we should make a copy of ctx if we intend to keep it
-    # ctx = ctx.copy()
-    # ctx.set_outputs(ctx.outputs() + [m.vmap[v] for v in r.lhs.inputs()])
-    # ctx.set_inputs(ctx.inputs() + [m.vmap[v] for v in r.lhs.outputs()])
+    h = ctx
 
     # this will embed r.rhs into h
     m1 = Match(r.rhs, h)
     # vmap1: Dict[int,int] = {}
 
-    # first map the boundary, using the matching of the lhs
+    # first map the inputs, using the matching of the lhs
     for vl,vr in zip(r.lhs.inputs(), r.rhs.inputs()):
         m1.vmap[vr] = in_map[vl] if vl in in_map else m.vmap[vl]
+
+    # next map the outputs. if the same vertex is an input and an output in r.rhs, then
+    # merge them in h.
     for vl,vr in zip(r.lhs.outputs(), r.rhs.outputs()):
-        m1.vmap[vr] = out_map[vl] if vl in out_map else m.vmap[vl]
+        vr1 = out_map[vl] if vl in out_map else m.vmap[vl]
+        if vr in m1.vmap:
+            h.merge_vertices(m1.vmap[vr], vr1)
+        else:
+            m1.vmap[vr] = vr1
 
     # then map the interior to new, fresh vertices
     for v in r.rhs.vertices():

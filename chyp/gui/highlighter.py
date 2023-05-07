@@ -14,6 +14,7 @@ KEYWORD = '#8aadf4'
 IDENT =   '#91d7e3'
 NUM =     '#ed8796'
 OP =      '#eed49f'
+COMMENT = '#8087a2'
 BG_GOOD = '#36504f'
 BG_BAD  = '#863a4f'
 
@@ -42,6 +43,10 @@ class ChypHighlighter(QSyntaxHighlighter):
         for m in re.finditer('(\\W|^)([0-9]+)(\\W|$)', text):
             x,y = m.span(2)
             self.setFormat(x, y-x, QColor(NUM))
+
+        for m in re.finditer('#.*$', text):
+            x,y = m.span(0)
+            self.setFormat(x, y-x, QColor(COMMENT))
 
         # highlight the region that is currently in focus
         if self.region:
