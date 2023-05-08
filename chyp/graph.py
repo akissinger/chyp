@@ -14,7 +14,7 @@
 # limitations under the License.
 
 from __future__ import annotations
-from typing import Set, List, Dict, Iterator, Any, Optional, Tuple
+from typing import Iterable, Set, List, Dict, Iterator, Any, Optional, Tuple
 import json
 import copy
 
@@ -217,6 +217,19 @@ class Graph:
 
     def is_boundary(self, v: int) -> bool:
         return self.is_input(v) or self.is_output(v)
+
+    def successors(self, vs: Iterable[int]) -> Set[int]:
+        succ: Set[int] = set()
+        current = list(vs)
+        while len(current) > 0:
+            v = current.pop()
+            for e in self.out_edges(v):
+                for v1 in self.target(e):
+                    if v1 not in succ:
+                        succ.add(v1)
+                        current.append(v1)
+
+        return succ
 
     def merge_vertices(self, v: int, w: int) -> None:
         """Identify the two vertices given

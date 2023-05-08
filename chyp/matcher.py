@@ -206,6 +206,12 @@ class Match:
     def is_injective(self) -> bool:
         return len(self.vmap) == len(self.vimg)
 
+    def is_convex(self) -> bool:
+        in_img = [self.vmap[v] for v in self.dom.inputs() if v in self.vmap]
+        out_img = [self.vmap[v] for v in self.dom.outputs() if v in self.vmap]
+        # TODO finish
+        return True
+
     # def is_cospan_iso(self) -> bool:
     #     d_in = self.dom.inputs()
     #     d_out = self.dom.outputs()

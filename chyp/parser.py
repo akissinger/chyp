@@ -1,5 +1,5 @@
 from typing import Any, Dict, List, Optional, Tuple
-from lark import Lark, Transformer, UnexpectedCharacters, UnexpectedEOF, UnexpectedToken, v_args
+from lark import Lark, Transformer, UnexpectedInput, v_args
 from lark.tree import Meta
 
 from .graph import Graph, GraphError, gen, perm, identity
@@ -12,7 +12,7 @@ GRAMMAR = Lark("""
     let : "let" var "=" term
     rule : "rule" var ":" term (eq | le) term
     rewrite : "rewrite" [converse] var ":" term rewrite_part*
-    rewrite_part : (eq | le) term_hole "by" [converse] rule_ref
+    rewrite_part : (eq | le) term_hole [ "by" [converse] rule_ref ]
     converse : "-"
     ?term  : par_term | seq
     ?par_term : "(" term ")" | par | perm | id | term_ref
@@ -44,7 +44,7 @@ class ChypParseData(Transformer):
 
     def __init__(self) -> None:
         self.graphs: Dict[str, Graph] = dict()
-        self.rules: Dict[str, Rule] = dict()
+        self.rules: Dict[str, Rule] = {'refl': Rule(Graph(), Graph(), name="refl")}
         self.rewrites: Dict[str, Tuple[int, int, bool, Optional[Rule],
                                        Optional[Graph], Optional[Graph],
                                        Optional[Graph], Optional[Graph]]] = dict()
@@ -120,24 +120,33 @@ class ChypParseData(Transformer):
     @v_args(meta=True)
     def gen(self, meta: Meta, items: List[Any]) -> None:
         name, arity, coarity = items
-        self.graphs[name] = gen(name, arity, coarity)
+        if not name in self.graphs:
+            self.graphs[name] = gen(name, arity, coarity)
+        else:
+            self.errors.append((meta.line, "Term '{}' already defined.".format(name)))
         self.parts.append((meta.start_pos, meta.end_pos, 'gen', name))
         
     @v_args(meta=True)
     def let(self, meta: Meta, items: List[Any]) -> None:
         name, graph = items
-        if graph:
-            self.graphs[name] = graph
+        if not name in self.graphs:
+            if graph:
+                self.graphs[name] = graph
+        else:
+            self.errors.append((meta.line, "Term '{}' already defined.".format(name)))
         self.parts.append((meta.start_pos, meta.end_pos, 'let', name))
 
     @v_args(meta=True)
     def rule(self, meta: Meta, items: List[Any]) -> None:
         name, lhs, invertible, rhs = items
-        if lhs and rhs:
-            try:
-                self.rules[name] = Rule(lhs, rhs, name, invertible)
-            except RuleError as e:
-                self.errors.append((meta.line, str(e)))
+        if not name in self.rules:
+            if lhs and rhs:
+                try:
+                    self.rules[name] = Rule(lhs, rhs, name, invertible)
+                except RuleError as e:
+                    self.errors.append((meta.line, str(e)))
+        else:
+            self.errors.append((meta.line, "Rule '{}' already defined.".format(name)))
         self.parts.append((meta.start_pos, meta.end_pos, 'rule', name))
 
     @v_args(meta=True)
@@ -183,7 +192,10 @@ class ChypParseData(Transformer):
                         else:
                             self.errors.append((meta.line, "Trying to prove converse for unknown rule: " + base_name))
                     else:
-                        self.rules[name] = Rule(term, rhs, name=name, equiv=all_equiv)
+                        if not name in self.rules:
+                            self.rules[name] = Rule(term, rhs, name=name, equiv=all_equiv)
+                        else:
+                            self.errors.append((meta.line, "Rule '{}' already defined.".format(name)))
                 except RuleError as e:
                     self.errors.append((meta.line, str(e)))
 
@@ -193,7 +205,7 @@ class ChypParseData(Transformer):
         t_start,t_end,rhs = items[1]
         converse = True if items[2] else False
 
-        rule = items[3]
+        rule = items[3] if items[3] else self.rules['refl']
         if rule and converse:
             rule = items[3].converse()
 
@@ -214,12 +226,18 @@ def parse(code: str) -> ChypParseData:
         tree = GRAMMAR.parse(code)
         parse_data.transform(tree)
         parse_data.parsed = True
-    except UnexpectedEOF as e:
-        parse_data.errors += [(e.line, "Parse error, unexpected end of file:\n" + e.get_context(code))]
-    except UnexpectedToken as e:
-        parse_data.errors += [(e.line, "Parse error, unexpected token:\n" + e.get_context(code))]
-    except UnexpectedCharacters as e:
-        parse_data.errors += [(e.line, "Parse error, unexpected characters:\n" + e.get_context(code))]
+    except UnexpectedInput as e:
+        msg = 'Parse error: '
+        e_lines = e.get_context(code).splitlines()
+        if len(e_lines) >= 2:
+            parse_data.errors += [(e.line, msg + e_lines[0] + '\n' + len(msg)*' ' + e_lines[1])]
+        else:
+            parse_data.errors += [(e.line, msg + e_lines[0])]
+
+    # except UnexpectedToken as e:
+    #     parse_data.errors += [(e.line, "Parse error, unexpected token:\n" + e.get_context(code))]
+    # except UnexpectedCharacters as e:
+    #     parse_data.errors += [(e.line, "Parse error, unexpected characters:\n" + e.get_context(code))]
 
     return parse_data
 

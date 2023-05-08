@@ -14,10 +14,12 @@
 # limitations under the License.
 
 from __future__ import annotations
+from logging import error
 from typing import Callable, Dict, Optional, Tuple
-from PySide6.QtCore import QByteArray, QFileInfo, QObject, QThread, Qt, QSettings
+from PySide6.QtCore import QAbstractItemModel, QByteArray, QFileInfo, QObject, QThread, Qt, QSettings
 from PySide6.QtGui import QCloseEvent, QKeySequence, QTextCursor
-from PySide6.QtWidgets import QApplication, QHBoxLayout, QMainWindow, QMenuBar, QSplitter, QVBoxLayout, QWidget
+from PySide6.QtWidgets import QApplication, QHBoxLayout, QMainWindow, QMenuBar, QSplitter, QTreeView, QVBoxLayout, QWidget
+from cvxpy.utilities.key_utils import none_to_empty
 
 from chyp.term import graph_to_term
 
@@ -27,6 +29,7 @@ from ..state import RewriteState, State
 from ..matcher import match_rule
 from ..rewrite import rewrite
 
+from .errorlist import ErrorListModel
 from .graphview import GraphView
 from .codeview import CodeView
 from .document import ChypDocument
@@ -76,6 +79,10 @@ class Editor(QMainWindow):
 
         self.splitter.addWidget(self.code_view)
         self.code_view.setFocus()
+
+        self.error_view = QTreeView()
+        self.error_view.setModel(ErrorListModel())
+        self.splitter.addWidget(self.error_view)
 
         self.build_menu()
 
@@ -132,9 +139,13 @@ class Editor(QMainWindow):
         edit_redo.setShortcut(QKeySequence(QKeySequence.StandardKey.Redo))
         edit_redo.triggered.connect(self.code_view.redo)
 
-        code_run = code_menu.addAction("&Run")
-        code_run.setShortcut(QKeySequence("Ctrl+R"))
-        code_run.triggered.connect(self.update_state)
+        # code_run = code_menu.addAction("&Run")
+        # code_run.setShortcut(QKeySequence("Ctrl+R"))
+        # code_run.triggered.connect(self.update_state)
+
+        code_show_errors = code_menu.addAction("Show &Errors")
+        code_show_errors.setShortcut(QKeySequence("F4"))
+        code_show_errors.triggered.connect(self.show_errors)
 
         code_add_rewrite_step = code_menu.addAction("&Add Rewrite Step")
         code_add_rewrite_step.setShortcut(QKeySequence("Ctrl+Return"))
@@ -203,6 +214,27 @@ class Editor(QMainWindow):
             cursor.setPosition(p1[1])
             self.code_view.setTextCursor(cursor)
             
+
+    def show_errors(self):
+        conf = QSettings('chyp', 'chyp')
+        error_panel_size = conf.value('error_panel_size', 100)
+        if isinstance(error_panel_size, str):
+            error_panel_size = int(error_panel_size)
+        if not isinstance(error_panel_size, int) or error_panel_size == 0:
+            error_panel_size = 100
+        
+        sizes = self.splitter.sizes()
+        if sizes[2] == 0:
+            sizes[2] = error_panel_size
+            if sizes[1] >= error_panel_size + 50:
+                sizes[1] -= error_panel_size
+            else:
+                sizes[0] -= error_panel_size
+        else:
+            conf.setValue('error_panel_size', sizes[2])
+            sizes[1] += sizes[2]
+            sizes[2] = 0
+        self.splitter.setSizes(sizes)
 
     def show_at_cursor(self) -> None:
         if not self.parsed: return
@@ -320,6 +352,10 @@ class Editor(QMainWindow):
     def update_state(self, quiet: bool=False) -> None:
         self.code_view.set_current_region(None)
         self.state.update(self.code_view.toPlainText())
+        
+        model = self.error_view.model()
+        if isinstance(model, ErrorListModel):
+            model.set_errors(self.state.errors)
 
         if len(self.state.errors) == 0:
             self.lhs_view.set_graph(Graph())
@@ -336,6 +372,9 @@ class Editor(QMainWindow):
             conf = QSettings('chyp', 'chyp')
             conf.setValue("editor_window_geometry", self.saveGeometry())
             conf.setValue("editor_splitter_state", self.splitter.saveState())
+            sizes = self.splitter.sizes()
+            if sizes[2] != 0:
+                conf.setValue('error_panel_size', sizes[2])
             e.accept()
         else:
             e.ignore()
