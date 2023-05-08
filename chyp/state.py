@@ -36,35 +36,50 @@ class RewriteState:
 
     def __init__(self,
                  term_pos: Tuple[int,int] = (0,0),
+                 equiv: bool=True,
                  rule: Optional[Rule]=None,
                  lhs: Optional[Graph]=None,
                  rhs: Optional[Graph]=None,
+                 lhs_match: Optional[Graph]=None,
+                 rhs_match: Optional[Graph]=None,
                  stub: bool=False) -> None:
         self.status = RewriteState.UNCHECKED
         self.term_pos = term_pos
-        self.rule = rule if rule else Rule(Graph(), Graph())
-        self.lhs = lhs if lhs else Graph()
-        self.rhs = rhs if rhs else Graph()
+        self.equiv = equiv
+        self.rule = rule
+        self.lhs = lhs
+        self.rhs = rhs
+        self.lhs_match = lhs_match
+        self.rhs_match = rhs_match
         self.stub = stub
 
     def check(self) -> None:
-        for m_lhs in match_rule(self.rule, self.lhs):
-            for m_rhs in dpo(self.rule, m_lhs):
-                iso = find_iso(m_rhs.cod, self.rhs)
-                if iso:
-                    self.status = RewriteState.VALID
+        if self.rule and self.lhs and self.rhs:
+            # check for any constraints on the LHS and RHS first
+            if self.lhs_match and not find_iso(self.lhs, self.lhs_match):
+                self.status = RewriteState.INVALID
+            if self.rhs_match and not find_iso(self.rhs, self.rhs_match):
+                self.status = RewriteState.INVALID
 
-                    for v in m_lhs.dom.vertices():
-                        self.lhs.vertex_data(m_lhs.vmap[v]).highlight = True
-                    for e in m_lhs.dom.edges():
-                        self.lhs.edge_data(m_lhs.emap[e]).highlight = True
+            # if all LHS/RHS constraints are satisfied, try to prove the rule step by rewriting
+            if self.status == RewriteState.CHECKING:
+                for m_lhs in match_rule(self.rule, self.lhs):
+                    for m_rhs in dpo(self.rule, m_lhs):
+                        iso = find_iso(m_rhs.cod, self.rhs)
+                        if iso:
+                            self.status = RewriteState.VALID
 
-                    for v in m_rhs.dom.vertices():
-                        self.rhs.vertex_data(iso.vmap[m_rhs.vmap[v]]).highlight = True
-                    for e in m_rhs.dom.edges():
-                        self.rhs.edge_data(iso.emap[m_rhs.emap[e]]).highlight = True
+                            for v in m_lhs.dom.vertices():
+                                self.lhs.vertex_data(m_lhs.vmap[v]).highlight = True
+                            for e in m_lhs.dom.edges():
+                                self.lhs.edge_data(m_lhs.emap[e]).highlight = True
 
-                    break
+                            for v in m_rhs.dom.vertices():
+                                self.rhs.vertex_data(iso.vmap[m_rhs.vmap[v]]).highlight = True
+                            for e in m_rhs.dom.edges():
+                                self.rhs.edge_data(iso.emap[m_rhs.emap[e]]).highlight = True
+
+                            break
 
         if self.status != RewriteState.VALID:
             self.status = RewriteState.INVALID
@@ -84,9 +99,9 @@ class State:
         self.parts = parse_data.parts
         self.errors = parse_data.errors
 
-        for name, (t_start, t_end, rule, lhs, rhs) in parse_data.rewrites.items():
-            stub = rule == None
-            self.rewrites[name] = RewriteState((t_start, t_end), rule, lhs, rhs, stub)
+        for name, (t_start, t_end, equiv, rule, lhs, rhs, lhs_match, rhs_match) in parse_data.rewrites.items():
+            stub = not (':' in name)
+            self.rewrites[name] = RewriteState((t_start, t_end), equiv, rule, lhs, rhs, lhs_match, rhs_match, stub)
 
     def part_with_index_at(self, pos: int) -> Optional[Tuple[int, Tuple[int,int,str,str]]]:
         p0 = None

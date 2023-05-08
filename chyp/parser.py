@@ -1,5 +1,5 @@
 from typing import Any, Dict, List, Optional, Tuple
-from lark import Lark, Transformer, UnexpectedCharacters, UnexpectedEOF, UnexpectedInput, UnexpectedToken, v_args
+from lark import Lark, Transformer, UnexpectedCharacters, UnexpectedEOF, UnexpectedToken, v_args
 from lark.tree import Meta
 
 from .graph import Graph, GraphError, gen, perm, identity
@@ -10,10 +10,10 @@ GRAMMAR = Lark("""
     ?statement : gen | let | rule | rewrite
     gen : "gen" var ":" num "->" num
     let : "let" var "=" term
-    rule : "rule" var ":" term "=" term
-    rewrite : "rewrite" var ":" term rewrite_part*
-    rewrite_part : "=" term_hole "by" inverse? rule_ref
-    inverse : "-"
+    rule : "rule" var ":" term (eq | le) term
+    rewrite : "rewrite" [converse] var ":" term rewrite_part*
+    rewrite_part : (eq | le) term_hole "by" [converse] rule_ref
+    converse : "-"
     ?term  : par_term | seq
     ?par_term : "(" term ")" | par | perm | id | term_ref
     par : par_term "*" par_term
@@ -21,6 +21,8 @@ GRAMMAR = Lark("""
     perm : "sw" [ "[" num ("," num)* "]" ]
     id : "id"
 
+    eq : "=" | "=="
+    le : "<=" | "~>"
     num : INT
     var : CNAME
     term_ref : CNAME
@@ -35,14 +37,17 @@ GRAMMAR = Lark("""
     %ignore SH_COMMENT
     """,
     parser='lalr',
-    propagate_positions=True)
+    propagate_positions=True,
+    maybe_placeholders=True)
 
 class ChypParseData(Transformer):
 
     def __init__(self) -> None:
         self.graphs: Dict[str, Graph] = dict()
         self.rules: Dict[str, Rule] = dict()
-        self.rewrites: Dict[str, Tuple[int, int, Optional[Rule], Optional[Graph], Optional[Graph]]] = dict()
+        self.rewrites: Dict[str, Tuple[int, int, bool, Optional[Rule],
+                                       Optional[Graph], Optional[Graph],
+                                       Optional[Graph], Optional[Graph]]] = dict()
         self.errors: List[Tuple[int, str]] = list()
         self.parts: List[Tuple[int, int, str, str]] = list()
         self.parsed = False
@@ -58,6 +63,12 @@ class ChypParseData(Transformer):
 
     def id(self, _: List[Any]) -> Graph:
         return identity()
+
+    def eq(self, _: List[Any]) -> bool:
+        return True
+
+    def le(self, _: List[Any]) -> bool:
+        return False
 
     @v_args(meta=True)
     def perm(self, meta: Meta, items: List[Any]) -> Optional[Graph]:
@@ -121,55 +132,75 @@ class ChypParseData(Transformer):
 
     @v_args(meta=True)
     def rule(self, meta: Meta, items: List[Any]) -> None:
-        name, lhs, rhs = items
+        name, lhs, invertible, rhs = items
         if lhs and rhs:
             try:
-                self.rules[name] = Rule(lhs, rhs, name=name)
+                self.rules[name] = Rule(lhs, rhs, name, invertible)
             except RuleError as e:
                 self.errors.append((meta.line, str(e)))
         self.parts.append((meta.start_pos, meta.end_pos, 'rule', name))
 
     @v_args(meta=True)
     def rewrite(self, meta: Meta, items: List[Any]) -> None:
-        name = items[0]
-        term = items[1]
-        rw_parts = items[2:]
+        converse = True if items[0] else False
+        base_name = items[1]
+        name = '-' + base_name if converse else base_name
+
+        term = items[2]
+        rw_parts = items[3:]
 
         if len(rw_parts) == 0:
             self.parts.append((meta.start_pos, meta.end_pos, "rewrite", name))
-            self.rewrites[name] = (0,0,None,term,None)
+            self.rewrites[name] = (0,0,False,None,term,None,None,None)
         else:
             start = meta.start_pos
             lhs = term
             rhs = None
+            all_equiv = True
+
+            if converse and base_name in self.rules:
+                lhs_match = self.rules[base_name].rhs
+                rhs_match = self.rules[base_name].lhs
+            else:
+                lhs_match = None
+                rhs_match = None
+
+            last_i = len(rw_parts)-1
             for i, rw_part in enumerate(rw_parts):
-                end, t_start, t_end, rule, rhs = rw_part
-                self.rewrites[name + ":" + str(i)] = (t_start, t_end, rule, lhs, rhs)
+                end, t_start, t_end, equiv, rule, rhs = rw_part
+                all_equiv = all_equiv and equiv
+                self.rewrites[name + ":" + str(i)] = (t_start, t_end, equiv, rule, lhs, rhs,
+                                                      lhs_match if i == 0 else None,
+                                                      rhs_match if i == last_i else None)
                 lhs = rhs.copy() if rhs else None
                 self.parts.append((start, end, "rewrite", name + ":" + str(i)))
                 start = end
             if term and rhs:
                 try:
-                    self.rules[name] = Rule(term, rhs, name=name)
+                    if converse:
+                        if base_name in self.rules:
+                            self.rules[base_name].equiv = True
+                        else:
+                            self.errors.append((meta.line, "Trying to prove converse for unknown rule: " + base_name))
+                    else:
+                        self.rules[name] = Rule(term, rhs, name=name, equiv=all_equiv)
                 except RuleError as e:
                     self.errors.append((meta.line, str(e)))
 
     @v_args(meta=True)
-    def rewrite_part(self, meta: Meta, items: List[Any]) -> Tuple[int, int, int, Rule, Graph]:
-        t_start,t_end,rhs = items[0]
+    def rewrite_part(self, meta: Meta, items: List[Any]) -> Tuple[int, int, int, bool, Optional[Rule], Optional[Graph]]:
+        equiv = items[0]
+        t_start,t_end,rhs = items[1]
+        converse = True if items[2] else False
 
-        if len(items) == 3:
-            inverse = True
-            rule = items[2]
-        else:
-            inverse = False
-            rule = items[1]
-        
-        if rule and inverse:
-            rule.invert()
-            rule.name = '-' + rule.name
+        rule = items[3]
+        if rule and converse:
+            rule = items[3].converse()
 
-        return (meta.end_pos, t_start, t_end, rule, rhs)
+        if equiv and rule and not rule.equiv:
+            rule = None
+
+        return (meta.end_pos, t_start, t_end, equiv, rule, rhs)
 
 
     @v_args(meta=True)

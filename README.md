@@ -131,12 +131,13 @@ gen : "gen" var ":" num "->" num
 let : "let" var "=" term
 rule : "rule" var ":" term "=" term
 rewrite : "rewrite" var ":" term rewrite_part*
-rewrite_part : "=" term_hole "by" rule_ref num?
+rewrite_part : "=" term_hole "by" inverse? rule_ref
+inverse : "-"
 term  : par_term | seq
 par_term : "(" term ")" | par | perm | id | term_ref
 par : par_term "*" par_term
 seq : term ";" term
-perm : "sw" [ "[" num ("," num)* "]" ]
+perm : "sw" ( "[" num ("," num)* "]" )?
 id : "id"
 term_hole : term | "?"
 
@@ -146,3 +147,6 @@ term_ref : IDENTIFIER
 rule_ref : IDENTIFIER
 
 ```
+
+The parser ignores whitespace and comments starting with `#`.
+

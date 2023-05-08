@@ -251,8 +251,8 @@ class Editor(QMainWindow):
                             check_thread.finished.connect(check_finished(i))
                             check_thread.start()
 
-                    lhs = rw.lhs.copy()
-                    rhs = rw.rhs.copy()
+                    lhs = rw.lhs.copy() if rw.lhs else Graph()
+                    rhs = rw.rhs.copy() if rw.rhs else Graph()
                     convex_layout(lhs)
                     convex_layout(rhs)
                     self.graph_cache[i] = (lhs, rhs)
@@ -279,30 +279,31 @@ class Editor(QMainWindow):
         part = self.state.part_at(pos)
         if part and part[2] == 'rewrite' and part[3] in self.state.rewrites:
             rw = self.state.rewrites[part[3]]
-            start, end = rw.term_pos
-            text = self.code_view.toPlainText()
-            term = text[start:end]
+            if rw.rule and rw.lhs:
+                start, end = rw.term_pos
+                text = self.code_view.toPlainText()
+                term = text[start:end]
 
-            found_prev = (term == '?')
-            rw_term = None
-            for m in match_rule(rw.rule, rw.lhs):
-                t = graph_to_term(rewrite(rw.rule, m))
-                if found_prev and term != t:
-                    rw_term = t
-                    break
-                elif not rw_term:
-                    rw_term = t
+                found_prev = (term == '?')
+                rw_term = None
+                for m in match_rule(rw.rule, rw.lhs):
+                    t = graph_to_term(rewrite(rw.rule, m))
+                    if found_prev and term != t:
+                        rw_term = t
+                        break
+                    elif not rw_term:
+                        rw_term = t
 
-                found_prev = (term == t)
+                    found_prev = (term == t)
 
-            if rw_term:
-                cursor = self.code_view.textCursor()
-                cursor.clearSelection()
-                cursor.setPosition(start)
-                cursor.setPosition(end, mode=QTextCursor.MoveMode.KeepAnchor)
-                cursor.insertText(rw_term)
-                self.code_view.setTextCursor(cursor)
-                self.update_state()
+                if rw_term:
+                    cursor = self.code_view.textCursor()
+                    cursor.clearSelection()
+                    cursor.setPosition(start)
+                    cursor.setPosition(end, mode=QTextCursor.MoveMode.KeepAnchor)
+                    cursor.insertText(rw_term)
+                    self.code_view.setTextCursor(cursor)
+                    self.update_state()
 
     def repeat_step_at_cursor(self) -> None:
         self.update_state()
@@ -310,9 +311,11 @@ class Editor(QMainWindow):
         part = self.state.part_at(pos)
         if part and part[2] == 'rewrite' and part[3] in self.state.rewrites:
             rule = self.state.rewrites[part[3]].rule
-            self.code_view.add_line_below('  = ? by ' + rule.name)
-            self.update_state()
-            self.next_rewrite_at_cursor()
+
+            if rule:
+                self.code_view.add_line_below('  = ? by ' + rule.name)
+                self.update_state()
+                self.next_rewrite_at_cursor()
 
     def update_state(self, quiet: bool=False) -> None:
         self.code_view.set_current_region(None)
