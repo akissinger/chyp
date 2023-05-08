@@ -313,17 +313,19 @@ class Editor(QMainWindow):
                 start, end = rw.term_pos
                 text = self.code_view.toPlainText()
                 term = text[start:end]
+                seen = set([term])
 
                 found_prev = (term == '?')
                 rw_term = None
                 for m in match_rule(rw.rule, rw.lhs):
                     t = graph_to_term(rewrite(rw.rule, m))
-                    if found_prev and term != t:
+                    if found_prev and not t in seen:
                         rw_term = t
                         break
                     elif not rw_term:
                         rw_term = t
 
+                    seen.add(t)
                     found_prev = (term == t)
 
                 if rw_term:
