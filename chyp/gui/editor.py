@@ -19,7 +19,6 @@ from PySide6.QtCore import QByteArray, QFileInfo, QObject, QThread, Qt, QSetting
 from PySide6.QtGui import QCloseEvent, QKeySequence, QTextCursor
 from PySide6.QtWidgets import QApplication, QHBoxLayout, QMainWindow, QMenuBar, QSplitter, QTreeView, QVBoxLayout, QWidget
 
-
 from ..layout import convex_layout
 from ..graph import Graph
 from ..state import RewriteState, State
