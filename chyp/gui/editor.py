@@ -14,18 +14,16 @@
 # limitations under the License.
 
 from __future__ import annotations
-from logging import error
 from typing import Callable, Dict, Optional, Tuple
-from PySide6.QtCore import QAbstractItemModel, QByteArray, QFileInfo, QObject, QThread, Qt, QSettings
+from PySide6.QtCore import QByteArray, QFileInfo, QObject, QThread, Qt, QSettings
 from PySide6.QtGui import QCloseEvent, QKeySequence, QTextCursor
 from PySide6.QtWidgets import QApplication, QHBoxLayout, QMainWindow, QMenuBar, QSplitter, QTreeView, QVBoxLayout, QWidget
-from cvxpy.utilities.key_utils import none_to_empty
 
-from chyp.term import graph_to_term
 
 from ..layout import convex_layout
 from ..graph import Graph
 from ..state import RewriteState, State
+from ..term import graph_to_term
 from ..matcher import match_rule
 from ..rewrite import rewrite
 
