@@ -207,9 +207,10 @@ class Match:
         return len(self.vmap) == len(self.vimg)
 
     def is_convex(self) -> bool:
-        in_img = [self.vmap[v] for v in self.dom.inputs() if v in self.vmap]
-        out_img = [self.vmap[v] for v in self.dom.outputs() if v in self.vmap]
-        # TODO finish
+        future = self.cod.successors([self.vmap[v] for v in self.dom.outputs() if v in self.vmap])
+        for v in self.dom.inputs():
+            if v in self.vmap and self.vmap[v] in future:
+                return False
         return True
 
     # def is_cospan_iso(self) -> bool:
@@ -227,8 +228,9 @@ class Match:
 
 
 class Matches(Iterable):
-    def __init__(self, dom: Graph, cod: Graph, initial_match: Optional[Match] = None) -> None:
+    def __init__(self, dom: Graph, cod: Graph, initial_match: Optional[Match] = None, convex=True) -> None:
         if initial_match is None: initial_match = Match(dom=dom, cod=cod) 
+        self.convex = convex
         self.match_stack = [initial_match]
 
     def __iter__(self) -> Iterator:
@@ -239,16 +241,23 @@ class Matches(Iterable):
             m = self.match_stack.pop()
             if m.is_total():
                 match_log("got successful match:\n" + str(m))
-                return m
+                if self.convex:
+                    if m.is_convex():
+                        match_log("match is convex, returning")
+                        return m
+                    else:
+                        match_log("match is not convex, dropping")
+                else:
+                    return m
             else:
                 self.match_stack += m.more()
         raise StopIteration
 
-def match_graph(dom: Graph, cod: Graph) -> Iterable[Match]:
-    return Matches(dom, cod)
+def match_graph(dom: Graph, cod: Graph, convex=True) -> Iterable[Match]:
+    return Matches(dom, cod, convex=convex)
 
-def match_rule(r: Rule, g: Graph) -> Iterable[Match]:
-    return Matches(r.lhs, g)
+def match_rule(r: Rule, g: Graph, convex=True) -> Iterable[Match]:
+    return Matches(r.lhs, g, convex=convex)
 
 def find_iso(g: Graph, h: Graph) -> Optional[Match]:
     g_in = g.inputs()
@@ -263,7 +272,7 @@ def find_iso(g: Graph, h: Graph) -> Optional[Match]:
     for i in range(len(g_out)):
         if not m0.try_add_vertex(g_out[i], h_out[i]): return None
 
-    for m in Matches(dom=g, cod=h, initial_match=m0):
+    for m in Matches(dom=g, cod=h, initial_match=m0, convex=False):
         if m.is_surjective(): return m
 
     return None

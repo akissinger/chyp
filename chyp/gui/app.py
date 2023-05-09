@@ -60,17 +60,11 @@ catppuccin_macchiato = {
   'fg_good': cat_macchiato_p['green'],
   'fg_bad': cat_macchiato_p['red'],
   'bg_alt': cat_macchiato_p['crust'],
-  'bg_button': cat_macchiato_p['surface0'],
-  'fg_button': cat_macchiato_p['rosewater'],
+  'bg_button': cat_macchiato_p['mantle'],
+  'fg_button': cat_macchiato_p['text'],
   'fg_link': cat_macchiato_p['blue'],
   'bg_highlight': cat_macchiato_p['blue'],
   'fg_highlight': cat_macchiato_p['crust'],
-  'fg_subject': cat_macchiato_p['text'],
-  'fg_subject_unread': cat_macchiato_p['mauve'],
-  'fg_subject_flagged': cat_macchiato_p['yellow'],
-  'fg_from': cat_macchiato_p['blue'],
-  'fg_date': cat_macchiato_p['flamingo'],
-  'fg_tags': cat_macchiato_p['peach'],
 }
 
 theme = catppuccin_macchiato
