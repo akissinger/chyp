@@ -154,12 +154,46 @@ class Match:
     #     return (all(e in self.eimg for e in self.cod.in_edges(cod_v)) and
     #             all(e in self.eimg for e in self.cod.out_edges(cod_v)))
 
+    def map_scalars(self) -> bool:
+        """Try to extend the match by mapping all scalars (i.e. 0 -> 0 edges)
+
+        Returns True if is successful. Note that any matchings of scalars will yield
+        isomorphic results under rewriting, so we don't return a list of all the possible
+        matchings.
+        """
+        cod_sc = []
+        for e in self.cod.edges():
+            ed = self.cod.edge_data(e)
+            if len(ed.s) == 0 and len(ed.t) == 0:
+                cod_sc.append((e, ed.value))
+
+        for e in self.dom.edges():
+            match_log("trying to map scalar edge {}".format(e))
+            ed = self.dom.edge_data(e)
+            if len(ed.s) != 0 or len(ed.t) != 0: continue
+            found = False
+            for i in range(len(cod_sc)):
+                e1, val = cod_sc[i]
+                if val == ed.value:
+                    cod_sc.pop(i)
+                    self.emap[e] = e1
+                    self.eimg.add(e1)
+                    found = True
+                    match_log("successfully mapped scalar {} -> {}".format(e, e1))
+                    break
+            if not found:
+                match_log("match failed: could not map scalar edge {}".format(e))
+                return False
+
+        return True
+
+
 
     def more(self) -> List[Match]:
         # a list of partial matches the same as this one, but matching 1 more vertex or edge
         ms = []
 
-        # first try to complete nhds of vertices already matched
+        # first, try to complete nhds of vertices already matched
         for v in self.vmap:
             # check if a vertex's nhd is already fully mapped
             if self.dom_nhd_mapped(v): continue
@@ -213,25 +247,17 @@ class Match:
                 return False
         return True
 
-    # def is_cospan_iso(self) -> bool:
-    #     d_in = self.dom.inputs()
-    #     d_out = self.dom.outputs()
-    #     c_in = self.cod.inputs()
-    #     c_out = self.cod.outputs()
-    #
-    #     return (len(d_in) == len(c_in) and
-    #             len(d_out) == len(c_out) and
-    #             all(self.vmap[d_in[i]] == c_in[i] for i in range(len(d_in))) and
-    #             all(self.vmap[d_out[i]] == c_out[i] for i in range(len(d_out))) and
-    #             self.is_injective() and self.is_surjective())
-
 
 
 class Matches(Iterable):
     def __init__(self, dom: Graph, cod: Graph, initial_match: Optional[Match] = None, convex=True) -> None:
         if initial_match is None: initial_match = Match(dom=dom, cod=cod) 
         self.convex = convex
-        self.match_stack = [initial_match]
+
+        if initial_match.map_scalars():
+            self.match_stack = [initial_match]
+        else:
+            self.match_stack = []
 
     def __iter__(self) -> Iterator:
         return self
