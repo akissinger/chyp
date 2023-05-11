@@ -62,37 +62,24 @@ def convex_layout(g: Graph) -> None:
     etab = { e : i for i, e in enumerate(g.edges()) }
 
     constr = []
-    opt = [Constant(0.1) * vy[i] for i in range(g.num_edges())]
+    opt = []
+    # opt = [Constant(0.1) * vy[i] for i in range(g.num_edges())]
 
     for vlist in (g.inputs(), g.outputs()):
         for i in range(len(vlist) - 1):
             v1 = vlist[i]
             v2 = vlist[i+1]
             constr.append(vy[vtab[v2]] - vy[vtab[v1]] >= Constant(1))
+            opt.append(Constant(0.1) * (vy[vtab[v2]] - vy[vtab[v1]]))
 
     for e_layer in e_layers:
-        # v_layer = v_layers[layer]
-        # for i in range(len(v_layer)-1):
-        #     v1 = v_layer[i]
-        #     v2 = v_layer[i+1]
-        #     constr.append(vy[vtab[v2]] - vy[vtab[v1]] >= Constant(1))
-        #
-        # # break if this is the final v_layer (hence no more e_layers)
-        # if layer >= len(e_layers): break
-        # e_layer = e_layers[layer]
-
         for i in range(len(e_layer)):
             e1 = e_layer[i]
-            # for vlist, weight in ((g.source(e1), 1.0), (g.target(e1), 2.0)):
-            #     for j, v in enumerate(vlist):
-            #         # pass
-            #         y_shift = Constant(0.0 if len(vlist) <= 1 else ((j / (len(vlist) - 1)) - 0.5))
-            #         opt.append(Constant(weight) * (vy[vtab[v]] - (ey[etab[e1]] + y_shift)))
-
             if i+1 >= len(e_layer): break
             e2 = e_layer[i+1]
             dist = (g.edge_data(e1).box_size() + g.edge_data(e2).box_size()) * 0.5
             constr.append(ey[etab[e2]] - ey[etab[e1]] >= Constant(dist))
+            opt.append(Constant(0.1) * (ey[etab[e2]] - ey[etab[e1]]))
 
     for v in g.vertices():
         pos1 = vy[vtab[v]]

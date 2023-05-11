@@ -72,6 +72,7 @@ class Editor(QMainWindow):
         self.doc.fileNameChanged.connect(self.update_file_name)
         self.doc.modificationChanged.connect(self.update_file_name)
         self.doc.recentFilesChanged.connect(self.update_recent_files)
+        self.doc.documentReplaced.connect(self.reset_state)
         self.update_file_name()
 
         self.splitter.addWidget(self.code_view)
@@ -190,6 +191,11 @@ class Editor(QMainWindow):
             fi = QFileInfo(f)
             action = self.file_open_recent.addAction(fi.fileName())
             action.triggered.connect(open_recent(f))
+
+    def reset_state(self) -> None:
+        cursor = self.code_view.textCursor()
+        cursor.setPosition(0)
+        self.code_view.setTextCursor(cursor)
 
     def invalidate_text(self) -> None:
         self.parsed = False

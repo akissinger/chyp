@@ -23,12 +23,16 @@ def layer_decomp(g: Graph) -> Tuple[List[List[int]], List[List[int]]]:
     v_pos = dict()
     e_pos = dict()
     v_layer = []
+
+    outputs = set(g.outputs())
     for i,v in enumerate(g.inputs()):
+        if v in outputs: g.insert_id_after(v)
         v_layer.append(v)
         v_pos[v] = i
-    edges = set(g.edges())
-    new_ids = set()
     
+    new_ids = set()
+    edges = set(g.edges())
+
     while len(edges) > 0:
         v_layers.append(v_layer)
 

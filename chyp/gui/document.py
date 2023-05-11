@@ -24,6 +24,7 @@ from .highlighter import ChypHighlighter
 class ChypDocument(QTextDocument):
     recentFilesChanged = Signal()
     fileNameChanged = Signal()
+    documentReplaced = Signal()
 
     def __init__(self, parent: QWidget) -> None:
         super().__init__(parent)
@@ -75,6 +76,7 @@ class ChypDocument(QTextDocument):
             self.setPlainText('')
             self.setModified(False)
             self.fileNameChanged.emit()
+            self.documentReplaced.emit()
 
     def open(self, file_name: str='') -> None:
         if self.confirm_close():
@@ -94,6 +96,7 @@ class ChypDocument(QTextDocument):
                 self.add_to_recent_files(self.file_name)
                 self.setModified(False)
                 self.fileNameChanged.emit()
+                self.documentReplaced.emit()
 
     def save(self) -> bool:
         if self.file_name:
