@@ -15,11 +15,12 @@ GRAMMAR = Lark("""
     rewrite_part : (eq | le) term_hole [ "by" [converse] rule_ref ]
     converse : "-"
     ?term  : par_term | seq
-    ?par_term : "(" term ")" | par | perm | id | term_ref
+    ?par_term : "(" term ")" | par | perm | id | id0 | term_ref
     par : par_term "*" par_term
     seq : term ";" term
     perm : "sw" [ "[" num ("," num)* "]" ]
     id : "id"
+    id0 : "id0"
 
     eq : "=" | "=="
     le : "<=" | "~>"
@@ -63,6 +64,9 @@ class ChypParseData(Transformer):
 
     def id(self, _: List[Any]) -> Graph:
         return identity()
+
+    def id0(self, _: List[Any]) -> Graph:
+        return Graph()
 
     def eq(self, _: List[Any]) -> bool:
         return True
