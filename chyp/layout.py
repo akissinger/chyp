@@ -30,7 +30,7 @@ def convex_layout(g: Graph) -> None:
     Vertices and edges are placed in layers according to `layer_decomp`. Their
     y-coordinates are chosen by convex optimation to try to make connections as
     straight as possible subject to the constraints:
-      1. vertices must be in order and at least 1.0 apart
+      1. inputs and outputs must be in order and at least 1.0 apart
       2. edges must be in order and not overlapping
     """
     v_layers, e_layers = layer_decomp(g)
@@ -63,28 +63,54 @@ def convex_layout(g: Graph) -> None:
 
     constr = []
     opt = [Constant(0.1) * vy[i] for i in range(g.num_edges())]
-    for layer in range(len(v_layers)):
-        v_layer = v_layers[layer]
-        for i in range(len(v_layer)-1):
-            v1 = v_layer[i]
-            v2 = v_layer[i+1]
+
+    for vlist in (g.inputs(), g.outputs()):
+        for i in range(len(vlist) - 1):
+            v1 = vlist[i]
+            v2 = vlist[i+1]
             constr.append(vy[vtab[v2]] - vy[vtab[v1]] >= Constant(1))
 
-        # break if this is the final v_layer (hence no more e_layers)
-        if layer >= len(e_layers): break
-        e_layer = e_layers[layer]
+    for e_layer in e_layers:
+        # v_layer = v_layers[layer]
+        # for i in range(len(v_layer)-1):
+        #     v1 = v_layer[i]
+        #     v2 = v_layer[i+1]
+        #     constr.append(vy[vtab[v2]] - vy[vtab[v1]] >= Constant(1))
+        #
+        # # break if this is the final v_layer (hence no more e_layers)
+        # if layer >= len(e_layers): break
+        # e_layer = e_layers[layer]
 
         for i in range(len(e_layer)):
             e1 = e_layer[i]
-            for vlist, weight in ((g.source(e1), 1.0), (g.target(e1), 2.0)):
-                for j, v in enumerate(vlist):
-                    y_shift = Constant(0.0 if len(vlist) <= 1 else ((j / (len(vlist) - 1)) - 0.5))
-                    opt.append(Constant(weight) * (vy[vtab[v]] - (ey[etab[e1]] + y_shift)))
+            # for vlist, weight in ((g.source(e1), 1.0), (g.target(e1), 2.0)):
+            #     for j, v in enumerate(vlist):
+            #         # pass
+            #         y_shift = Constant(0.0 if len(vlist) <= 1 else ((j / (len(vlist) - 1)) - 0.5))
+            #         opt.append(Constant(weight) * (vy[vtab[v]] - (ey[etab[e1]] + y_shift)))
 
             if i+1 >= len(e_layer): break
             e2 = e_layer[i+1]
             dist = (g.edge_data(e1).box_size() + g.edge_data(e2).box_size()) * 0.5
             constr.append(ey[etab[e2]] - ey[etab[e1]] >= Constant(dist))
+
+    for v in g.vertices():
+        pos1 = vy[vtab[v]]
+        pos2 = vy[vtab[v]]
+        if len(g.in_edges(v)) >= 1:
+            e = next(iter(g.in_edges(v)))
+            t = g.target(e)
+            y_shift = Constant(0.0 if len(t) <= 1 else ((t.index(v) / (len(t) - 1)) - 0.5))
+            pos1 = ey[etab[e]] + y_shift
+
+        if len(g.out_edges(v)) >= 1:
+            e = next(iter(g.out_edges(v)))
+            s = g.source(e)
+            y_shift = Constant(0.0 if len(s) <= 1 else ((s.index(v) / (len(s) - 1)) - 0.5))
+            pos2 = ey[etab[e]] + y_shift
+
+        opt.append(pos1 - pos2)
+
 
     # problem = Problem(Minimize(cp.sum_squares(cp.vstack(opt))), constr)
     problem = Problem(Minimize(cp.norm1(cp.vstack(opt))), constr)
@@ -106,7 +132,12 @@ def convex_layout(g: Graph) -> None:
 
     for e,i in etab.items():
         y = ey.value[i]
-        g.edge_data(e).y = y - yshift
+        ed = g.edge_data(e)
+        ed.y = y - yshift
+        for j,v in enumerate(ed.t):
+            if not g.is_boundary(v):
+                yshift_v = 0 if len(ed.t) <= 1 else ((j / (len(ed.t) - 1)) - 0.5)
+                g.vertex_data(v).y = ed.y + yshift_v
 
 
 def layer_layout(g: Graph) -> None:
