@@ -1,0 +1,110 @@
+# Chyp uses cospans of hypergraphs to represent morphisms in a symmetric monoidal
+# category (SMC). This representation at its rewrite theory was defined in:
+#
+#   Bonchi, Gadducci, Kissinger, Sobocinski, Zanasi. "String Diagram Rewrite
+#     Theory II: Rewriting with Symmetric Monoidal Structure". MSCS 2020
+#
+# ...which we'll refer to as SDRT2.
+#
+# In that paper, it was shown that cospans of hypergraphs are isomorphic if and
+# only if their corresponding terms are equal up to the SMC axioms. Hence, we can
+# see that chyp already "knows" all of the axioms of an SMC.
+#
+# To check whether two terms are equal up to SMC axioms, we can simply write:
+#
+#    rewrite LEMMA_NAME : S = T
+# 
+# This is actually shorthand for
+#
+#    rewrite LEMMA_NAME : S = T by refl
+#
+# where "refl", meaning "reflexivity", is a special rewrite rule that
+# does nothing.
+
+
+# First, we define some generators:
+gen x : 0 -> 0
+gen y : 0 -> 0
+
+gen a : 1 -> 1
+gen b : 1 -> 1
+gen c : 1 -> 1
+gen d : 1 -> 1
+
+gen f : 2 -> 2
+gen g : 2 -> 2
+
+# In SDRT2, 8 non-trivial axioms were given for an SMC. Let's show examples of
+# for all of them. 
+
+# 1. associativity of parallel composition
+rewrite assoc_par:
+  a * (b * c)
+  = (a * b) * c
+  = a * b * c
+
+# 2. associativity of sequential composition
+rewrite assoc_seq:
+  a ; (b ; c)
+  = (a ; b) ; c
+  = a ; b ; c
+
+# 3. identity for sequential composition
+rewrite ident_seq:
+  a ; id
+  = id ; a
+  = a
+
+# 4. identity for parallel composition
+rewrite ident_par:
+  a * id0
+  = id0 * a
+  = a
+
+# 5. interchange law
+rewrite inter:
+  a * b ; c * d = (a ; c) * (b ; d)
+
+# 6. hexagon law
+rewrite hex:
+  sw * id ; id * sw
+  = sw[1, 2, 0]
+
+# 7. idempotence of swap
+rewrite sw_sw:
+  sw ; sw = id * id
+
+# 8. naturality of swap
+rewrite sw_nat:
+  a * b ; sw = sw ; b * a
+
+
+
+# Here are some consequences of the SMC axioms:
+
+# interchange law (box-sliding version)
+rewrite inter1:
+  a * id ; id * b
+  = id * b ; a * id
+  = a * b
+
+# commutativity of scalars (a.k.a. Eckmann-Hilton argument)
+rewrite eckmann_hilton:
+  x ; y
+  = x * y
+  = y * x
+  = y ; x
+
+# yang-baxter equation (a.k.a. the 3rd Reidemeister move)
+rewrite yang_baxter:
+  sw * id ; id * sw ; sw * id
+  = id * sw ; sw * id ; id * sw
+
+# different expressions for the same permutation
+rewrite perm_exp:
+  sw * sw * id * id ; id * sw * id * sw ; sw * sw * sw
+  = sw[3, 1, 2, 0, 4, 5]
+  = sw[3, 1, 2, 0] * sw[0, 1]
+
+
+
