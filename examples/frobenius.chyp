@@ -86,21 +86,22 @@ rewrite yankR :
   = id by counitL
 
 
-# We can also prove the caps and cups can transform multiplications into comultiplications, i.e.
+# We can also prove the cups can transform multiplications into comultiplications:
 #
-#  m_cup : cup * id ; id * m = n
-#  n_cap : n * id ; id * cap = m
+#  m_cupL : cup * id ; id * m = n
+#  m_cupR : id * cup ; m * id = n
 #
 
-rewrite m_cup :
+rewrite m_cupL :
   cup * id ; id * m
   = u * n ; m * id by frob
   = n by unitL
 
-rewrite n_cap :
-  n * id ; id * cap
-  = id * n ; m * v by frob
-  = m by counitR
+rewrite m_cupR :
+  id * cup ; m * id
+  = n * u ; id * m by -frob
+  = n by unitR
+
 
 
 # As a final exercise, let's show that the tensor product of a Frobenius algebra
@@ -166,7 +167,68 @@ rewrite frob2 :
   = id2 * n2 ; m2 * id2
 
 
+# Generic non-commutative Frobenius algebras are a bit wild, so we often look at special symmetric
+# Frobenius algebras (SSFAs). These satisfy two extra conditions:
+#
+#   spec : n ; m = id
+#   symm : sw ; cap = cap
+#
+# In fact, both of these rules are implied by a single rule, relating the "Killing form" to the
+# counit.
+
+# The Killing form is the (left) partial trace of the multiplication, which we can define as
+# follows:
+let kf = cup * id ; id * m ; sw ; cap
+
+# In fact, it doesn't matter if we take the left or right partial trace, since the m_cup rules
+# let us flip between the two:
+rewrite kf_flip :
+  kf
+  = n ; sw ; cap by m_cupL
+  = id * cup ; m * id ; sw; cap by -m_cupR
 
 
+# Now, we can show that a Frobenius algebra is an SSFA if and only if the Killing form equals
+# the counit:
 
+rule ssym : kf = v
+
+
+# First, we prove symmetry. This one is a bit tricky to follow. The main thing to note is the two
+# steps "-yankR" and "yankR" are essentially invoking cyclicity of the partial trace.
+rewrite symm :
+  cap
+  = u * m ; n * id ; id * m ; sw ; m ; v by -ssym
+  = u * id * id ; n * id * id ; id * m * id ; id * m ; sw ; m ; v by -assoc
+  = u * id * u * id ; n * id * n * id ; id * m * id * m ; sw[1, 2, 3, 0] ; m * m ; v * v by -yankR
+  = u * id * id ; n * id * id ; id * id * sw ; id * m * id ; id * m ; sw ; m ; v by yankR
+  = sw ; u * m ; n * id ; id * m ; sw ; m ; v by assoc
+  = sw ; m ; v by ssym
+
+# Next, we prove specialness. We start with a lemma relating the Killing form to the LHS of
+# the "spec" rule:
+rewrite spec_lem :
+  n ; id * kf
+  = n ; id * n ; id * sw ; id * cap by m_cupL
+  = n ; n * id ; id * sw ; id * m ; id * v by -coassoc
+  = n ; n * id ; id * m ; id * v by symm
+  = n ; id * n ; m * v by frob
+  = n ; m by counitR
+
+# Combining ssym with the counit rule completes the proof:
+rewrite spec :
+  n ; m
+  = n ; id * kf by -spec_lem
+  = n ; id * v by ssym
+  = id by counitR
+
+
+# Going back the other way, we have:
+rewrite ssym_again :
+  kf
+  = u * id ; n * id ; id * m ; sw ; m ; v
+  = u * id ; n * id ; id * m ; m ; v by symm
+  = u * id ; m ; n ; m ; v by frobL
+  = u * id ; m ; v by spec
+  = v by unitL
 
