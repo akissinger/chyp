@@ -39,6 +39,8 @@ The main way to interact with Chyp is by writing `*.chyp` prover files. These ar
 3. define rewrite rules (i.e. axioms), and
 4. prove new rules by rewriting.
 
+You can find some examples of `*.chyp` files in the [examples](https://github.com/akissinger/chyp/tree/master/examples) folder.
+
 ## Defining generators and terms
 
 Generators are defined via the `gen` statement, which takes a name, a number of input wires, and a number of output wires. For example, we can define three new generators `f`, `g`, and `h` with various arities as follows:

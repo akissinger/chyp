@@ -1,0 +1,172 @@
+# In this file, we'll define a non-commutative Frobenius algebra and prove some
+# standard facts.
+
+
+# First, introduce generators for multiplication (m), unit (u), comultiplication (n),
+# and counit (v).
+gen m : 2 -> 1
+gen u : 0 -> 1
+gen n : 1 -> 2
+gen v : 1 -> 0
+
+# (m, u) forms a monoid
+rule assoc : m * id ; m = id * m ; m
+rule unitL : u * id ; m = id
+rule unitR : id * u ; m = id
+
+# (n, v) forms a comonoid
+rule coassoc : n ; n * id = n ; id * n
+rule counitL : n ; v * id = id
+rule counitR : n ; id * v = id
+
+# there are many equivalent formulations of the Frobenius condition. Here's one:
+rule frob : n * id ; id * m = id * n ; m * id
+
+# The rule above is equivalent to the slightly more familiar pair of rules:
+#
+#   frobL : n * id ; id * m = m ; n
+#   frobR : id * n ; m * id = m ; n
+#
+# If m and n were both commutative, one of these would imply the other, and either
+# would imply "frob". However, for non-commutative Frobenius algebras, we need them
+# both.
+
+# Let's prove these both follow from "frob". Once we prove one...
+rewrite frobL :
+  n * id ; id * m
+  = u * n * id ; m * m by -unitL
+  = u * id * id ; n * id * id ; id * m * id ; id * m by -frob
+  = u * m ; n * id ; id * m by assoc
+  = u * m ; id * n ; m * id by frob
+  = m ; n by unitL
+
+# ...the other is easy:
+rewrite frobR :
+  id * n ; m * id
+  = n * id ; id * m by -frob
+  = m ; n by frobL
+
+# Going back the other way, we have:
+rewrite frob_again:
+  n * id ; id * m
+  = m ; n by frobL
+  = id * n ; m * id by -frobR
+
+
+# Frobenis algebras always induce a "cup" and "cap" map:
+let cup = u ; n
+let cap = m ; v
+
+# By definition, "cap" satisfies and associativity condition with m:
+rewrite cap_assoc :
+  m * id ; cap
+  = id * m ; cap by assoc
+
+# ...and "cup" a coassociativity condition with n:
+rewrite cup_coassoc :
+  cup ; n * id
+  = cup ; id * n by coassoc
+
+
+# Thanks to frobL and frobR, we can prove the following "yanking" equations:
+#
+#   yankL : cup * id ; id * cap = id
+#   yankR : id * cup ; cap * id = id
+#
+rewrite yankL :
+  cup * id ; id * cap
+  = u * id ; m ; n ; id * v by frobL
+  = n ; id * v by unitL
+  = id by counitR
+
+rewrite yankR :
+  id * cup ; cap * id
+  = u * id ; sw ; m ; n ; v * id by frobR
+  = n ; v * id by unitR
+  = id by counitL
+
+
+# We can also prove the caps and cups can transform multiplications into comultiplications, i.e.
+#
+#  m_cup : cup * id ; id * m = n
+#  n_cap : n * id ; id * cap = m
+#
+
+rewrite m_cup :
+  cup * id ; id * m
+  = u * n ; m * id by frob
+  = n by unitL
+
+rewrite n_cap :
+  n * id ; id * cap
+  = id * n ; m * v by frob
+  = m by counitR
+
+
+# As a final exercise, let's show that the tensor product of a Frobenius algebra
+# with itself is also a Frobenius algebra. That is, for:
+
+let m2 = id * sw * id ; m * m
+let u2 = u * u
+let n2 = n * n ; id * sw * id
+let v2 = v * v
+
+# ...we can prove all of the Frobenius rules.
+
+# For convenience in stating the rules, we also define:
+let id2 = id * id
+
+# Note how definitions are unfolded automatically. In each of the proofs below, we introduce
+# a trivial final step to fold the definitions back up.
+
+# (m2, u2) forms a monoid
+rewrite assoc2 :
+  m2 * id2 ; m2
+  = id * id * sw * id * id ; id * m * m * id ; id * sw * id ; m * m by assoc
+  = id * id * id * sw * id ; id * id * m * m ; id * sw * id ; m * m by assoc
+  = id2 * m2 ; m2
+
+rewrite unitL2 :
+  u2 * id2 ; m2
+  = u * id * id ; m * id by unitL
+  = id * id by unitL
+  = id2
+
+rewrite unitR2 :
+  id2 * u2 ; m2
+  = u * id * id ; sw * id ; m * id by unitR
+  = id * id by unitR
+  = id2
+
+# (n2, v2) forms a comonoid
+rewrite coassoc2 :
+  n2 ; n2 * id2
+  = n * n ; n * id * id * n ; id * sw[2, 0, 3, 1] * id by coassoc
+  = n * n ; id * n * id * n ; id * sw[2, 0, 3, 1] * id by coassoc
+  = n2 ; id2 * n2
+
+rewrite counitL2 :
+  n2 ; v2 * id2
+  = n * id ; v * id * id by counitL
+  = id * id by counitL
+  = id2
+
+rewrite counitR2 :
+  n2 ; id2 * v2
+  = n * id ; id * v * id by counitR
+  = id * id by counitR
+  = id2
+  
+
+# and last but not least, the Frobenius equation:
+rewrite frob2 :
+  n2 * id2 ; id2 * m2
+  = n * id * id * n ; id * id * sw * id * id ; id * m * m * id ; id * sw * id by frob
+  = id * id * n * n ; id * sw * sw * id ; m * m * id * id by frob
+  = id2 * n2 ; m2 * id2
+
+
+
+
+
+

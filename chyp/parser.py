@@ -211,7 +211,7 @@ class ChypParseData(Transformer):
 
         rule = items[3] if items[3] else self.rules['refl']
         if rule and converse:
-            rule = items[3].converse()
+            rule = rule.converse()
 
         if equiv and rule and not rule.equiv:
             rule = None
