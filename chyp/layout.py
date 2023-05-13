@@ -105,7 +105,7 @@ def convex_layout(g: Graph) -> None:
     min = None
     max = None
     for v,i in vtab.items():
-        if vy.value:
+        if not vy.value is None:
             y = vy.value[i]
             if min is None or y < min: min = y
             if max is None or y > max: max = y
