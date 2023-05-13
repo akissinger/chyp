@@ -2,7 +2,7 @@ Chyp (pronounced "chip") is an interactive theorem prover for symmetric monoidal
 
 ![Chyp screenshot](https://github.com/akissinger/chyp/raw/master/chyp-screen.png)
 
-Chyp is short for _Composing HYPergraphs_, which refers to how string diagrams are represented and plugged together formally in the tool. By switching to a combinatoric structure based on hypergraphs, we obtain a convenient rewrite theory for string diagrams. There is a lot of theory behind this, which has been developed over a series of papers:
+Chyp is short for _Cospans of HYPergraphs_, which refers to how string diagrams are represented and plugged together formally in the tool. By switching from terms to this combinatoric structure, we obtain a convenient rewrite theory for string diagrams that automatically handles the extra "bureaucracy" that comes from working with sequential and parallel composition together. There is a lot of theory behind this, which has been developed over a series of papers:
 
 * [String Diagram Rewrite Theory I: Rewriting with Frobenius Structure](https://arxiv.org/abs/2012.01847)
 * [String Diagram Rewrite Theory II: Rewriting with Symmetric Monoidal Structure](https://arxiv.org/abs/2104.14686)
@@ -73,6 +73,7 @@ Note these indices are local to the swap map, so splitting or combining swap map
 
 
 ## Rules and rewriting
+
 
 An algebraic theory can be presented by introducing some generators as well as some rewrite rules. Rules are defined via the `rule` statement, which gives the rule a name, then takes as input a pair of terms with the same number of inputs and outputs. For example, we could introduce a pair of rules relating the `f` and `g` generators as follows:
 
