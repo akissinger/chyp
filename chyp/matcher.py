@@ -241,6 +241,9 @@ class Match:
         return len(self.vmap) == len(self.vimg)
 
     def is_convex(self) -> bool:
+        if not self.is_injective():
+            return False
+
         future = self.cod.successors([self.vmap[v] for v in self.dom.outputs() if v in self.vmap])
         for v in self.dom.inputs():
             if v in self.vmap and self.vmap[v] in future:

@@ -1,0 +1,152 @@
+# In this file, we'll define a non-commutative Hopf algebra and prove some
+# standard facts.
+
+
+# First, introduce generators for multiplication (m), unit (u), comultiplication (n),
+# counit (v), and antipode (s).
+gen m : 2 -> 1
+gen u : 0 -> 1
+gen n : 1 -> 2
+gen v : 1 -> 0
+gen s : 1 -> 1
+
+# (m, u) forms a monoid
+rule assoc : m * id ; m = id * m ; m
+rule unitL : u * id ; m = id
+rule unitR : id * u ; m = id
+
+# (n, v) forms a comonoid
+rule coassoc : n ; n * id = n ; id * n
+rule counitL : n ; v * id = id
+rule counitR : n ; id * v = id
+
+# the bialgebra laws
+rule bialg : m ; n = n * n ; id * sw * id ; m * m
+rule ucp : u ; n = u * u
+rule vcp : m ; v = v * v
+rule uv : u ; v = id0
+
+# the antipode laws
+rule antiL : n ; s * id ; m = v ; u
+rule antiR : n ; id * s ; m = v ; u
+
+
+# first, lets define a comonoid on 2 in terms of (n,v), and prove "2" versions
+# of the comonoid rules.
+gen n2 : 2 -> 4
+rule n2_def : n2 = n * n ; id * sw * id
+
+# Note we could also do this with:
+#
+#   let n2 = n * n ; id * sw * id
+#
+# but using a gen/rule pair lets us explicitly fold and unfold n2, which
+# makes some of the proofs later easier to read.
+
+
+# Next come proofs of the comonoid laws:
+
+rewrite coassoc2 :
+  n2 ; n2 * id * id
+  = n2 ; n * n * id * id ; id * sw * id * id * id by n2_def
+  = n * n ; n * id * n * id ; id * sw[2, 0, 3, 1] * id by n2_def
+  = n * n ; n * id * id * n ; id * sw[2, 0, 3, 1] * id by coassoc
+  = n * n ; id * n * id * n ; id * sw[2, 0, 3, 1] * id by coassoc
+  = n * n ; id * id * sw ; id * n2 * id ; id * sw[4, 0, 1, 2, 3] by -n2_def
+  = n2 ; id * id * n2 by -n2_def
+
+rewrite counitL2 :
+  n2 ; v * v * id * id
+  = n * n ; v * id * v * id by n2_def
+  = n * id ; v * id * id by counitL
+  = id * id by counitL
+
+rewrite counitR2 :
+  n2 ; id * id * v * v
+  = n * n ; id * v * id * v by n2_def
+  = n * id ; id * v * id by counitR
+  = id * id by counitR
+
+
+# Now, we'll show some properties of Hopf algebras
+
+
+#########################
+# The antipode is unique
+#########################
+
+gen sp : 1 -> 1
+rule antiLp : n ; sp * id ; m = v ; u
+rule antiRp : n ; id * sp ; m = v ; u
+
+rewrite sp_is_s :
+  sp
+  = sp * u ; m by -unitR
+  = n ; id * v ; sp * u ; m by -counitR
+  = n ; sp * n ; id * id * s ; id * m ; m by -antiR
+  = n ; n * s ; sp * m ; m by -coassoc
+  = n ; n * s ; sp * id * id ; m * id ; m by -assoc
+  = n * u ; v * s * id ; sw ; m by antiLp
+  = u * s ; m by counitL
+  = s by unitL
+
+
+#######################################
+# The antipode is an anti-homomorphism
+#######################################
+
+# for convenience, we'll make definitions for the LHS and RHS of the anti-HM rule
+gen a1 : 2 -> 1
+rule a1_def : a1 = m ; s
+gen a2 : 2 -> 1
+rule a2_def : a2 = sw ; s * s ; m
+
+
+
+# show a1 is a left inverse of "m" w.r.t. convolution
+rewrite anti_hm_lem1 :
+  n2 ; a1 * m ; m
+  = n2; (m ; s) * m ; m by a1_def
+  = n * n ; id * sw * id ; m * m ; s * id ; m by n2_def
+  = m ; n ; s * id ; m by -bialg
+  = u * m ; id * v by antiL
+  = u * v * v by vcp
+
+
+# show a2 is a right inverse of "m" w.r.t. convolution
+rewrite anti_hm_lem2 :
+  n2 ; m * a2 ; m
+  = n2; m * (sw ; s * s ; m) ; m by a2_def
+  = n * n ; id * sw * id ; m * s * s ; id * sw ; id * m ; m by n2_def
+  = n * n ; id * s * id * s ; id * sw[1, 2, 0] ; id * id * m ; id * m ; m by assoc
+  = n * n ; id * s * id * s ; id * id * m ; id * sw ; id * m ; m by -assoc
+  = n * u * v ; id * s * id ; id * sw ; id * m ; m by antiR
+  = n * v ; id * s ; m by unitL
+  = u * v * v by antiR
+
+# ...hence a1 = a2
+rewrite s_anti_hm :
+  m ; s
+  = a1 by -a1_def
+  = u * a1 ; sw ; m by -unitR
+  = u * n2 ; id * a1 * v * v ; sw ; m by -counitR2
+  = n2 ; id * id * n2 ; a1 * m * a2 ; id * m ; m by -anti_hm_lem2
+  = n2 ; n2 * id * id ; a1 * m * a2 ; id * m ; m by -coassoc2
+  = n2 ; n2 * id * id ; a1 * m * a2 ; m * id ; m by -assoc
+  = u * n2 ; id * v * v * a2 ; m by anti_hm_lem1
+  = n2 ; v * v * a2 by unitL
+  = a2 by counitL2
+  = s * s ; sw ; m by a2_def
+
+# This implies that the antipode squared is a homomorphism:
+gen s2 : 1 -> 1
+rule s2_def : s2 = s ; s
+
+rewrite s2_hm :
+  m ; s2
+  = m ; s ; s by s2_def
+  = s * s ; sw ; m ; s by s_anti_hm
+  = s * s ; s * s ; m by s_anti_hm
+  = s * s2 ; s * id ; m by -s2_def
+  = s2 * s2 ; m by -s2_def
+
