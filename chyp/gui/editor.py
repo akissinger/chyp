@@ -15,7 +15,7 @@
 
 from __future__ import annotations
 from typing import Callable, Dict, Optional, Tuple
-from PySide6.QtCore import QByteArray, QFileInfo, QObject, QThread, Qt, QSettings
+from PySide6.QtCore import QByteArray, QFileInfo, QObject, QThread, QTimer, Qt, QSettings
 from PySide6.QtGui import QCloseEvent, QKeySequence, QTextCursor
 from PySide6.QtWidgets import QApplication, QHBoxLayout, QMainWindow, QMenuBar, QSplitter, QTreeView, QVBoxLayout, QWidget
 
@@ -93,6 +93,9 @@ class Editor(QMainWindow):
 
         # keep a cache of graphs that have already been laid out
         self.graph_cache : Dict[int, Tuple[Graph, Optional[Graph]]] = dict()
+
+        # keep a revision count, so we don't trigger parsing until the user stops typing for a bit
+        self.revision = 0
 
     def build_menu(self) -> None:
         menu = QMenuBar()
@@ -201,7 +204,16 @@ class Editor(QMainWindow):
         self.parsed = False
         self.graph_cache = dict()
         self.code_view.set_current_region(None)
-        self.update_state(quiet=True)
+        self.revision += 1
+
+        def update(r: int) -> Callable:
+            def f():
+                if r == self.revision:
+                    self.update_state()
+            return f
+
+        QTimer.singleShot(100, update(self.revision))
+        # self.update_state(sync=False)
 
     def next_part(self, step:int=1) -> None:
         if not self.parsed: return
@@ -354,10 +366,11 @@ class Editor(QMainWindow):
                 self.update_state()
                 self.next_rewrite_at_cursor()
 
-    def update_state(self, quiet: bool=False) -> None:
+    def update_state(self) -> None:
+        self.state = State()
         self.code_view.set_current_region(None)
-        self.state.update(self.code_view.toPlainText())
         
+        self.state.update(self.code_view.toPlainText())
         model = self.error_view.model()
         if isinstance(model, ErrorListModel):
             model.set_errors(self.state.errors)
@@ -367,10 +380,8 @@ class Editor(QMainWindow):
             self.rhs_view.setVisible(False)
             self.parsed = True
             self.show_at_cursor()
-        elif not quiet:
-            print('**********************************************************************')
-            for err in self.state.errors:
-                print("%d: %s" % err)
+
+
 
     def closeEvent(self, e: QCloseEvent) -> None:
         if self.doc.confirm_close():
@@ -391,3 +402,13 @@ class CheckThread(QThread):
 
     def run(self) -> None:
         self.rw.check()
+
+# class UpdateStateThread(QThread):
+#     def __init__(self, state: State, code: str, parent: Optional[QObject] = None) -> None:
+#         super().__init__(parent)
+#         self.state = state
+#         self.code = code
+
+#     def run(self) -> None:
+#         self.msleep(300)
+#         self.state.update(self.code)

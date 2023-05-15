@@ -138,6 +138,7 @@ rewrite s_anti_hm :
   = a2 by counitL2
   = s * s ; sw ; m by a2_def
 
+
 # This implies that the antipode squared is a homomorphism:
 gen s2 : 1 -> 1
 rule s2_def : s2 = s ; s
