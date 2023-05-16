@@ -207,7 +207,7 @@ class Editor(QMainWindow):
         self.revision += 1
 
         def update(r: int) -> Callable:
-            def f():
+            def f() -> None:
                 if r == self.revision:
                     self.update_state()
             return f
@@ -230,7 +230,7 @@ class Editor(QMainWindow):
             self.code_view.setTextCursor(cursor)
             
 
-    def show_errors(self):
+    def show_errors(self) -> None:
         conf = QSettings('chyp', 'chyp')
         error_panel_size = conf.value('error_panel_size', 100)
         if isinstance(error_panel_size, str):

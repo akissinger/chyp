@@ -253,7 +253,7 @@ class Match:
 
 
 class Matches(Iterable):
-    def __init__(self, dom: Graph, cod: Graph, initial_match: Optional[Match] = None, convex=True) -> None:
+    def __init__(self, dom: Graph, cod: Graph, initial_match: Optional[Match] = None, convex: bool=True) -> None:
         if initial_match is None: initial_match = Match(dom=dom, cod=cod) 
         self.convex = convex
 
@@ -282,10 +282,10 @@ class Matches(Iterable):
                 self.match_stack += m.more()
         raise StopIteration
 
-def match_graph(dom: Graph, cod: Graph, convex=True) -> Iterable[Match]:
+def match_graph(dom: Graph, cod: Graph, convex: bool=True) -> Iterable[Match]:
     return Matches(dom, cod, convex=convex)
 
-def match_rule(r: Rule, g: Graph, convex=True) -> Iterable[Match]:
+def match_rule(r: Rule, g: Graph, convex: bool=True) -> Iterable[Match]:
     return Matches(r.lhs, g, convex=convex)
 
 def find_iso(g: Graph, h: Graph) -> Optional[Match]:

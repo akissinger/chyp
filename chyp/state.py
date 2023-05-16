@@ -90,7 +90,7 @@ class State:
         self.rules: Dict[str, Rule] = dict()
         self.rewrites: Dict[str, RewriteState] = dict()
         self.parts: List[Tuple[int, int, str, str]] = list()
-        self.errors: List[Tuple[int, str]] = list()
+        self.errors: List[Tuple[str, int, str]] = list()
 
     def update(self, code: str) -> None:
         parse_data = parse(code)
