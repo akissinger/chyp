@@ -317,6 +317,9 @@ class Editor(QMainWindow):
                 self.rhs_view.setVisible(True)
                 self.lhs_view.set_graph(lhs)
                 if rhs: self.rhs_view.set_graph(rhs)
+            else:
+                self.rhs_view.setVisible(False)
+                self.lhs_view.set_graph(Graph())
 
 
     def next_rewrite_at_cursor(self) -> None:

@@ -1,0 +1,15 @@
+gen m1 : 2 -> 1
+gen u1 : 0 -> 1
+gen n1 : 1 -> 2
+gen v1 : 1 -> 0
+
+gen m2 : 2 -> 1
+gen u2 : 0 -> 1
+gen n2 : 1 -> 2
+gen v2 : 1 -> 0
+
+import frobenius as F1(m=m1, u=u1, n=n1, v=v1)
+import frobenius as F2(m=m2, u=u2, n=n2, v=v2)
+import hopf as H1(m=m1, u=u1, n=n2, v=v2)
+import hopf as H2(m=m2, u=u2, n=n1, v=v1)
+

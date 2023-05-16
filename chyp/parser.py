@@ -8,13 +8,12 @@ from .rule import Rule, RuleError
 
 GRAMMAR = Lark("""
     start : statement*
-    ?statement : import_statement | gen | let | rule | rewrite
-    import_statement : "import" module_name [ "as" var ]
+    ?statement : import_statement | gen | let | rule | rewrite | show
     gen : "gen" var ":" num "->" num
     let : "let" var "=" term
     rule : "rule" var ":" term (eq | le) term
     rewrite : "rewrite" [converse] var ":" term rewrite_part*
-    rewrite_part : (eq | le) term_hole [ "by" [converse] rule_ref ]
+    rewrite_part : (eq | le) term_hole [ "by" [ converse ] rule_ref ]
     converse : "-"
     ?term  : par_term | seq
     ?par_term : "(" term ")" | par | perm | id | id0 | term_ref
@@ -23,6 +22,10 @@ GRAMMAR = Lark("""
     perm : "sw" [ "[" num ("," num)* "]" ]
     id : "id"
     id0 : "id0"
+    show : "show" rule_ref
+
+    import_statement : "import" module_name [ "as" var ] [ "(" import_let ("," import_let)* ")" ]
+    import_let : var "=" term
 
     eq : "=" | "=="
     le : "<=" | "~>"
@@ -90,17 +93,6 @@ class ChypParseData(Transformer):
         return False
 
     @v_args(meta=True)
-    def import_statement(self, meta: Meta, items: List[Any]) -> None:
-        mod = items[0]
-        namespace = items[1] or mod
-        file_name = module_filename(mod, self.file_name)
-        try:
-            with open(file_name) as f:
-                parse(f.read(), file_name, namespace, self)
-        except FileNotFoundError:
-            self.errors.append((self.file_name, meta.line, 'File not found: {}'.format(file_name)))
-
-    @v_args(meta=True)
     def perm(self, meta: Meta, items: List[Any]) -> Optional[Graph]:
         try:
             if items[0] is None:
@@ -118,7 +110,7 @@ class ChypParseData(Transformer):
             s = self.namespace + '.' + s
 
         if s in self.graphs:
-            return self.graphs[str(items[0])]
+            return self.graphs[s]
         else:
             self.errors.append((self.file_name, meta.line, 'Undefined term: ' + s))
             return None
@@ -130,7 +122,7 @@ class ChypParseData(Transformer):
             s = self.namespace + '.' + s
 
         if s in self.rules:
-            return self.rules[str(items[0])]
+            return self.rules[s]
         else:
             self.errors.append((self.file_name, meta.line, 'Undefined rule: ' + s))
             return None
@@ -154,6 +146,12 @@ class ChypParseData(Transformer):
             return None
 
     @v_args(meta=True)
+    def show(self, meta: Meta, items: List[Any]) -> None:
+        rule = items[0]
+        if rule:
+            self.parts.append((meta.start_pos, meta.end_pos, 'rule', rule.name))
+
+    @v_args(meta=True)
     def gen(self, meta: Meta, items: List[Any]) -> None:
         name, arity, coarity = items
         if not name in self.graphs:
@@ -175,6 +173,34 @@ class ChypParseData(Transformer):
         else:
             self.errors.append((self.file_name, meta.line, "Term '{}' already defined.".format(name)))
         self.parts.append((meta.start_pos, meta.end_pos, 'let', name))
+
+    @v_args(meta=True)
+    def import_statement(self, meta: Meta, items: List[Any]) -> None:
+        mod = items[0]
+        namespace = items[1] or mod
+        import_lets = items[2:]
+
+        for il in import_lets:
+            if il:
+                name, graph = il
+                name = namespace + '.' + name
+                if not name in self.graphs:
+                    if graph:
+                        self.graphs[name] = graph
+                else:
+                    self.errors.append((self.file_name, meta.line, "Term '{}' already defined.".format(name)))
+
+        file_name = module_filename(mod, self.file_name)
+        try:
+            with open(file_name) as f:
+                parse(f.read(), file_name, namespace, self)
+        except FileNotFoundError:
+            self.errors.append((self.file_name, meta.line, 'File not found: {}'.format(file_name)))
+
+        self.parts.append((meta.start_pos, meta.end_pos, 'import', namespace))
+
+    def import_let(self, items: List[Any]) -> Tuple[str, Graph]:
+        return (items[0], items[1])
 
     @v_args(meta=True)
     def rule(self, meta: Meta, items: List[Any]) -> None:
