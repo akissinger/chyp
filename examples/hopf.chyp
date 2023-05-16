@@ -124,6 +124,7 @@ rewrite anti_hm_lem2 :
   = n * v ; id * s ; m by unitL
   = u * v * v by antiR
 
+
 # ...hence a1 = a2
 rewrite s_anti_hm :
   m ; s
