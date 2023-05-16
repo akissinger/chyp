@@ -1,3 +1,4 @@
+import os.path
 from typing import Any, Dict, List, Optional, Tuple
 from lark import Lark, Transformer, UnexpectedInput, v_args
 from lark.tree import Meta
@@ -7,8 +8,8 @@ from .rule import Rule, RuleError
 
 GRAMMAR = Lark("""
     start : statement*
-    ?statement : import | gen | let | rule | rewrite
-    import : "import" module_name [ "as" var ]
+    ?statement : import_statement | gen | let | rule | rewrite
+    import_statement : "import" module_name [ "as" var ]
     gen : "gen" var ":" num "->" num
     let : "let" var "=" term
     rule : "rule" var ":" term (eq | le) term
@@ -49,9 +50,9 @@ GRAMMAR = Lark("""
 source_cache: Dict[str, Tuple[float,str]] = dict()
 
 class ChypParseData(Transformer):
-    def __init__(self, namespace: str, filename: str) -> None:
+    def __init__(self, namespace: str, file_name: str) -> None:
         self.namespace = namespace
-        self.filename = filename
+        self.file_name = file_name
         self.import_depth = 0
 
         self.graphs: Dict[str, Graph] = dict()
@@ -67,7 +68,8 @@ class ChypParseData(Transformer):
     #     pass
         
     def var(self, items: List[Any]) -> str:
-        return str(items[0])
+        s = str(items[0])
+        return self.namespace + '.' + s if self.namespace else s
 
     def module_name(self, items: List[Any]) -> str:
         return str(items[0])
@@ -88,6 +90,17 @@ class ChypParseData(Transformer):
         return False
 
     @v_args(meta=True)
+    def import_statement(self, meta: Meta, items: List[Any]) -> None:
+        mod = items[0]
+        namespace = items[1] or mod
+        file_name = module_filename(mod, self.file_name)
+        try:
+            with open(file_name) as f:
+                parse(f.read(), file_name, namespace, self)
+        except FileNotFoundError:
+            self.errors.append((self.file_name, meta.line, 'File not found: {}'.format(file_name)))
+
+    @v_args(meta=True)
     def perm(self, meta: Meta, items: List[Any]) -> Optional[Graph]:
         try:
             if items[0] is None:
@@ -95,7 +108,7 @@ class ChypParseData(Transformer):
             else:
                 return perm([int(i) for i in items])
         except GraphError as e:
-            self.errors.append((self.filename, meta.line, str(e)))
+            self.errors.append((self.file_name, meta.line, str(e)))
         return None
     
     @v_args(meta=True)
@@ -107,7 +120,7 @@ class ChypParseData(Transformer):
         if s in self.graphs:
             return self.graphs[str(items[0])]
         else:
-            self.errors.append((self.filename, meta.line, 'Undefined term: ' + s))
+            self.errors.append((self.file_name, meta.line, 'Undefined term: ' + s))
             return None
 
     @v_args(meta=True)
@@ -119,7 +132,7 @@ class ChypParseData(Transformer):
         if s in self.rules:
             return self.rules[str(items[0])]
         else:
-            self.errors.append((self.filename, meta.line, 'Undefined rule: ' + s))
+            self.errors.append((self.file_name, meta.line, 'Undefined rule: ' + s))
             return None
     
     def par(self, items: List[Any]) -> Optional[Graph]:
@@ -135,7 +148,7 @@ class ChypParseData(Transformer):
             try:
                 g = items[0] >> items[1]
             except GraphError as e:
-                self.errors.append((self.filename, meta.line, str(e)))
+                self.errors.append((self.file_name, meta.line, str(e)))
             return g
         else:
             return None
@@ -150,7 +163,7 @@ class ChypParseData(Transformer):
             inp = len(g.inputs())
             outp = len(g.outputs())
             if inp != arity or outp != coarity:
-                self.errors.append((self.filename, meta.line, "Term '{}' already defined with incompatible type {} -> {}.".format(name, inp, outp)))
+                self.errors.append((self.file_name, meta.line, "Term '{}' already defined with incompatible type {} -> {}.".format(name, inp, outp)))
         self.parts.append((meta.start_pos, meta.end_pos, 'gen', name))
         
     @v_args(meta=True)
@@ -160,7 +173,7 @@ class ChypParseData(Transformer):
             if graph:
                 self.graphs[name] = graph
         else:
-            self.errors.append((self.filename, meta.line, "Term '{}' already defined.".format(name)))
+            self.errors.append((self.file_name, meta.line, "Term '{}' already defined.".format(name)))
         self.parts.append((meta.start_pos, meta.end_pos, 'let', name))
 
     @v_args(meta=True)
@@ -171,9 +184,9 @@ class ChypParseData(Transformer):
                 try:
                     self.rules[name] = Rule(lhs, rhs, name, invertible)
                 except RuleError as e:
-                    self.errors.append((self.filename, meta.line, str(e)))
+                    self.errors.append((self.file_name, meta.line, str(e)))
         else:
-            self.errors.append((self.filename, meta.line, "Rule '{}' already defined.".format(name)))
+            self.errors.append((self.file_name, meta.line, "Rule '{}' already defined.".format(name)))
         self.parts.append((meta.start_pos, meta.end_pos, 'rule', name))
 
     @v_args(meta=True)
@@ -217,14 +230,14 @@ class ChypParseData(Transformer):
                         if base_name in self.rules:
                             self.rules[base_name].equiv = True
                         else:
-                            self.errors.append((self.filename, meta.line, "Trying to prove converse for unknown rule: " + base_name))
+                            self.errors.append((self.file_name, meta.line, "Trying to prove converse for unknown rule: " + base_name))
                     else:
                         if not name in self.rules:
                             self.rules[name] = Rule(term, rhs, name=name, equiv=all_equiv)
                         else:
-                            self.errors.append((self.filename, meta.line, "Rule '{}' already defined.".format(name)))
+                            self.errors.append((self.file_name, meta.line, "Rule '{}' already defined.".format(name)))
                 except RuleError as e:
-                    self.errors.append((self.filename, meta.line, str(e)))
+                    self.errors.append((self.file_name, meta.line, str(e)))
 
     @v_args(meta=True)
     def rewrite_part(self, meta: Meta, items: List[Any]) -> Tuple[int, int, int, bool, Optional[Rule], Optional[Graph]]:
@@ -248,22 +261,12 @@ class ChypParseData(Transformer):
         return (meta.start_pos, meta.end_pos, t)
 
 
-# def load_file(path: str) -> Optional[ChypParseData]:
-#     try:
-#         mtime = getmtime(path)
-#         code = None
-#         if path in source_cache and mtime == source_cache[path][0]:
-#             return source_cache[path][1]
-#         else:
-#             with open(path) as f:
-#                 f.read()
-#             return None
-#     except FileNotFoundError:
-#         return None
+def module_filename(name: str, current_file: str) -> str:
+    return os.path.join(os.path.dirname(current_file), *name.split('.')) + '.chyp'
 
 
-def parse(code: str, filename: str='', namespace: str='', parent: Optional[ChypParseData] = None) -> ChypParseData:
-    parse_data = ChypParseData(namespace, filename)
+def parse(code: str, file_name: str='', namespace: str='', parent: Optional[ChypParseData] = None) -> ChypParseData:
+    parse_data = ChypParseData(namespace, file_name)
 
     if parent:
         parse_data.graphs = parent.graphs
@@ -271,7 +274,7 @@ def parse(code: str, filename: str='', namespace: str='', parent: Optional[ChypP
         parse_data.errors = parent.errors
         parse_data.import_depth = parent.import_depth + 1
         if parse_data.import_depth > 255:
-            parse_data.errors += [(parent.filename, -1, "Maximum import depth (255) exceeded. Probably a cyclic import.")]
+            parse_data.errors += [(parent.file_name, -1, "Maximum import depth (255) exceeded. Probably a cyclic import.")]
 
     try:
         tree = GRAMMAR.parse(code)
@@ -281,9 +284,9 @@ def parse(code: str, filename: str='', namespace: str='', parent: Optional[ChypP
         msg = 'Parse error: '
         e_lines = e.get_context(code).splitlines()
         if len(e_lines) >= 2:
-            parse_data.errors += [(filename, e.line, msg + e_lines[0] + '\n' + len(msg)*' ' + e_lines[1])]
+            parse_data.errors += [(file_name, e.line, msg + e_lines[0] + '\n' + len(msg)*' ' + e_lines[1])]
         else:
-            parse_data.errors += [(filename, e.line, msg + e_lines[0])]
+            parse_data.errors += [(file_name, e.line, msg + e_lines[0])]
 
     return parse_data
 

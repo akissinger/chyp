@@ -92,8 +92,8 @@ class State:
         self.parts: List[Tuple[int, int, str, str]] = list()
         self.errors: List[Tuple[str, int, str]] = list()
 
-    def update(self, code: str) -> None:
-        parse_data = parse(code)
+    def update(self, code: str, file_name: str) -> None:
+        parse_data = parse(code, file_name)
         self.graphs = parse_data.graphs
         self.rules = parse_data.rules
         self.parts = parse_data.parts

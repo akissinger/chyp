@@ -79,6 +79,7 @@ class Editor(QMainWindow):
         self.code_view.setFocus()
 
         self.error_view = QTreeView()
+        self.error_view.setIndentation(0)
         self.error_view.setModel(ErrorListModel())
         self.splitter.addWidget(self.error_view)
 
@@ -370,7 +371,7 @@ class Editor(QMainWindow):
         self.state = State()
         self.code_view.set_current_region(None)
         
-        self.state.update(self.code_view.toPlainText())
+        self.state.update(self.doc.toPlainText(), self.doc.file_name)
         model = self.error_view.model()
         if isinstance(model, ErrorListModel):
             model.set_errors(self.state.errors)

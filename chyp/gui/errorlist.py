@@ -1,5 +1,5 @@
-from typing import Any, List, Optional, Tuple, Union, overload
-from PySide6.QtCore import QObject, QPersistentModelIndex, Qt, QAbstractItemModel, QModelIndex
+from typing import Any, List, Tuple, Union
+from PySide6.QtCore import QFileInfo, QPersistentModelIndex, Qt, QAbstractItemModel, QModelIndex
 from PySide6.QtGui import QFont
 
 class ErrorListModel(QAbstractItemModel):
@@ -22,7 +22,10 @@ class ErrorListModel(QAbstractItemModel):
             return None
 
         if role == Qt.ItemDataRole.DisplayRole:
-            return self.errors[index.row()][index.column()]
+            if index.column() == 0:
+                return QFileInfo(self.errors[index.row()][0]).fileName()
+            else:
+                return self.errors[index.row()][index.column()] 
         elif role == Qt.ItemDataRole.FontRole:
             return QFont("monospace", 12)
         elif role == Qt.ItemDataRole.TextAlignmentRole:
@@ -55,7 +58,7 @@ class ErrorListModel(QAbstractItemModel):
 
     def parent(self, child: Any=None) -> Any:
         """Always return an invalid index, since there are no nested indices"""
-        if not child:
+        if child is None:
             return super().parent()
         else:
             return QModelIndex()
