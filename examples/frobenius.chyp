@@ -87,10 +87,6 @@ rewrite yankR :
 
 
 # We can also prove the cups can transform multiplications into comultiplications:
-#
-#  m_cupL : cup * id ; id * m = n
-#  m_cupR : id * cup ; m * id = n
-#
 
 rewrite m_cupL :
   cup * id ; id * m
@@ -102,7 +98,15 @@ rewrite m_cupR :
   = n * u ; id * m by -frob
   = n by unitR
 
+rewrite n_capL :
+  id * n ; cap * id
+  = n * id ; v * m by -frob
+  = m by counitL
 
+rewrite n_capR :
+  n * id ; id * cap
+  = id * n ; m * v by frob
+  = m by counitR
 
 # As a final exercise, let's show that the tensor product of a Frobenius algebra
 # with itself is also a Frobenius algebra. That is, for:
@@ -196,7 +200,7 @@ rule ssym : kf = v
 
 # First, we prove symmetry. This one is a bit tricky to follow. The main thing to note is the two
 # steps "-yankR" and "yankR" are essentially invoking cyclicity of the partial trace.
-rewrite symm :
+rewrite symm_cap :
   cap
   = u * m ; n * id ; id * m ; sw ; m ; v by -ssym
   = u * id * id ; n * id * id ; id * m * id ; id * m ; sw ; m ; v by -assoc
@@ -204,6 +208,15 @@ rewrite symm :
   = u * id * id ; n * id * id ; id * id * sw ; id * m * id ; id * m ; sw ; m ; v by yankR
   = sw ; u * m ; n * id ; id * m ; sw ; m ; v by assoc
   = sw ; m ; v by ssym
+  = sw ; cap
+
+# Once we prove the cap is symmetric, the cup follows from the yanking rules
+rewrite symm_cup :
+  cup
+  = u * u ; n * n ; id * sw[2, 0, 1] ; id * m * id ; id * v * id by -yankL
+  = u * u ; n * n ; id * sw * id ; id * id * m ; id * id * v by symm_cap
+  = u ; n ; sw by yankL
+  = cup ; sw
 
 # Next, we prove specialness. We start with a lemma relating the Killing form to the LHS of
 # the "spec" rule:
@@ -211,7 +224,7 @@ rewrite spec_lem :
   n ; id * kf
   = n ; id * n ; id * sw ; id * cap by m_cupL
   = n ; n * id ; id * sw ; id * m ; id * v by -coassoc
-  = n ; n * id ; id * m ; id * v by symm
+  = n ; n * id ; id * m ; id * v by symm_cap
   = n ; id * n ; m * v by frob
   = n ; m by counitR
 
@@ -227,7 +240,7 @@ rewrite spec :
 rewrite ssym_again :
   kf
   = u * id ; n * id ; id * m ; sw ; m ; v
-  = u * id ; n * id ; id * m ; m ; v by symm
+  = u * id ; n * id ; id * m ; m ; v by symm_cap
   = u * id ; m ; n ; m ; v by frobL
   = u * id ; m ; v by spec
   = v by unitL
