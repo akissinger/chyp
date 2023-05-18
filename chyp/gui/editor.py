@@ -259,6 +259,7 @@ class Editor(QMainWindow):
         p = self.state.part_with_index_at(pos)
         if p:
             i, part = p
+            # print(part)
             self.code_view.set_current_region((part[0], part[1]))
             if part[2] in ('let','gen') and part[3] in self.state.graphs:
                 if i not in self.graph_cache:
@@ -285,20 +286,20 @@ class Editor(QMainWindow):
                 self.rhs_view.set_graph(rhs)
             elif part[2] == 'rewrite' and part[3] in self.state.rewrites:
                 rw = self.state.rewrites[part[3]]
+                if not rw.stub:
+                    if rw.status == RewriteState.UNCHECKED:
+                        rw.status = RewriteState.CHECKING
+                        def check_finished(i: int) -> Callable:
+                            def f() -> None:
+                                self.graph_cache.pop(i, None)
+                                self.show_at_cursor()
+                            return f
+
+                        check_thread = CheckThread(rw, self)
+                        check_thread.finished.connect(check_finished(i))
+                        check_thread.start()
+
                 if i not in self.graph_cache:
-                    if not rw.stub:
-                        if rw.status == RewriteState.UNCHECKED:
-                            rw.status = RewriteState.CHECKING
-                            def check_finished(i: int) -> Callable:
-                                def f() -> None:
-                                    self.graph_cache.pop(i, None)
-                                    self.show_at_cursor()
-                                return f
-
-                            check_thread = CheckThread(rw, self)
-                            check_thread.finished.connect(check_finished(i))
-                            check_thread.start()
-
                     lhs = rw.lhs.copy() if rw.lhs else Graph()
                     rhs = rw.rhs.copy() if rw.rhs else Graph()
                     convex_layout(lhs)
@@ -354,8 +355,11 @@ class Editor(QMainWindow):
                     cursor.clearSelection()
                     cursor.setPosition(start)
                     cursor.setPosition(end, mode=QTextCursor.MoveMode.KeepAnchor)
+
+                    self.blockSignals(True)
                     cursor.insertText(rw_term)
                     self.code_view.setTextCursor(cursor)
+                    self.blockSignals(False)
                     self.update_state()
 
     def repeat_step_at_cursor(self) -> None:
@@ -380,8 +384,8 @@ class Editor(QMainWindow):
             model.set_errors(self.state.errors)
 
         if len(self.state.errors) == 0:
-            self.lhs_view.set_graph(Graph())
-            self.rhs_view.setVisible(False)
+            # self.lhs_view.set_graph(Graph())
+            # self.rhs_view.setVisible(False)
             self.parsed = True
             self.show_at_cursor()
 

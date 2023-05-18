@@ -26,9 +26,11 @@ from ..graph import Graph
 
 SCALE = 50.0
 
+BOX_WIDTH = 1.1
+
 class EItem(QGraphicsRectItem):
     def __init__(self, g: Graph, e: int) -> None:
-        super().__init__(-0.4 * SCALE, -0.8 * SCALE, 0.8 * SCALE, 1.6 * SCALE)
+        super().__init__(-0.5 * BOX_WIDTH * SCALE, -0.8 * SCALE, BOX_WIDTH * SCALE, 1.6 * SCALE)
         self.g = g
         self.e = e
         ed = g.edge_data(e)
@@ -45,7 +47,7 @@ class EItem(QGraphicsRectItem):
             self.setVisible(False)
         else:
             if self.num_s <= 1 and self.num_t <= 1:
-                self.setRect(-0.4 * SCALE, -0.4 * SCALE, 0.8 * SCALE, 0.8 * SCALE)
+                self.setRect(-0.5 * BOX_WIDTH * SCALE, -0.4 * SCALE, BOX_WIDTH * SCALE, 0.8 * SCALE)
 
             self.setBrush(QBrush(QColor(200,200,255)))
             if ed.highlight:
@@ -60,7 +62,7 @@ class EItem(QGraphicsRectItem):
         super().paint(painter, option, widget)
         ed = self.g.edge_data(self.e)
 
-        painter.setFont(QFont("sans", 14))
+        painter.setFont(QFont("sans", 11))
         painter.drawText(self.boundingRect(), Qt.AlignmentFlag.AlignCenter, str(ed.value)) # type:ignore
 
 class VItem(QGraphicsEllipseItem):
@@ -91,7 +93,7 @@ class TItem(QGraphicsPathItem):
     def refresh(self) -> None:
         path = QPainterPath()
 
-        x_shift = (0 if self.eitem.is_id else 0.4) * SCALE
+        x_shift = (0 if self.eitem.is_id else 0.5 * BOX_WIDTH) * SCALE
 
         if self.src:
             if self.eitem.num_s == 1:

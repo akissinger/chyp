@@ -1,6 +1,6 @@
 import os.path
 from typing import Any, Dict, List, Optional, Tuple
-from lark import Lark, Transformer, UnexpectedInput, v_args
+from lark import Lark, ParseTree, Transformer, UnexpectedInput, v_args
 from lark.tree import Meta
 
 from .graph import Graph, GraphError, gen, perm, identity
@@ -192,8 +192,7 @@ class ChypParseData(Transformer):
 
         file_name = module_filename(mod, self.file_name)
         try:
-            with open(file_name) as f:
-                parse(f.read(), file_name, namespace, self)
+            parse(file_name=file_name, namespace=namespace, parent=self)
         except FileNotFoundError:
             self.errors.append((self.file_name, meta.line, 'File not found: {}'.format(file_name)))
 
@@ -290,8 +289,12 @@ class ChypParseData(Transformer):
 def module_filename(name: str, current_file: str) -> str:
     return os.path.join(os.path.dirname(current_file), *name.split('.')) + '.chyp'
 
+# cache parse trees for imported files and only re-parse if the file changes
+parse_cache: Dict[str, Tuple[float, ParseTree]] = dict()
 
-def parse(code: str, file_name: str='', namespace: str='', parent: Optional[ChypParseData] = None) -> ChypParseData:
+def parse(code: str='', file_name: str='', namespace: str='', parent: Optional[ChypParseData] = None) -> ChypParseData:
+    global parse_cache
+
     parse_data = ChypParseData(namespace, file_name)
 
     if parent:
@@ -303,7 +306,16 @@ def parse(code: str, file_name: str='', namespace: str='', parent: Optional[Chyp
             parse_data.errors += [(parent.file_name, -1, "Maximum import depth (255) exceeded. Probably a cyclic import.")]
 
     try:
-        tree = GRAMMAR.parse(code)
+        if file_name and not code:
+            mtime = os.path.getmtime(file_name)
+            if file_name in parse_cache and parse_cache[file_name][0] == mtime:
+                tree = parse_cache[file_name][1]
+            else:
+                with open(file_name) as f:
+                    tree = GRAMMAR.parse(f.read())
+                parse_cache[file_name] = (mtime, tree)
+        else:
+            tree = GRAMMAR.parse(code)
         parse_data.transform(tree)
         parse_data.parsed = True
     except UnexpectedInput as e:
