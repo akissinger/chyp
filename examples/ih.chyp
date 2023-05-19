@@ -8,10 +8,12 @@ gen u2 : 0 -> 1
 gen n2 : 1 -> 2
 gen v2 : 1 -> 0
 
-import frobenius as F1(m=m1, u=u1, n=n1, v=v1)
-import frobenius as F2(m=m2, u=u2, n=n2, v=v2)
+import ssfa as F1(m=m1, u=u1, n=n1, v=v1)
+import ssfa as F2(m=m2, u=u2, n=n2, v=v2)
 import hopf as H1(m=m1, u=u1, n=n2, v=v2)
 import hopf as H2(m=m2, u=u2, n=n1, v=v1)
+
+let m1_t2 = (F1.cup * F1.cup ; id * sw * id ; id * id * m1) * id ; id * id * F1.cap
 
 let d1 = id * F1.cup ; F2.cap * id
 let d2 = id * F2.cup ; F1.cap * id

@@ -1,0 +1,74 @@
+import frobenius
+
+# Generic non-commutative Frobenius algebras are a bit wild, so we often look at special symmetric
+# Frobenius algebras (SSFAs). These satisfy two extra conditions:
+#
+#   spec : n ; m = id
+#   symm : sw ; cap = cap
+#
+# In fact, both of these rules are implied by a single rule, relating the "Killing form" to the
+# counit.
+
+# The Killing form is the (left) partial trace of the multiplication, which we can define as
+# follows:
+let kf = cup * id ; id * m ; sw ; cap
+
+# In fact, it doesn't matter if we take the left or right partial trace, since the m_cup rules
+# let us flip between the two:
+rewrite kf_flip :
+  kf
+  = n ; sw ; cap by m_cupL
+  = id * cup ; m * id ; sw; cap by -m_cupR
+
+
+# Now, we can show that a Frobenius algebra is an SSFA if and only if the Killing form equals
+# the counit:
+
+rule ssym : kf = v
+
+
+# First, we prove symmetry. This one is a bit tricky to follow. The main thing to note is the two
+# steps "-yankR" and "yankR" are essentially invoking cyclicity of the partial trace.
+rewrite symm_cap :
+  cap
+  = m ; v by cap_def
+  = cup * m ; id * m ; sw ; cap by -ssym
+  = cup * id * id ; id * m * id ; id * m ; sw ; cap by -assoc
+  = cup * cup * id * id ; id * sw * sw * id ; id * id * m * m ; sw[3, 0, 2, 1] ; cap * cap by -yankR
+  = cup * id * id ; id * sw * id ; id * id * m ; id * sw ; id * m ; sw ; cap by yankR
+  = sw ; cup * m ; id * m ; sw ; cap by assoc
+  = sw ; m ; v by ssym
+  = sw ; cap by -cap_def
+
+# Once we prove the cap is symmetric, the cup follows from the yanking rules
+rewrite symm_cup :
+  cup
+  = cup * cup ; id * sw[2, 0, 1] ; id * cap * id by -yankL
+  = cup * cup ; id * id * sw ; id * cap * id by symm_cap
+  = cup ; sw by yankL
+
+# Next, we prove specialness. We start with a lemma relating the Killing form to the LHS of
+# the "spec" rule:
+rewrite spec_lem :
+  n ; id * kf
+  = n ; id * n ; id * sw ; id * cap by m_cupL
+  = n ; n * id ; id * sw ; id * cap by -coassoc
+  = n ; n * id ; id * cap by symm_cap
+  = n ; m by n_capR
+
+# Combining ssym with the counit rule completes the proof:
+rewrite spec :
+  n ; m
+  = n ; id * kf by -spec_lem
+  = n ; id * v by ssym
+  = id by counitR
+
+
+# Going back the other way, we have:
+rewrite ssym_again :
+  kf
+  = cup * id ; id * m ; sw ; cap
+  = cup * id ; id * m ; cap by symm_cap
+  = n ; cap by m_cupL
+  = n ; m ; v by cap_def
+  = v by spec

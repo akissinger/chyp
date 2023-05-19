@@ -8,9 +8,10 @@ from .rule import Rule, RuleError
 
 GRAMMAR = Lark("""
     start : statement*
-    ?statement : import_statement | gen | let | rule | rewrite | show
+    ?statement : import_statement | gen | let | def_statement | rule | rewrite | show
     gen : "gen" var ":" num "->" num
     let : "let" var "=" term
+    def_statement : "def" var "=" term
     rule : "rule" var ":" term (eq | le) term
     rewrite : "rewrite" [converse] var ":" term rewrite_part*
     rewrite_part : (eq | le) term_hole [ "by" [ converse ] rule_ref ]
@@ -175,9 +176,35 @@ class ChypParseData(Transformer):
         self.parts.append((meta.start_pos, meta.end_pos, 'let', name))
 
     @v_args(meta=True)
+    def rule(self, meta: Meta, items: List[Any]) -> None:
+        name, lhs, invertible, rhs = items
+        if not name in self.rules:
+            if lhs and rhs:
+                try:
+                    self.rules[name] = Rule(lhs, rhs, name, invertible)
+                except RuleError as e:
+                    self.errors.append((self.file_name, meta.line, str(e)))
+        else:
+            self.errors.append((self.file_name, meta.line, "Rule '{}' already defined.".format(name)))
+        self.parts.append((meta.start_pos, meta.end_pos, 'rule', name))
+
+    @v_args(meta=True)
+    def def_statement(self, meta: Meta, items: List[Any]) -> None:
+        name, graph = items
+        rule_name = name + '_def'
+        if not name in self.graphs and not rule_name in self.rules:
+            if graph:
+                lhs = gen(name, len(graph.inputs()), len(graph.outputs()))
+                self.graphs[name] = lhs
+                self.rules[rule_name] = Rule(lhs, graph, rule_name, True)
+        else:
+            self.errors.append((self.file_name, meta.line, "Term '{}' or rule '{}' already defined.".format(name, rule_name)))
+        self.parts.append((meta.start_pos, meta.end_pos, 'rule', rule_name))
+
+    @v_args(meta=True)
     def import_statement(self, meta: Meta, items: List[Any]) -> None:
         mod = items[0]
-        namespace = items[1] or mod
+        namespace = items[1] or ''
         import_lets = items[2:]
 
         for il in import_lets:
@@ -200,20 +227,6 @@ class ChypParseData(Transformer):
 
     def import_let(self, items: List[Any]) -> Tuple[str, Graph]:
         return (items[0], items[1])
-
-    @v_args(meta=True)
-    def rule(self, meta: Meta, items: List[Any]) -> None:
-        name, lhs, invertible, rhs = items
-        if not name in self.rules:
-            if lhs and rhs:
-                try:
-                    self.rules[name] = Rule(lhs, rhs, name, invertible)
-                except RuleError as e:
-                    self.errors.append((self.file_name, meta.line, str(e)))
-        else:
-            self.errors.append((self.file_name, meta.line, "Rule '{}' already defined.".format(name)))
-        self.parts.append((meta.start_pos, meta.end_pos, 'rule', name))
-
     @v_args(meta=True)
     def rewrite(self, meta: Meta, items: List[Any]) -> None:
         converse = True if items[0] else False
@@ -294,6 +307,12 @@ parse_cache: Dict[str, Tuple[float, ParseTree]] = dict()
 
 def parse(code: str='', file_name: str='', namespace: str='', parent: Optional[ChypParseData] = None) -> ChypParseData:
     global parse_cache
+
+    if parent and parent.namespace:
+        if namespace != '':
+            namespace = parent.namespace + '.' + namespace
+        else:
+            namespace = parent.namespace
 
     parse_data = ChypParseData(namespace, file_name)
 

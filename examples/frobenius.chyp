@@ -54,18 +54,22 @@ rewrite frob_again:
 
 
 # Frobenis algebras always induce a "cup" and "cap" map:
-let cup = u ; n
-let cap = m ; v
+def cup = u ; n
+def cap = m ; v
 
 # By definition, "cap" satisfies and associativity condition with m:
 rewrite cap_assoc :
   m * id ; cap
-  = id * m ; cap by assoc
+  = m * id ; m ; v by cap_def
+  = id * m ; m ; v by assoc
+  = id * m ; cap by -cap_def
 
 # ...and "cup" a coassociativity condition with n:
 rewrite cup_coassoc :
   cup ; n * id
-  = cup ; id * n by coassoc
+  = u ; n ; n * id by cup_def
+  = u ; n ; id * n by coassoc
+  = cup ; id * n by -cup_def
 
 
 # Thanks to frobL and frobR, we can prove the following "yanking" equations:
@@ -75,12 +79,16 @@ rewrite cup_coassoc :
 #
 rewrite yankL :
   cup * id ; id * cap
+  = u * id ; n * id ; id * cap by cup_def
+  = u * id ; n * id ; id * m ; id * v by cap_def
   = u * id ; m ; n ; id * v by frobL
   = n ; id * v by unitL
   = id by counitR
 
 rewrite yankR :
   id * cup ; cap * id
+  = u * id ; n * id ; sw[2, 0, 1] ; cap * id by cup_def
+  = u * id ; n * id ; sw[2, 0, 1] ; m * id ; v * id by cap_def
   = u * id ; sw ; m ; n ; v * id by frobR
   = n ; v * id by unitR
   = id by counitL
@@ -90,21 +98,25 @@ rewrite yankR :
 
 rewrite m_cupL :
   cup * id ; id * m
+  = u * id ; n * id ; id * m by cup_def
   = u * n ; m * id by frob
   = n by unitL
 
 rewrite m_cupR :
   id * cup ; m * id
+  = u * id ; n * id ; sw[2, 0, 1] ; m * id by cup_def
   = n * u ; id * m by -frob
   = n by unitR
 
 rewrite n_capL :
   id * n ; cap * id
+  = id * n ; m * id ; v * id by cap_def
   = n * id ; v * m by -frob
   = m by counitL
 
 rewrite n_capR :
   n * id ; id * cap
+  = n * id ; id * m ; id * v by cap_def
   = id * n ; m * v by frob
   = m by counitR
 
@@ -171,77 +183,4 @@ rewrite frob2 :
   = id2 * n2 ; m2 * id2
 
 
-# Generic non-commutative Frobenius algebras are a bit wild, so we often look at special symmetric
-# Frobenius algebras (SSFAs). These satisfy two extra conditions:
-#
-#   spec : n ; m = id
-#   symm : sw ; cap = cap
-#
-# In fact, both of these rules are implied by a single rule, relating the "Killing form" to the
-# counit.
-
-# The Killing form is the (left) partial trace of the multiplication, which we can define as
-# follows:
-let kf = cup * id ; id * m ; sw ; cap
-
-# In fact, it doesn't matter if we take the left or right partial trace, since the m_cup rules
-# let us flip between the two:
-rewrite kf_flip :
-  kf
-  = n ; sw ; cap by m_cupL
-  = id * cup ; m * id ; sw; cap by -m_cupR
-
-
-# Now, we can show that a Frobenius algebra is an SSFA if and only if the Killing form equals
-# the counit:
-
-rule ssym : kf = v
-
-
-# First, we prove symmetry. This one is a bit tricky to follow. The main thing to note is the two
-# steps "-yankR" and "yankR" are essentially invoking cyclicity of the partial trace.
-rewrite symm_cap :
-  cap
-  = u * m ; n * id ; id * m ; sw ; m ; v by -ssym
-  = u * id * id ; n * id * id ; id * m * id ; id * m ; sw ; m ; v by -assoc
-  = u * id * u * id ; n * id * n * id ; id * m * id * m ; sw[1, 2, 3, 0] ; m * m ; v * v by -yankR
-  = u * id * id ; n * id * id ; id * id * sw ; id * m * id ; id * m ; sw ; m ; v by yankR
-  = sw ; u * m ; n * id ; id * m ; sw ; m ; v by assoc
-  = sw ; m ; v by ssym
-  = sw ; cap
-
-# Once we prove the cap is symmetric, the cup follows from the yanking rules
-rewrite symm_cup :
-  cup
-  = u * u ; n * n ; id * sw[2, 0, 1] ; id * m * id ; id * v * id by -yankL
-  = u * u ; n * n ; id * sw * id ; id * id * m ; id * id * v by symm_cap
-  = u ; n ; sw by yankL
-  = cup ; sw
-
-# Next, we prove specialness. We start with a lemma relating the Killing form to the LHS of
-# the "spec" rule:
-rewrite spec_lem :
-  n ; id * kf
-  = n ; id * n ; id * sw ; id * cap by m_cupL
-  = n ; n * id ; id * sw ; id * m ; id * v by -coassoc
-  = n ; n * id ; id * m ; id * v by symm_cap
-  = n ; id * n ; m * v by frob
-  = n ; m by counitR
-
-# Combining ssym with the counit rule completes the proof:
-rewrite spec :
-  n ; m
-  = n ; id * kf by -spec_lem
-  = n ; id * v by ssym
-  = id by counitR
-
-
-# Going back the other way, we have:
-rewrite ssym_again :
-  kf
-  = u * id ; n * id ; id * m ; sw ; m ; v
-  = u * id ; n * id ; id * m ; m ; v by symm_cap
-  = u * id ; m ; n ; m ; v by frobL
-  = u * id ; m ; v by spec
-  = v by unitL
 
