@@ -18,6 +18,8 @@ import sys
 from PySide6.QtGui import QColor, QPalette
 from PySide6.QtWidgets import QApplication
 
+from .colors import apply_theme
+
 from .mainwindow import MainWindow
 
 
@@ -77,25 +79,7 @@ class Chyp(QApplication):
         super().__init__(sys.argv)
         self.setApplicationName('chyp')
         self.setDesktopFileName("chyp")
-        # Force the style to be the same on all OSs:
-        QApplication.setStyle("Fusion")
-        # Now use a palette to switch to theme colors:
-        palette = QPalette()
-        palette.setColor(QPalette.ColorRole.Window, QColor(theme['bg']))
-        palette.setColor(QPalette.ColorRole.WindowText, QColor(theme['fg']))
-        palette.setColor(QPalette.ColorRole.Base, QColor(theme['bg']))
-        palette.setColor(QPalette.ColorRole.AlternateBase, QColor(theme['bg_alt']))
-        palette.setColor(QPalette.ColorRole.ToolTipBase, QColor(theme['fg']))
-        palette.setColor(QPalette.ColorRole.ToolTipText, QColor(theme['fg']))
-        palette.setColor(QPalette.ColorRole.Text, QColor(theme['fg']))
-        palette.setColor(QPalette.ColorRole.Button, QColor(theme['bg_button']))
-        palette.setColor(QPalette.ColorRole.ButtonText, QColor(theme['fg_button']))
-        palette.setColor(QPalette.ColorRole.BrightText, QColor(theme['fg_bright']))
-        palette.setColor(QPalette.ColorRole.Link, QColor(theme['fg_link']))
-        palette.setColor(QPalette.ColorRole.Highlight, QColor(theme['bg_highlight']))
-        palette.setColor(QPalette.ColorRole.HighlightedText, QColor(theme['fg_highlight']))
-        QApplication.setPalette(palette)
-
+        apply_theme()
         self.main_window = MainWindow()
         self.lastWindowClosed.connect(self.quit)
 
