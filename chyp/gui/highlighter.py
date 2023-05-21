@@ -2,21 +2,24 @@ from typing import Optional, Tuple
 import re
 from PySide6.QtGui import QColor, QSyntaxHighlighter, QTextDocument
 
+from .colors import current_theme
+
 NO_STATUS = 0
 STATUS_GOOD = 1
 STATUS_BAD = 2
 
 # palette from: https://github.com/catppuccin/catppuccin
-FG =      '#cad3f5'
-BG =      '#24273a'
-SEL =     '#363a4f'
-KEYWORD = '#8aadf4'
-IDENT =   '#91d7e3'
-NUM =     '#ed8796'
-OP =      '#eed49f'
-COMMENT = '#8087a2'
-BG_GOOD = '#36504f'
-BG_BAD  = '#863a4f'
+theme = current_theme()
+FG =      theme['fg']
+BG =      theme['bg']
+SEL =     theme['bg_sel']
+KEYWORD = theme['fg_keyword']
+IDENT =   theme['fg_ident']
+NUM =     theme['fg_num']
+OP =      theme['fg_op']
+COMMENT = theme['fg_comment']
+BG_GOOD = theme['bg_good']
+BG_BAD  = theme['bg_bad']
 
 class ChypHighlighter(QSyntaxHighlighter):
     def __init__(self, doc: QTextDocument) -> None:

@@ -16,7 +16,7 @@
 from __future__ import annotations
 from typing import Callable, List, Optional
 from PySide6.QtCore import QByteArray, QDir, QFileInfo, QSettings, Qt
-from PySide6.QtGui import QCloseEvent, QKeySequence
+from PySide6.QtGui import QActionGroup, QCloseEvent, QKeySequence
 from PySide6.QtWidgets import QApplication, QFileDialog, QMainWindow, QMenuBar, QMessageBox, QTabWidget, QVBoxLayout, QWidget
 
 from .editor import Editor
@@ -70,6 +70,34 @@ class MainWindow(QMainWindow):
             self.active_editor = w
             self.active_editor.code_view.setFocus()
             self.update_file_name()
+
+    def update_themes(self):
+        conf = QSettings('chyp', 'chyp')
+        theme_name = conf.value('theme')
+        if not theme_name or not isinstance(theme_name, str):
+            theme_name = 'catppuccin_macchiato'
+
+        def set_th(t: str) -> Callable:
+            def f():
+                conf.setValue('theme', t)
+                QMessageBox.information(self, 'Theme set',
+                                        'You must restart Chyp for the new theme to take effect.')
+            return f
+
+        themes_group = QActionGroup(self)
+
+        view_themes_dark = self.view_themes.addAction("Dark")
+        view_themes_dark.setCheckable(True)
+        view_themes_dark.setChecked(theme_name == 'catppuccin_macchiato')
+        view_themes_dark.triggered.connect(set_th('catppuccin_macchiato'))
+
+        view_themes_light = self.view_themes.addAction("Light")
+        view_themes_light.setCheckable(True)
+        view_themes_light.setChecked(theme_name == 'catppuccin_latte')
+        view_themes_light.triggered.connect(set_th('catppuccin_latte'))
+
+        themes_group.addAction(view_themes_dark)
+        themes_group.addAction(view_themes_light)
 
     def recent_files(self) -> List[str]:
         conf = QSettings('chyp', 'chyp')
@@ -321,5 +349,9 @@ class MainWindow(QMainWindow):
         view_goto_import = view_menu.addAction("&Go To Import")
         view_goto_import.setShortcut(QKeySequence("Ctrl+G"))
         view_goto_import.triggered.connect(lambda: self.goto_import())
+
+        view_menu.addSeparator()
+        self.view_themes = view_menu.addMenu("&Themes")
+        self.update_themes()
 
         self.setMenuBar(menu)
