@@ -385,7 +385,7 @@ class Editor(QMainWindow):
 
         if len(self.state.errors) == 0:
             self.parsed = True
-            self.code_view.completion_model.set_completions(self.state.rules.keys())
+            self.code_view.set_completions(self.state.rules.keys())
             self.show_at_cursor()
 
 

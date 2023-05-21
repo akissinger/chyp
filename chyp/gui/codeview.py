@@ -1,5 +1,5 @@
 from sys import prefix
-from typing import Optional, Tuple
+from typing import Iterable, Optional, Tuple
 import re
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QKeyEvent, QTextCursor
@@ -23,6 +23,12 @@ class CodeView(QPlainTextEdit):
         # self.completion_model.set_completions(["foo", "bar", "baz"])
         self.completer.setModel(self.completion_model)
         self.completer.activated.connect(self.insert_completion)
+
+    def popup_visible(self) -> bool:
+        return self.completer.popup().isVisible()
+
+    def set_completions(self, completions: Iterable[str]) -> None:
+        self.completion_model.set_completions(completions)
 
     def ident_at_cursor(self) -> str:
         cursor = self.textCursor()
