@@ -220,7 +220,6 @@ class Editor(QWidget):
                 self.rhs_view.setVisible(False)
                 self.lhs_view.set_graph(Graph())
 
-
     def next_rewrite_at_cursor(self) -> None:
         self.update_state()
         if not self.parsed: return
@@ -286,6 +285,12 @@ class Editor(QWidget):
             self.code_view.set_completions(self.state.rules.keys())
             self.show_at_cursor()
 
+    def import_at_cursor(self) -> str:
+        p = self.state.part_at(self.code_view.textCursor().position())
+        if p and p[2] == 'import':
+            return p[3]
+        else:
+            return ''
 
 class CheckThread(QThread):
     def __init__(self, rw: RewriteState, parent: Optional[QObject] = None) -> None:

@@ -203,6 +203,12 @@ class MainWindow(QMainWindow):
             i = (self.tabs.currentIndex() - 1) % c
             self.tabs.setCurrentIndex(i)
 
+    def goto_import(self) -> None:
+        if self.active_editor:
+            f = self.active_editor.import_at_cursor()
+            if f:
+                self.open(f)
+
 
     def closeEvent(self, e: QCloseEvent) -> None:
         conf = QSettings('chyp', 'chyp')
@@ -310,5 +316,10 @@ class MainWindow(QMainWindow):
         view_previous_tab = view_menu.addAction("&Previous Tab")
         view_previous_tab.setShortcut(QKeySequence("Ctrl+["))
         view_previous_tab.triggered.connect(lambda: self.previous_tab())
+
+        view_menu.addSeparator()
+        view_goto_import = view_menu.addAction("&Go To Import")
+        view_goto_import.setShortcut(QKeySequence("Ctrl+G"))
+        view_goto_import.triggered.connect(lambda: self.goto_import())
 
         self.setMenuBar(menu)

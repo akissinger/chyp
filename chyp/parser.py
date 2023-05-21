@@ -223,10 +223,11 @@ class ChypParseData(Transformer):
         except FileNotFoundError:
             self.errors.append((self.file_name, meta.line, 'File not found: {}'.format(file_name)))
 
-        self.parts.append((meta.start_pos, meta.end_pos, 'import', namespace))
+        self.parts.append((meta.start_pos, meta.end_pos, 'import', file_name))
 
     def import_let(self, items: List[Any]) -> Tuple[str, Graph]:
         return (items[0], items[1])
+
     @v_args(meta=True)
     def rewrite(self, meta: Meta, items: List[Any]) -> None:
         converse = True if items[0] else False
