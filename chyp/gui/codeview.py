@@ -1,8 +1,10 @@
 from typing import Optional, Tuple
+import re
+from PySide6.QtCore import Qt
+from PySide6.QtGui import QKeyEvent, QTextCursor
+from PySide6.QtWidgets import QCompleter, QPlainTextEdit
 
-from PySide6.QtGui import QTextCursor
-from PySide6.QtWidgets import QPlainTextEdit
-
+from .completion import CodeCompletionModel
 from .document import ChypDocument
 from .highlighter import BG, FG, NO_STATUS
 
@@ -11,6 +13,69 @@ class CodeView(QPlainTextEdit):
     def __init__(self) -> None:
         super().__init__()
         self.setStyleSheet("QPlainTextEdit {background-color: %s; color: %s}" % (BG, FG))
+        self.completer = QCompleter(self)
+        self.completer.setCompletionMode(QCompleter.CompletionMode.PopupCompletion)
+        self.completer.setCaseSensitivity(Qt.CaseSensitivity.CaseSensitive)
+        self.completer.setWidget(self)
+        # self.words = ["foostuff", "bar", "baz"]
+        # self.model = QStringListModel(self.completer)
+        # self.model.setStringList(self.words)
+        # self.completer.setModel(self.model)
+        self.completion_model = CodeCompletionModel(self.completer)
+        self.completion_model.set_completions(["foo", "bar", "baz"])
+        self.completer.setModel(self.completion_model)
+        self.completer.activated.connect(self.insert_completion)
+
+    def ident_at_cursor(self) -> str:
+        cursor = self.textCursor()
+        cursor.select(QTextCursor.SelectionType.BlockUnderCursor)
+        block = cursor.selectedText()[:cursor.positionInBlock()]
+
+        m = re.match('([a-zA-Z_][\\.a-zA-Z0-9_]*)$', block)
+        if m:
+            return m.group(0)
+        else:
+            return ''
+
+    def insert_completion(self, completion: str):
+        if self.completer.widget() is not self:
+            return
+
+        print("inserting completion: " + completion)
+        cursor = self.textCursor()
+        extra = len(completion) - len(self.completer.completionPrefix())
+
+        if extra != 0:
+            cursor.movePosition(QTextCursor.MoveOperation.Left)
+            cursor.movePosition(QTextCursor.MoveOperation.EndOfWord)
+            cursor.insertText(completion[-extra:])
+            self.setTextCursor(cursor)
+
+    # def focusInEvent(self, e: QFocusEvent) -> None:
+    #     self.completer.setWidget(self)
+    #     super().focusInEvent(e)
+
+    def keyPressEvent(self, e: QKeyEvent) -> None:
+        if (self.completer.popup().isVisible() and
+            e.key() in (Qt.Key.Key_Escape, Qt.Key.Key_Tab, Qt.Key.Key_Backtab)):
+            e.ignore()
+            return
+
+        complete = e.key() == Qt.Key.Key_Tab or (Qt.KeyboardModifier.ControlModifier in e.modifiers() and e.key() == Qt.Key.Key_Space)
+        if self.completer.popup().isVisible() or complete:
+            if not complete:
+                super().keyPressEvent(e)
+
+            prefix = self.ident_at_cursor()
+            print("prefix: " + prefix)
+            if prefix != self.completer.completionPrefix():
+                self.completer.setCompletionPrefix(prefix)
+                self.completer.popup().setCurrentIndex(self.completer.completionModel().index(0,0))
+            cr = self.cursorRect()
+            cr.setWidth(self.completer.popup().sizeHintForColumn(0) + self.completer.popup().verticalScrollBar().sizeHint().width())
+            self.completer.complete(cr)
+        else:
+            super().keyPressEvent(e)
 
     def set_current_region(self, region: Optional[Tuple[int,int]], status: int = NO_STATUS) -> None:
         doc = self.document()
