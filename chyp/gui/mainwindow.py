@@ -14,7 +14,7 @@
 # limitations under the License.
 
 from __future__ import annotations
-from typing import Callable, List
+from typing import Callable, List, Optional
 from PySide6.QtCore import QByteArray, QDir, QFileInfo, QSettings, Qt
 from PySide6.QtGui import QCloseEvent, QKeySequence
 from PySide6.QtWidgets import QApplication, QFileDialog, QMainWindow, QMenuBar, QMessageBox, QTabWidget, QVBoxLayout, QWidget
@@ -49,80 +49,6 @@ class MainWindow(QMainWindow):
         self.update_file_name()
         self.build_menu()
 
-    def build_menu(self) -> None:
-        menu = QMenuBar()
-        file_menu = menu.addMenu("&File")
-        edit_menu = menu.addMenu("&Edit")
-        code_menu = menu.addMenu("&Code")
-
-        file_new = file_menu.addAction("&New")
-        file_new.triggered.connect(lambda: self.new())
-
-        file_open = file_menu.addAction("&Open")
-        file_open.setShortcut(QKeySequence(QKeySequence.StandardKey.Open))
-        file_open.triggered.connect(lambda: self.open())
-
-        self.file_open_recent = file_menu.addMenu("Open &Recent")
-        self.update_recent_files()
-
-        file_menu.addSeparator()
-
-        file_save = file_menu.addAction("&Save")
-        file_save.setShortcut(QKeySequence(QKeySequence.StandardKey.Save))
-        file_save.triggered.connect(lambda: self.save())
-
-        file_save_as = file_menu.addAction("Save &As")
-        file_save_as.setShortcut(QKeySequence(QKeySequence.StandardKey.SaveAs))
-        file_save_as.triggered.connect(lambda: self.save_as())
-
-        file_menu.addSeparator()
-
-        file_exit = file_menu.addAction("E&xit")
-        file_exit.setShortcut(QKeySequence(QKeySequence.StandardKey.Quit))
-
-        app = QApplication.instance()
-        if app:
-            file_exit.triggered.connect(app.quit)
-
-        edit_undo = edit_menu.addAction("&Undo")
-        edit_undo.setShortcut(QKeySequence(QKeySequence.StandardKey.Undo))
-        edit_undo.triggered.connect(lambda: self.undo())
-
-        edit_redo = edit_menu.addAction("&Redo")
-        edit_redo.setShortcut(QKeySequence(QKeySequence.StandardKey.Redo))
-        edit_redo.triggered.connect(lambda: self.redo())
-
-        # code_run = code_menu.addAction("&Run")
-        # code_run.setShortcut(QKeySequence("Ctrl+R"))
-        # code_run.triggered.connect(self.update_state)
-
-        code_show_errors = code_menu.addAction("Show &Errors")
-        code_show_errors.setShortcut(QKeySequence("F4"))
-        code_show_errors.triggered.connect(lambda: self.show_errors())
-
-        code_add_rewrite_step = code_menu.addAction("&Add Rewrite Step")
-        code_add_rewrite_step.setShortcut(QKeySequence("Ctrl+Return"))
-        code_add_rewrite_step.triggered.connect(lambda: self.add_rewrite_step())
-
-        code_add_rewrite_step = code_menu.addAction("&Repeat Rewrite Step")
-        code_add_rewrite_step.setShortcut(QKeySequence("Ctrl+Shift+Return"))
-        code_add_rewrite_step.triggered.connect(lambda: self.repeat_rewrite_step())
-
-        code_next_rewrite = code_menu.addAction("&Next Rewrite")
-        code_next_rewrite.setShortcut(QKeySequence("Ctrl+N"))
-        code_next_rewrite.triggered.connect(lambda: self.next_rewrite())
-
-        code_menu.addSeparator()
-
-        code_next_part = code_menu.addAction("Next &Part")
-        code_next_part.setShortcut(QKeySequence("Ctrl+J"))
-        code_next_part.triggered.connect(lambda: self.next_part())
-
-        code_previous_part = code_menu.addAction("Previous &Part")
-        code_previous_part.setShortcut(QKeySequence("Ctrl+K"))
-        code_previous_part.triggered.connect(lambda: self.previous_part())
-
-        self.setMenuBar(menu)
 
     def remove_empty_editor(self):
         if self.active_editor:
@@ -166,7 +92,26 @@ class MainWindow(QMainWindow):
         editor.doc.modificationChanged.connect(self.update_file_name)
         self.tabs.setCurrentWidget(editor)
         editor.reset_state()
-        # editor.code_view.setFocus()
+
+    def close_tab(self, editor: Optional[Editor]=None) -> bool:
+        if editor is None:
+            editor = self.active_editor
+
+        if editor:
+            i = self.tabs.indexOf(editor)
+            if i != -1 and editor.doc.confirm_close():
+                editor.doc.fileNameChanged.disconnect(self.update_file_name)
+                editor.doc.modificationChanged.disconnect(self.update_file_name)
+                self.tabs.removeTab(i)
+
+                if self.tabs.count() == 0:
+                    app = QApplication.instance()
+                    if app:
+                        app.quit()
+
+                return True
+
+        return False
 
     def new(self) -> None:
         self.remove_empty_editor()
@@ -246,6 +191,18 @@ class MainWindow(QMainWindow):
         if self.active_editor:
             self.active_editor.next_part(step=-1)
 
+    def next_tab(self) -> None:
+        c = self.tabs.count()
+        if c != 0:
+            i = (self.tabs.currentIndex() + 1) % c
+            self.tabs.setCurrentIndex(i)
+
+    def previous_tab(self) -> None:
+        c = self.tabs.count()
+        if c != 0:
+            i = (self.tabs.currentIndex() - 1) % c
+            self.tabs.setCurrentIndex(i)
+
 
     def closeEvent(self, e: QCloseEvent) -> None:
         conf = QSettings('chyp', 'chyp')
@@ -257,13 +214,101 @@ class MainWindow(QMainWindow):
             if sizes[2] != 0:
                 conf.setValue('error_panel_size', sizes[2])
 
-        for i in range(self.tabs.count()-1,-1,-1):
-            w = self.tabs.widget(i)
+        while self.tabs.count() > 0:
+            w = self.tabs.widget(0)
             if isinstance(w, Editor):
-                if w.doc.confirm_close():
-                    self.tabs.removeTab(i)
-                else:
+                if not self.close_tab(w):
                     e.ignore()
                     return
+            else:
+                raise RuntimeError("Unexpected widget in tab list")
 
         e.accept()
+
+    def build_menu(self) -> None:
+        menu = QMenuBar()
+        file_menu = menu.addMenu("&File")
+        edit_menu = menu.addMenu("&Edit")
+        code_menu = menu.addMenu("&Code")
+        view_menu = menu.addMenu("&View")
+
+        file_new = file_menu.addAction("&New")
+        file_new.triggered.connect(lambda: self.new())
+
+        file_open = file_menu.addAction("&Open")
+        file_open.setShortcut(QKeySequence(QKeySequence.StandardKey.Open))
+        file_open.triggered.connect(lambda: self.open())
+
+        self.file_open_recent = file_menu.addMenu("Open &Recent")
+        self.update_recent_files()
+
+        file_menu.addSeparator()
+
+        file_close = file_menu.addAction("&Close")
+        file_close.setShortcut(QKeySequence(QKeySequence.StandardKey.Close))
+        file_close.triggered.connect(lambda: self.close_tab())
+
+        file_save = file_menu.addAction("&Save")
+        file_save.setShortcut(QKeySequence(QKeySequence.StandardKey.Save))
+        file_save.triggered.connect(lambda: self.save())
+
+        file_save_as = file_menu.addAction("Save &As")
+        file_save_as.setShortcut(QKeySequence(QKeySequence.StandardKey.SaveAs))
+        file_save_as.triggered.connect(lambda: self.save_as())
+
+        file_menu.addSeparator()
+
+        file_exit = file_menu.addAction("E&xit")
+        file_exit.setShortcut(QKeySequence(QKeySequence.StandardKey.Quit))
+
+        app = QApplication.instance()
+        if app:
+            file_exit.triggered.connect(app.quit)
+
+        edit_undo = edit_menu.addAction("&Undo")
+        edit_undo.setShortcut(QKeySequence(QKeySequence.StandardKey.Undo))
+        edit_undo.triggered.connect(lambda: self.undo())
+
+        edit_redo = edit_menu.addAction("&Redo")
+        edit_redo.setShortcut(QKeySequence(QKeySequence.StandardKey.Redo))
+        edit_redo.triggered.connect(lambda: self.redo())
+
+        # code_run = code_menu.addAction("&Run")
+        # code_run.setShortcut(QKeySequence("Ctrl+R"))
+        # code_run.triggered.connect(self.update_state)
+
+        code_show_errors = code_menu.addAction("Show &Errors")
+        code_show_errors.setShortcut(QKeySequence("F4"))
+        code_show_errors.triggered.connect(lambda: self.show_errors())
+
+        code_add_rewrite_step = code_menu.addAction("&Add Rewrite Step")
+        code_add_rewrite_step.setShortcut(QKeySequence("Ctrl+Return"))
+        code_add_rewrite_step.triggered.connect(lambda: self.add_rewrite_step())
+
+        code_add_rewrite_step = code_menu.addAction("&Repeat Rewrite Step")
+        code_add_rewrite_step.setShortcut(QKeySequence("Ctrl+Shift+Return"))
+        code_add_rewrite_step.triggered.connect(lambda: self.repeat_rewrite_step())
+
+        code_next_rewrite = code_menu.addAction("&Next Rewrite")
+        code_next_rewrite.setShortcut(QKeySequence("Ctrl+N"))
+        code_next_rewrite.triggered.connect(lambda: self.next_rewrite())
+
+        code_menu.addSeparator()
+
+        code_next_part = code_menu.addAction("Next &Part")
+        code_next_part.setShortcut(QKeySequence("Ctrl+J"))
+        code_next_part.triggered.connect(lambda: self.next_part())
+
+        code_previous_part = code_menu.addAction("Previous &Part")
+        code_previous_part.setShortcut(QKeySequence("Ctrl+K"))
+        code_previous_part.triggered.connect(lambda: self.previous_part())
+
+        view_next_tab = view_menu.addAction("&Next Tab")
+        view_next_tab.setShortcut(QKeySequence("Ctrl+]"))
+        view_next_tab.triggered.connect(lambda: self.next_tab())
+
+        view_previous_tab = view_menu.addAction("&Previous Tab")
+        view_previous_tab.setShortcut(QKeySequence("Ctrl+["))
+        view_previous_tab.triggered.connect(lambda: self.previous_tab())
+
+        self.setMenuBar(menu)
