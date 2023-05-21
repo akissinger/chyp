@@ -15,9 +15,9 @@
 
 from __future__ import annotations
 from typing import Callable, List
-from PySide6.QtCore import QByteArray, QFileInfo, QSettings
+from PySide6.QtCore import QByteArray, QFileInfo, QSettings, Qt
 from PySide6.QtGui import QCloseEvent, QKeySequence
-from PySide6.QtWidgets import QApplication, QMainWindow, QMenuBar, QVBoxLayout, QWidget
+from PySide6.QtWidgets import QApplication, QMainWindow, QMenuBar, QMessageBox, QTabWidget, QVBoxLayout, QWidget
 
 from .editor import Editor
 
@@ -29,11 +29,16 @@ class MainWindow(QMainWindow):
 
         self.setWindowTitle("chyp")
 
+        self.tabs = QTabWidget()
+        self.tabs.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+        self.tabs.currentChanged.connect(self.tab_changed)
+
         w = QWidget(self)
         w.setLayout(QVBoxLayout())
         self.setCentralWidget(w)
         w.layout().setContentsMargins(0,0,0,0)
         w.layout().setSpacing(0)
+        w.layout().addWidget(self.tabs)
         self.resize(1600, 800)
         
         geom = conf.value("editor_window_geometry")
@@ -41,10 +46,13 @@ class MainWindow(QMainWindow):
         self.show()
 
         self.active_editor = Editor()
-        w.layout().addWidget(self.active_editor)
+        self.tabs.addTab(self.active_editor, "Untitled")
+        # self.tabs.layout().setSpacing(0)
+        # w.layout().addWidget(self.active_editor)
 
         self.active_editor.doc.fileNameChanged.connect(self.update_file_name)
         self.active_editor.doc.modificationChanged.connect(self.update_file_name)
+        self.active_editor.code_view.setFocus()
         self.update_file_name()
         self.build_menu()
 
@@ -123,18 +131,26 @@ class MainWindow(QMainWindow):
 
         self.setMenuBar(menu)
 
+    def remove_empty_editor(self):
+        if self.active_editor:
+            if self.active_editor.title() == 'Untitled' and self.active_editor.doc.toPlainText() == '':
+                self.tabs.removeTab(self.tabs.indexOf(self.active_editor))
+                self.active_editor = None
+
     def update_file_name(self) -> None:
-        title = 'chyp - '
-        if self.active_editor and self.active_editor.doc.file_name:
-            fi = QFileInfo(self.active_editor.doc.file_name)
-            title += fi.fileName()
-        else:
-            title += 'Untitled'
+        for i in range(self.tabs.count()):
+            w = self.tabs.widget(i)
+            if isinstance(w, Editor):
+                self.tabs.setTabText(i, w.title())
+        if self.active_editor:
+            self.setWindowTitle('chyp - ' + self.active_editor.title())
 
-        if self.active_editor and self.active_editor.doc.isModified():
-            title += '*'
-
-        self.setWindowTitle(title)
+    def tab_changed(self, i: int) -> None:
+        w = self.tabs.widget(i)
+        if isinstance(w, Editor):
+            self.active_editor = w
+            self.active_editor.code_view.setFocus()
+            self.update_file_name()
 
     def recent_files(self) -> List[str]:
         conf = QSettings('chyp', 'chyp')
@@ -152,18 +168,32 @@ class MainWindow(QMainWindow):
             action.triggered.connect(open_recent(f))
 
     def new(self) -> None:
-        if self.active_editor:
-            self.active_editor.doc.new()
+        self.remove_empty_editor()
+        editor = Editor()
+        self.tabs.addTab(editor, "Untitled")
+        self.tabs.setCurrentWidget(editor)
 
     def open(self) -> None:
-        if self.active_editor:
-            self.active_editor.doc.open()
+        editor = Editor()
+        if editor.doc.open():
+            self.remove_empty_editor()
             self.update_recent_files()
+            editor.doc.fileNameChanged.connect(self.update_file_name)
+            self.tabs.addTab(editor, editor.title())
+            self.tabs.setCurrentWidget(editor)
 
     def open_recent(self, f: str):
-        if self.active_editor:
-            self.active_editor.doc.open(f)
-            self.update_recent_files()
+        editor = Editor()
+
+        try:
+            if editor.doc.open(f):
+                self.remove_empty_editor()
+                self.update_recent_files()
+                editor.doc.fileNameChanged.connect(self.update_file_name)
+                self.tabs.addTab(editor, editor.title())
+                self.tabs.setCurrentWidget(editor)
+        except FileNotFoundError:
+            QMessageBox.warning(self, "File not found", "File not found: " + f)
 
     def save(self) -> None:
         if self.active_editor:

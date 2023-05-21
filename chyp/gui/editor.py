@@ -15,7 +15,7 @@
 
 from __future__ import annotations
 from typing import Callable, Dict, Optional, Tuple
-from PySide6.QtCore import QByteArray, QObject, QThread, QTimer, Qt, QSettings
+from PySide6.QtCore import QByteArray, QFileInfo, QObject, QThread, QTimer, Qt, QSettings
 from PySide6.QtGui import QCloseEvent, QTextCursor
 from PySide6.QtWidgets import QHBoxLayout, QSplitter, QTreeView, QVBoxLayout, QWidget
 
@@ -37,9 +37,9 @@ class Editor(QWidget):
         super().__init__()
         conf = QSettings('chyp', 'chyp')
 
-        self.setWindowTitle("chyp")
-
         self.setLayout(QVBoxLayout())
+        self.layout().setSpacing(0)
+        self.layout().setContentsMargins(0,0,0,0)
 
         # save splitter position
         self.splitter = QSplitter(Qt.Orientation.Vertical)
@@ -63,7 +63,6 @@ class Editor(QWidget):
         self.doc.documentReplaced.connect(self.reset_state)
 
         self.splitter.addWidget(self.code_view)
-        self.code_view.setFocus()
 
         self.error_view = QTreeView()
         self.error_view.setIndentation(0)
@@ -83,6 +82,19 @@ class Editor(QWidget):
         # keep a revision count, so we don't trigger parsing until the user stops typing for a bit
         self.revision = 0
 
+        self.code_view.setFocus()
+
+    def title(self) -> str:
+        if self.doc.file_name:
+            fi = QFileInfo(self.doc.file_name)
+            title = fi.fileName()
+        else:
+            title = 'Untitled'
+
+        if self.doc.isModified():
+            title += '*'
+
+        return title
 
     def reset_state(self) -> None:
         cursor = self.code_view.textCursor()
@@ -118,7 +130,6 @@ class Editor(QWidget):
             cursor.setPosition(p1[1])
             self.code_view.setTextCursor(cursor)
             
-
     def show_errors(self) -> None:
         conf = QSettings('chyp', 'chyp')
         error_panel_size = conf.value('error_panel_size', 100)

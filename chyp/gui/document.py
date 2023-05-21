@@ -71,25 +71,27 @@ class ChypDocument(QTextDocument):
             self.fileNameChanged.emit()
             self.documentReplaced.emit()
 
-    def open(self, file_name: str='') -> None:
-        if self.confirm_close():
-            conf = QSettings('chyp', 'chyp')
-            if file_name == '':
-                o = conf.value('last_dir')
-                last_dir = o if isinstance(o, str) else QDir.home().absolutePath()
-                file_name, _ = QFileDialog.getOpenFileName(self.parent_widget,
-                                                           "Open File",
-                                                           last_dir,
-                                                           'chyp files (*.chyp)')
-            if file_name:
-                conf.setValue('last_dir', QFileInfo(file_name).absolutePath())
-                self.file_name = file_name
-                with open(file_name) as f:
-                    self.setPlainText(f.read())
-                self.add_to_recent_files(self.file_name)
-                self.setModified(False)
-                self.fileNameChanged.emit()
-                self.documentReplaced.emit()
+    def open(self, file_name: str='') -> bool:
+        conf = QSettings('chyp', 'chyp')
+        if file_name == '':
+            o = conf.value('last_dir')
+            last_dir = o if isinstance(o, str) else QDir.home().absolutePath()
+            file_name, _ = QFileDialog.getOpenFileName(self.parent_widget,
+                                                       "Open File",
+                                                       last_dir,
+                                                       'chyp files (*.chyp)')
+        if file_name:
+            conf.setValue('last_dir', QFileInfo(file_name).absolutePath())
+            self.file_name = file_name
+            with open(file_name) as f:
+                self.setPlainText(f.read())
+            self.add_to_recent_files(self.file_name)
+            self.setModified(False)
+            self.fileNameChanged.emit()
+            self.documentReplaced.emit()
+            return True
+
+        return False
 
     def save(self) -> bool:
         if self.file_name:
