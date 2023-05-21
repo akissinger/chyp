@@ -16,7 +16,7 @@
 from __future__ import annotations
 from typing import Callable, Dict, Optional, Tuple
 from PySide6.QtCore import QByteArray, QFileInfo, QObject, QThread, QTimer, Qt, QSettings
-from PySide6.QtGui import QCloseEvent, QTextCursor
+from PySide6.QtGui import QTextCursor
 from PySide6.QtWidgets import QHBoxLayout, QSplitter, QTreeView, QVBoxLayout, QWidget
 
 from ..layout import convex_layout
@@ -60,7 +60,7 @@ class Editor(QWidget):
         self.code_view = CodeView()
         self.doc = ChypDocument(self)
         self.code_view.setDocument(self.doc)
-        self.doc.documentReplaced.connect(self.reset_state)
+        # self.doc.documentReplaced.connect(self.reset_state)
 
         self.splitter.addWidget(self.code_view)
 
@@ -82,7 +82,6 @@ class Editor(QWidget):
         # keep a revision count, so we don't trigger parsing until the user stops typing for a bit
         self.revision = 0
 
-        self.code_view.setFocus()
 
     def title(self) -> str:
         if self.doc.file_name:
@@ -287,19 +286,6 @@ class Editor(QWidget):
             self.code_view.set_completions(self.state.rules.keys())
             self.show_at_cursor()
 
-
-
-    def closeEvent(self, e: QCloseEvent) -> None:
-        if self.doc.confirm_close():
-            conf = QSettings('chyp', 'chyp')
-            conf.setValue("editor_window_geometry", self.saveGeometry())
-            conf.setValue("editor_splitter_state", self.splitter.saveState())
-            sizes = self.splitter.sizes()
-            if sizes[2] != 0:
-                conf.setValue('error_panel_size', sizes[2])
-            e.accept()
-        else:
-            e.ignore()
 
 class CheckThread(QThread):
     def __init__(self, rw: RewriteState, parent: Optional[QObject] = None) -> None:
