@@ -22,7 +22,6 @@ from PySide6.QtWidgets import QFileDialog, QMessageBox, QPlainTextDocumentLayout
 from .highlighter import ChypHighlighter
 
 class ChypDocument(QTextDocument):
-    recentFilesChanged = Signal()
     fileNameChanged = Signal()
     documentReplaced = Signal()
 
@@ -34,21 +33,6 @@ class ChypDocument(QTextDocument):
         self.highlighter = ChypHighlighter(self)
         self.file_name = ''
         
-    def recent_files(self) -> List[str]:
-        conf = QSettings('chyp', 'chyp')
-        o = conf.value('recent_files', [])
-        return o if isinstance(o, list) else []
-
-    def add_to_recent_files(self, file_name: str) -> None:
-        conf = QSettings('chyp', 'chyp')
-        o = conf.value('recent_files', [])
-        recent_files: List[str] = o if isinstance(o, list) else [] 
-        recent_files = [f for f in recent_files if f != file_name]
-        recent_files.insert(0, file_name)
-        recent_files = recent_files[:10]
-        conf.setValue('recent_files', recent_files)
-        self.recentFilesChanged.emit()
-
     def confirm_close(self) -> bool:
         if self.isModified():
             text = "Do you wish to save changes to {}?".format(
@@ -69,6 +53,15 @@ class ChypDocument(QTextDocument):
                 return False
         else:
             return True
+
+    def add_to_recent_files(self, file_name: str) -> None:
+        conf = QSettings('chyp', 'chyp')
+        o = conf.value('recent_files', [])
+        recent_files: List[str] = o if isinstance(o, list) else [] 
+        recent_files = [f for f in recent_files if f != file_name]
+        recent_files.insert(0, file_name)
+        recent_files = recent_files[:10]
+        conf.setValue('recent_files', recent_files)
 
     def new(self) -> None:
         if self.confirm_close():
