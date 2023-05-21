@@ -384,9 +384,8 @@ class Editor(QMainWindow):
             model.set_errors(self.state.errors)
 
         if len(self.state.errors) == 0:
-            # self.lhs_view.set_graph(Graph())
-            # self.rhs_view.setVisible(False)
             self.parsed = True
+            self.code_view.completion_model.set_completions(self.state.rules.keys())
             self.show_at_cursor()
 
 

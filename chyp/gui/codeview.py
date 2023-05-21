@@ -1,3 +1,4 @@
+from sys import prefix
 from typing import Optional, Tuple
 import re
 from PySide6.QtCore import Qt
@@ -16,24 +17,25 @@ class CodeView(QPlainTextEdit):
         self.completer = QCompleter(self)
         self.completer.setCompletionMode(QCompleter.CompletionMode.PopupCompletion)
         self.completer.setCaseSensitivity(Qt.CaseSensitivity.CaseSensitive)
+        self.completer.setModelSorting(QCompleter.ModelSorting.CaseSensitivelySortedModel)
         self.completer.setWidget(self)
-        # self.words = ["foostuff", "bar", "baz"]
-        # self.model = QStringListModel(self.completer)
-        # self.model.setStringList(self.words)
-        # self.completer.setModel(self.model)
         self.completion_model = CodeCompletionModel(self.completer)
-        self.completion_model.set_completions(["foo", "bar", "baz"])
+        # self.completion_model.set_completions(["foo", "bar", "baz"])
         self.completer.setModel(self.completion_model)
         self.completer.activated.connect(self.insert_completion)
 
     def ident_at_cursor(self) -> str:
         cursor = self.textCursor()
+        block_pos = cursor.positionInBlock() + 1
         cursor.select(QTextCursor.SelectionType.BlockUnderCursor)
-        block = cursor.selectedText()[:cursor.positionInBlock()]
+        block = cursor.selectedText()
+        # print('full block: "{}"'.format(block))
+        block = block[:block_pos]
+        # print('chopped block: "{}"'.format(block))
 
-        m = re.match('([a-zA-Z_][\\.a-zA-Z0-9_]*)$', block)
+        m = re.search('([a-zA-Z_][\\.a-zA-Z0-9_]*)$', block)
         if m:
-            return m.group(0)
+            return m.group(1)
         else:
             return ''
 
@@ -41,7 +43,7 @@ class CodeView(QPlainTextEdit):
         if self.completer.widget() is not self:
             return
 
-        print("inserting completion: " + completion)
+        # print("inserting completion: " + completion)
         cursor = self.textCursor()
         extra = len(completion) - len(self.completer.completionPrefix())
 
@@ -50,10 +52,6 @@ class CodeView(QPlainTextEdit):
             cursor.movePosition(QTextCursor.MoveOperation.EndOfWord)
             cursor.insertText(completion[-extra:])
             self.setTextCursor(cursor)
-
-    # def focusInEvent(self, e: QFocusEvent) -> None:
-    #     self.completer.setWidget(self)
-    #     super().focusInEvent(e)
 
     def keyPressEvent(self, e: QKeyEvent) -> None:
         if (self.completer.popup().isVisible() and
@@ -67,11 +65,13 @@ class CodeView(QPlainTextEdit):
                 super().keyPressEvent(e)
 
             prefix = self.ident_at_cursor()
-            print("prefix: " + prefix)
+            cursor = self.textCursor()
+            cursor.setPosition(cursor.position() - len(prefix))
+            cr = self.cursorRect(cursor)
+            # print("prefix: " + prefix)
             if prefix != self.completer.completionPrefix():
                 self.completer.setCompletionPrefix(prefix)
                 self.completer.popup().setCurrentIndex(self.completer.completionModel().index(0,0))
-            cr = self.cursorRect()
             cr.setWidth(self.completer.popup().sizeHintForColumn(0) + self.completer.popup().verticalScrollBar().sizeHint().width())
             self.completer.complete(cr)
         else:
