@@ -46,7 +46,6 @@ class MainWindow(QMainWindow):
         self.active_editor.doc.fileNameChanged.connect(self.update_file_name)
         self.active_editor.doc.modificationChanged.connect(self.update_file_name)
         self.update_file_name()
-
         self.build_menu()
 
     def build_menu(self) -> None:

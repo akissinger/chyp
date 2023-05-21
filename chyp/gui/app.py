@@ -15,12 +15,10 @@
 
 from __future__ import annotations
 import sys
-from PySide6.QtCore import Qt
 from PySide6.QtGui import QColor, QPalette
-
 from PySide6.QtWidgets import QApplication
 
-from . import editor
+from .mainwindow import MainWindow
 
 
 cat_macchiato_p = {
@@ -98,7 +96,7 @@ class Chyp(QApplication):
         palette.setColor(QPalette.ColorRole.HighlightedText, QColor(theme['fg_highlight']))
         QApplication.setPalette(palette)
 
-        self.main_window = editor.Editor()
+        self.main_window = MainWindow()
         self.lastWindowClosed.connect(self.quit)
 
 
