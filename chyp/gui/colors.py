@@ -91,9 +91,10 @@ for t in ('catppuccin_macchiato', 'catppuccin_latte'):
       'fg_num': PALETTES[t]['red'],
       'fg_op': PALETTES[t]['yellow'],
       'fg_comment': PALETTES[t]['overlay1'],
+      'fg_string': PALETTES[t]['green']
     }
 
-def current_theme():
+def current_theme() -> Dict[str,str]:
     conf = QSettings('chyp', 'chyp')
 
     theme_name = conf.value('theme')
@@ -102,7 +103,7 @@ def current_theme():
 
     return THEMES[theme_name]
 
-def apply_theme():
+def apply_theme() -> None:
     theme = current_theme()
 
     QApplication.setStyle("Fusion")

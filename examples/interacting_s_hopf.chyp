@@ -1,4 +1,4 @@
-gen m1 : 2 -> 1
+gen m1 : 2 -> 1 "ff00ff"
 gen u1 : 0 -> 1
 gen n1 : 1 -> 2
 gen v1 : 1 -> 0

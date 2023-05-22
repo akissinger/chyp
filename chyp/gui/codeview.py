@@ -45,7 +45,7 @@ class CodeView(QPlainTextEdit):
         else:
             return ''
 
-    def insert_completion(self, completion: str):
+    def insert_completion(self, completion: str) -> None:
         if self.completer.widget() is not self:
             return
 

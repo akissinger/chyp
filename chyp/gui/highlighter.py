@@ -18,6 +18,7 @@ IDENT =   theme['fg_ident']
 NUM =     theme['fg_num']
 OP =      theme['fg_op']
 COMMENT = theme['fg_comment']
+STRING  = theme['fg_string']
 BG_GOOD = theme['bg_good']
 BG_BAD  = theme['bg_bad']
 
@@ -50,6 +51,10 @@ class ChypHighlighter(QSyntaxHighlighter):
         for m in re.finditer('#.*$', text):
             x,y = m.span(0)
             self.setFormat(x, y-x, QColor(COMMENT))
+
+        for m in re.finditer('"[^"]*"', text):
+            x,y = m.span(0)
+            self.setFormat(x, y-x, QColor(STRING))
 
         # highlight the region that is currently in focus
         if self.region:

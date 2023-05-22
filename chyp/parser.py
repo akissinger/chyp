@@ -9,9 +9,10 @@ from .rule import Rule, RuleError
 GRAMMAR = Lark("""
     start : statement*
     ?statement : import_statement | gen | let | def_statement | rule | rewrite | show
-    gen : "gen" var ":" num "->" num
+    gen : "gen" var ":" num "->" num [ gen_color ]
+    def_statement : "def" var "=" term [ gen_color ]
+    gen_color : "\\\"" color "\\\"" | "\\\"" color "\\\"" "\\\"" color "\\\""
     let : "let" var "=" term
-    def_statement : "def" var "=" term
     rule : "rule" var ":" term (eq | le) term
     rewrite : "rewrite" [converse] var ":" term rewrite_part*
     rewrite_part : (eq | le) term_hole [ "by" [ converse ] rule_ref ]
@@ -36,10 +37,12 @@ GRAMMAR = Lark("""
     term_ref : IDENT
     rule_ref : IDENT
     term_hole : term | "?"
+    color : HEXDIGIT HEXDIGIT HEXDIGIT HEXDIGIT HEXDIGIT HEXDIGIT
     IDENT: ("_"|LETTER) ("_"|"."|LETTER|DIGIT)*
 
     %import common.LETTER
     %import common.DIGIT
+    %import common.HEXDIGIT
     %import common.INT
     %import common.WS
     %import common.SH_COMMENT
@@ -154,7 +157,7 @@ class ChypParseData(Transformer):
 
     @v_args(meta=True)
     def gen(self, meta: Meta, items: List[Any]) -> None:
-        name, arity, coarity = items
+        name, arity, coarity = items[:3]
         if not name in self.graphs:
             self.graphs[name] = gen(name, arity, coarity)
         else:
@@ -190,7 +193,7 @@ class ChypParseData(Transformer):
 
     @v_args(meta=True)
     def def_statement(self, meta: Meta, items: List[Any]) -> None:
-        name, graph = items
+        name, graph = items[:2]
         rule_name = name + '_def'
         if not name in self.graphs and not rule_name in self.rules:
             if graph:
@@ -200,6 +203,9 @@ class ChypParseData(Transformer):
         else:
             self.errors.append((self.file_name, meta.line, "Term '{}' or rule '{}' already defined.".format(name, rule_name)))
         self.parts.append((meta.start_pos, meta.end_pos, 'rule', rule_name))
+
+    def gen_color(self, items: List[Any]) -> List[str]:
+        return ['#' + str(it)[1:-1] for it in items]
 
     @v_args(meta=True)
     def import_statement(self, meta: Meta, items: List[Any]) -> None:

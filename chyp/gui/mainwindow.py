@@ -45,12 +45,13 @@ class MainWindow(QMainWindow):
         if geom and isinstance(geom, QByteArray): self.restoreGeometry(geom)
         self.show()
 
+        self.active_editor: Optional[Editor] = None
         self.add_tab(Editor(), "Untitled")
         self.update_file_name()
         self.build_menu()
 
 
-    def remove_empty_editor(self):
+    def remove_empty_editor(self) -> None:
         if self.active_editor:
             if self.active_editor.title() == 'Untitled' and self.active_editor.doc.toPlainText() == '':
                 self.tabs.removeTab(self.tabs.indexOf(self.active_editor))
@@ -71,14 +72,14 @@ class MainWindow(QMainWindow):
             self.active_editor.code_view.setFocus()
             self.update_file_name()
 
-    def update_themes(self):
+    def update_themes(self) -> None:
         conf = QSettings('chyp', 'chyp')
         theme_name = conf.value('theme')
         if not theme_name or not isinstance(theme_name, str):
             theme_name = 'catppuccin_macchiato'
 
         def set_th(t: str) -> Callable:
-            def f():
+            def f() -> None:
                 conf.setValue('theme', t)
                 QMessageBox.information(self, 'Theme set',
                                         'You must restart Chyp for the new theme to take effect.')
@@ -114,7 +115,7 @@ class MainWindow(QMainWindow):
             action = self.file_open_recent.addAction(fi.fileName())
             action.triggered.connect(open_recent(f))
 
-    def add_tab(self, editor: Editor, title: str):
+    def add_tab(self, editor: Editor, title: str) -> None:
         self.tabs.addTab(editor, title)
         editor.doc.fileNameChanged.connect(self.update_file_name)
         editor.doc.modificationChanged.connect(self.update_file_name)
@@ -146,7 +147,7 @@ class MainWindow(QMainWindow):
         editor = Editor()
         self.add_tab(editor, "Untitled")
 
-    def open(self, file_name='') -> None:
+    def open(self, file_name: str='') -> None:
         conf = QSettings('chyp', 'chyp')
 
         # if no file name provided, show open dialog

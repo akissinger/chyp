@@ -43,6 +43,8 @@ class EData:
             value: Any="",
             x: float=0,
             y: float=0,
+            fg: str='',
+            bg: str='',
             hyper: bool=True) -> None:
         self.value = value
         self.highlight = False
@@ -50,6 +52,8 @@ class EData:
         self.y = y
         self.s = [] if s is None else s
         self.t = [] if t is None else t
+        self.fg = fg
+        self.bg = bg
         self.hyper = hyper
 
     def __repr__(self) -> str:
@@ -151,7 +155,7 @@ class Graph:
         else:
             e = name
 
-        self.edata[e] = EData(s, t, value, x, y, hyper)
+        self.edata[e] = EData(s, t, value, x, y, '', '', hyper)
         for v in s: self.vdata[v].out_edges.add(e)
         for v in t: self.vdata[v].in_edges.add(e)
         return e
