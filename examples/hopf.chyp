@@ -33,8 +33,7 @@ rule antiR : n ; id * s ; m = v ; u
 
 # first, lets define a comonoid on 2 in terms of (n,v), and prove "2" versions
 # of the comonoid rules.
-gen n2 : 2 -> 4
-rule n2_def : n2 = n * n ; id * sw * id
+def n2 = n * n ; id * sw * id
 
 # Note we could also do this with:
 #
@@ -96,12 +95,8 @@ rewrite sp_is_s :
 #######################################
 
 # for convenience, we'll make definitions for the LHS and RHS of the anti-HM rule
-gen a1 : 2 -> 1
-rule a1_def : a1 = m ; s
-gen a2 : 2 -> 1
-rule a2_def : a2 = sw ; s * s ; m
-
-
+def a1 = m ; s
+def a2 = sw ; s * s ; m
 
 # show a1 is a left inverse of "m" w.r.t. convolution
 rewrite anti_hm_lem1 :
@@ -141,8 +136,7 @@ rewrite s_anti_hm :
 
 
 # This implies that the antipode squared is a homomorphism:
-gen s2 : 1 -> 1
-rule s2_def : s2 = s ; s
+def s2 = s ; s
 
 rewrite s2_hm :
   m ; s2

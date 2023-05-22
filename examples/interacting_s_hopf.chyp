@@ -52,8 +52,31 @@ rewrite v2_tr :
 # We define the dualiser as the cap for F2 followed by the cup for F1:
 def d = id * cup1 ; cap2 * id
 
+# The dualiser has an inverse, given by:
+let d_inv = id * cup2 ; cap1 * id
+
+rewrite d_d_inv :
+  d ; d_inv
+  = cup1 * id ; sw[1, 2, 0] ; d_inv * cap2 by d_def
+  = cup2 * id ; sw[2, 0, 1] ; cap2 * id by F1.yankL
+  = id by F2.yankR
+
+rewrite d_inv_d :
+  d_inv ; d
+  = d_inv * cup1 ; cap2 * id by d_def
+  = cup1 * id ; sw[2, 0, 1] ; cap1 * id by F2.yankL
+  = id by F1.yankR
+
+# The dualiser preserves (co)units
+rewrite d_v2 :
+  d ; v2
+  = cup1 * id ; sw[1, 2, 0] ; v2 * cap2 by d_def
+  = u2 * id ; sw ; cap2 by v2_tr
+  = u2 * id ; sw ; m2 ; v2 by F2.cap_def
+  = v2 by F2.unitR
+
 # We can prove the dualiser behaves as an antipode for H2
-rewrite d_antip :
+rewrite d_antip_H2 :
   n1 ; id * d ; m2
   = n1 * cup1 ; id * sw[2, 0, 1] ; m2 * cap2 by d_def
   = n1 * cup1 ; id * sw * id ; m2 * cap2 by F1.symm_cup
@@ -68,17 +91,89 @@ rewrite d_antip :
   = v1 ; u2 by v2_tr
 
 # ...and hence equals H2.s by uniqueness
-rewrite d_is_s :
+rewrite d_is_s2 :
   d
   = d * u2 ; sw ; m2 by -H2.unitL
   = u2 * n1 ; id * v1 * d ; m2 by -H2.counitL
   = n1 ; n1 * d ; H2.s * id * id ; m2 * id ; m2 by -H2.antiL
   = n1 ; H2.s * n1 ; m2 * d ; m2 by H2.coassoc
   = n1 ; H2.s * n1 ; id * id * d ; id * m2 ; m2 by H2.assoc
-  = n1 * u2 ; H2.s * v1 * id ; m2 by d_antip
+  = n1 * u2 ; H2.s * v1 * id ; m2 by d_antip_H2
   = n1 ; H2.s * v1 by H2.unitR
   = H2.s by H2.counitR
 
-show d_is_s
+show d_is_s2
 
+# As a consequence, we get that d is an anti-hm for m2:
+rewrite d_anti_hm :
+  m2 ; d
+  = m2 ; H2.s by d_is_s2
+  = H2.s * H2.s ; sw ; m2 by H2.s_anti_hm
+  = H2.s * d ; sw ; m2 by -d_is_s2
+  = d * d ; sw ; m2 by -d_is_s2
+
+# This implies that cap2 is invariant under 'd'
+rewrite d_cap2 :
+  d * d ; cap2
+  = d * d ; m2 ; v2 by F2.cap_def
+  = sw ; m2 ; d ; v2 by -d_anti_hm
+  = sw ; m2 ; v2 by d_v2
+  = sw ; cap2 by -F2.cap_def
+  = cap2 by F2.symm_cap
+
+# Now, we can show that d is self-inverse:
+rewrite d_self_inv :
+  d ; d
+  = d * cup2 ; d * id * id ; sw[2, 0, 1] ; cap2 * id by -F2.yankL
+  = d * cup2 * cup1 ; sw * sw * id ; id * cap2 * cap2 by d_def
+  = d * cup2 * cup1 ; sw * sw[2, 0, 1] ; id * cap2 * cap2 by F1.symm_cup
+  = d * cup2 ; id * id * d ; sw * id ; id * cap2 by -d_def
+  = cup2 * id ; id * sw ; id * cap2 by d_cap2
+  = cup2 * id ; id * cap2 by F2.symm_cap
+  = id by F2.yankL
+
+# By uniqueness of the inverse, we get d = d_inv:
+rewrite d_is_d_inv :
+  d
+  = d ; d ; d_inv by -d_d_inv
+  = d_inv by d_self_inv
+
+# Hence, the definition of d is color-symmetric
+show d_def
+show d_is_d_inv
+
+# and d is also an antipode for H1
+rewrite d_antip_H1 :
+  n2 ; id * d ; m1
+  = n2 * cup2 ; id * sw[2, 0, 1] ; m1 * cap1 by d_is_d_inv
+  = n2 * cup2 ; id * sw * id ; m1 * cap1 by F2.symm_cup
+  = n2 * u2 ; id * id * n2 ; id * sw * id ; m1 * cap1 by F2.cup_def
+  = n2 * u2 ; id * id * n2 ; id * sw * id ; m1 * m1 ; id * v1 by F1.cap_def
+  = id * u2 ; m1 ; n2 ; id * v1 by -H1.bialg
+  = u2 * id ; n1 * id ; sw[1, 2, 0] ; n2 * cap1 ; id * v1 by -F1.n_capL
+  = u2 * u2 * id ; sw[1, 2, 0] ; n2 * cap1 ; id * v1 by H2.ucp
+  = u2 * cup2 * id ; sw[1, 3, 0, 2] ; id * cap1 * v1 by -F2.cup_def
+  = u2 * cup2 * id ; sw * sw ; id * cap1 * v1 by F1.symm_cap
+  = cup2 * v2 ; id * v1 by u2_tr
+  = v2 ; u1 by v1_tr
+
+# ...and hence equals H1.s by uniqueness
+rewrite d_is_s1 :
+  d
+  = d * u1 ; sw ; m1 by -H1.unitL
+  = u1 * n2 ; id * v2 * d ; m1 by -H1.counitL
+  = n2 ; n2 * d ; H1.s * id * id ; m1 * id ; m1 by -H1.antiL
+  = n2 ; H1.s * n2 ; m1 * d ; m1 by H1.coassoc
+  = n2 ; H1.s * n2 ; id * id * d ; id * m1 ; m1 by H1.assoc
+  = n2 * u1 ; H1.s * v2 * id ; m1 by d_antip_H1
+  = n2 ; H1.s * v2 by H1.unitR
+  = H1.s by H1.counitR
+
+# finally, this implies that the two antipodes (which both equal d) coincide:
+rewrite s1_is_s2 :
+  H1.s
+  = d by -d_is_s1
+  = H2.s by d_is_s2
+
+show s1_is_s2
 
