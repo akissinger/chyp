@@ -112,9 +112,9 @@ Now, when we place the cursor over any step of this rule, it is highlighted in g
 By default, Chyp tries to apply rules from left to right. We can apply a rule in the other direction by prefixing the rule name with `-`. For example, the proof above can be done backwards as follows:
 
     rewrite ba1_backwards :
-      f * id ; f ; g ; g * id
-      = id * f ; f ; g ; g * id by assoc
-      = g * f ; id * id * g ; id * sw * id ; f * f ; g * id by bialg
+      g * f ; id * id * g ; id * sw * id ; f * f ; g * id
+      = id * f ; f ; g ; g * id by -bialg
+      = f * id ; f ; g ; g * id by -assoc
 
 The golden rule of Chyp is that _only connectivity matters_. So, if two terms give the same diagram, like `a * b ; c * d` and `(a ; c) * (b ; d)`, Chyp treats them as identical. Since under the hood, Chyp does everything with graph rewriting and not term rewriting, the prover handles all of this extra book-keeping for you.
 
