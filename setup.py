@@ -10,10 +10,10 @@ data_files = []
 
 setuptools.setup(
     name="chyp",
-    version="0.3.4",
+    version="0.4",
     author="Aleks Kissinger",
     author_email="aleks0@gmail.com",
-    description="An interactive theorem prover for monoidal categories",
+    description="An interactive theorem prover for string diagrams",
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/akissinger/chyp",

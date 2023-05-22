@@ -1,4 +1,4 @@
-#     chyp - A compositional hypergraph library
+#     chyp - An interactive theorem prover for string diagrams 
 #     Copyright (C) 2022 - Aleks Kissinger
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
