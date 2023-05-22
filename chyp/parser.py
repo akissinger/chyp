@@ -199,14 +199,28 @@ class ChypParseData(Transformer):
         name = items[0]
         graph = items[1]
         (fg,bg) = items[2] if items[2] else ('','')
+
         rule_name = name + '_def'
-        if not name in self.graphs and not rule_name in self.rules:
+        if not rule_name in self.rules:
             if graph:
-                lhs = gen(name, len(graph.inputs()), len(graph.outputs()), fg, bg)
-                self.graphs[name] = lhs
-                self.rules[rule_name] = Rule(lhs, graph, rule_name, True)
+                arity = len(graph.inputs())
+                coarity = len(graph.outputs())
+
+                if not name in self.graphs:
+                    lhs = gen(name, arity, coarity, fg, bg)
+                    self.graphs[name] = lhs
+                    self.rules[rule_name] = Rule(lhs, graph, rule_name, True)
+                else:
+                    lhs = self.graphs[name]
+                    inp = len(lhs.inputs())
+                    outp = len(lhs.outputs())
+                    if inp == arity or outp == coarity:
+                        self.rules[rule_name] = Rule(lhs, graph, rule_name, True)
+                    else:
+                        self.errors.append((self.file_name, meta.line, "Term '{}' already defined with incompatible type {} -> {}.".format(name, inp, outp)))
+
         else:
-            self.errors.append((self.file_name, meta.line, "Term '{}' or rule '{}' already defined.".format(name, rule_name)))
+            self.errors.append((self.file_name, meta.line, "Rule '{}' already defined.".format(name, rule_name)))
         self.parts.append((meta.start_pos, meta.end_pos, 'rule', rule_name))
 
     def gen_color(self, items: List[Any]) -> Tuple[str,str]:

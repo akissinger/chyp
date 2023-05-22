@@ -1,21 +1,26 @@
-gen m1 : 2 -> 1 "ff00ff"
-gen u1 : 0 -> 1
-gen n1 : 1 -> 2
-gen v1 : 1 -> 0
+gen m1 : 2 -> 1   "ffffff"
+gen u1 : 0 -> 1   "ffffff"
+gen n1 : 1 -> 2   "ffffff"
+gen v1 : 1 -> 0   "ffffff"
 
-gen m2 : 2 -> 1
-gen u2 : 0 -> 1
-gen n2 : 1 -> 2
-gen v2 : 1 -> 0
+gen m2 : 2 -> 1   "aaaaaa"
+gen u2 : 0 -> 1   "aaaaaa"
+gen n2 : 1 -> 2   "aaaaaa"
+gen v2 : 1 -> 0   "aaaaaa"
 
-import ssfa as F1(m=m1, u=u1, n=n1, v=v1)
-import ssfa as F2(m=m2, u=u2, n=n2, v=v2)
+gen cup1 : 0 -> 2 "ffffff"
+gen cap1 : 2 -> 0 "ffffff"
+gen cup2 : 0 -> 2 "aaaaaa"
+gen cap2 : 2 -> 0 "aaaaaa"
+
+import ssfa as F1(m=m1, u=u1, n=n1, v=v1, cup=cup1, cap=cap1)
+import ssfa as F2(m=m2, u=u2, n=n2, v=v2, cup=cup2, cap=cap2)
 import hopf as H1(m=m1, u=u1, n=n2, v=v2)
 import hopf as H2(m=m2, u=u2, n=n1, v=v1)
 
-let m1_t2 = (F2.cup * F2.cup ; id * sw * id ; id * id * m1) * id ; id * id * F2.cap
+let m1_t2 = (cup2 * cup2 ; id * sw * id ; id * id * m1) * id ; id * id * cap2
 
-def d = id * F1.cup ; F2.cap * id
+def d = id * cup1 ; cap2 * id
 
 rule d_anti_hm : m1 ; d = d * d ; sw ; m1
 
