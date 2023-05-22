@@ -13,23 +13,15 @@ import ssfa as F2(m=m2, u=u2, n=n2, v=v2)
 import hopf as H1(m=m1, u=u1, n=n2, v=v2)
 import hopf as H2(m=m2, u=u2, n=n1, v=v1)
 
-let m1_t2 = (F1.cup * F1.cup ; id * sw * id ; id * id * m1) * id ; id * id * F1.cap
+let m1_t2 = (F2.cup * F2.cup ; id * sw * id ; id * id * m1) * id ; id * id * F2.cap
 
-let d1 = id * F1.cup ; F2.cap * id
-let d2 = id * F2.cup ; F1.cap * id
+def d = id * F1.cup ; F2.cap * id
 
-rule dlr : d1 = d2
+rule d_anti_hm : m1 ; d = d * d ; sw ; m1
 
-rewrite u1_cap2 :
-  u1 * id ; F2.cap
-  = u1 * u1 * id ; id * n1 * id ; m2 * m1 ; v2 * v1 by -F1.yankL
-  = u1 * id * u2 ; id * id * n2 ; id * sw[1, 2, 0] ; m1 * m1 ; v1 * v1 by dlr
-  = u2 * id ; n2 * id ; v1 * m1 ; v1 by F1.unitL
+rewrite d_flip :
+  d * d ; sw ; m1 ; v1
+  = m1 ; d ; v1 by -d_anti_hm
 
-rewrite d1_anti :
-  n1 ; id * d1 ; m2
-  = id * u1 ; m2 ; n1 ; id * v2 by -H2.bialg
-  = u1 * u1 * id ; sw[2, 0, 1] ; m2 * n1 ; sw[1, 2, 0] ; id * m1 ; id * v2 by -F1.m_cupL
-  = u1 * u1 * id ; sw[2, 0, 1] ; m2 * n1 ; v2 * id * v2 by H1.vcp
 
 

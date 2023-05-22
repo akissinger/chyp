@@ -82,6 +82,9 @@ class Editor(QWidget):
         # keep a revision count, so we don't trigger parsing until the user stops typing for a bit
         self.revision = 0
 
+        # index of the part of the parsed document we're currently looking at
+        self.current_part = -1
+
 
     def title(self) -> str:
         if self.doc.file_name:
@@ -102,6 +105,7 @@ class Editor(QWidget):
 
     def invalidate_text(self) -> None:
         self.parsed = False
+        self.current_part = -1
         self.graph_cache = dict()
         self.code_view.set_current_region(None)
         self.revision += 1
@@ -112,7 +116,7 @@ class Editor(QWidget):
                     self.update_state()
             return f
 
-        QTimer.singleShot(100, update(self.revision))
+        QTimer.singleShot(200, update(self.revision))
         # self.update_state(sync=False)
 
     def next_part(self, step:int=1) -> None:
@@ -152,73 +156,77 @@ class Editor(QWidget):
 
     def show_at_cursor(self) -> None:
         if not self.parsed: return
-
         pos = self.code_view.textCursor().position()
         p = self.state.part_with_index_at(pos)
-        if p:
-            i, part = p
-            # print(part)
-            self.code_view.set_current_region((part[0], part[1]))
-            if part[2] in ('let','gen') and part[3] in self.state.graphs:
-                if i not in self.graph_cache:
-                    g = self.state.graphs[part[3]].copy()
-                    convex_layout(g)
-                    self.graph_cache[i] = (g, None)
-                else:
-                    g, _ = self.graph_cache[i]
-                self.rhs_view.setVisible(False)
-                self.lhs_view.set_graph(g)
-            elif part[2] == 'rule' and part[3] in self.state.rules:
-                if i not in self.graph_cache:
-                    lhs = self.state.rules[part[3]].lhs.copy()
-                    rhs = self.state.rules[part[3]].rhs.copy()
-                    convex_layout(lhs)
-                    convex_layout(rhs)
-                    self.graph_cache[i] = (lhs, rhs)
-                else:
-                    lhs, rhs0 = self.graph_cache[i]
-                    if not rhs0: raise ValueError("Rule in graph_cache should have RHS")
-                    rhs = rhs0
-                self.rhs_view.setVisible(True)
-                self.lhs_view.set_graph(lhs)
-                self.rhs_view.set_graph(rhs)
-            elif part[2] == 'rewrite' and part[3] in self.state.rewrites:
-                rw = self.state.rewrites[part[3]]
-                if not rw.stub:
-                    if rw.status == RewriteState.UNCHECKED:
-                        rw.status = RewriteState.CHECKING
-                        def check_finished(i: int) -> Callable:
-                            def f() -> None:
-                                self.graph_cache.pop(i, None)
-                                self.show_at_cursor()
-                            return f
+        if not p: return
 
-                        check_thread = CheckThread(rw, self)
-                        check_thread.finished.connect(check_finished(i))
-                        check_thread.start()
+        i, part = p
+        # print(part)
 
-                if i not in self.graph_cache:
-                    lhs = rw.lhs.copy() if rw.lhs else Graph()
-                    rhs = rw.rhs.copy() if rw.rhs else Graph()
-                    convex_layout(lhs)
-                    convex_layout(rhs)
-                    self.graph_cache[i] = (lhs, rhs)
-                else:
-                    lhs, rhs0 = self.graph_cache[i]
-                    if not rhs0: raise ValueError("Rewrite step in graph_cache should have RHS")
-                    rhs = rhs0
+        if i == self.current_part: return
+        else: self.current_part = i
 
-                if rw.status == RewriteState.VALID:
-                    self.code_view.set_current_region((part[0], part[1]), status=STATUS_GOOD)
-                elif rw.status == RewriteState.INVALID:
-                    self.code_view.set_current_region((part[0], part[1]), status=STATUS_BAD)
-
-                self.rhs_view.setVisible(True)
-                self.lhs_view.set_graph(lhs)
-                if rhs: self.rhs_view.set_graph(rhs)
+        self.code_view.set_current_region((part[0], part[1]))
+        if part[2] in ('let','gen') and part[3] in self.state.graphs:
+            if i not in self.graph_cache:
+                g = self.state.graphs[part[3]].copy()
+                convex_layout(g)
+                self.graph_cache[i] = (g, None)
             else:
-                self.rhs_view.setVisible(False)
-                self.lhs_view.set_graph(Graph())
+                g, _ = self.graph_cache[i]
+            self.rhs_view.setVisible(False)
+            self.lhs_view.set_graph(g)
+        elif part[2] == 'rule' and part[3] in self.state.rules:
+            if i not in self.graph_cache:
+                lhs = self.state.rules[part[3]].lhs.copy()
+                rhs = self.state.rules[part[3]].rhs.copy()
+                convex_layout(lhs)
+                convex_layout(rhs)
+                self.graph_cache[i] = (lhs, rhs)
+            else:
+                lhs, rhs0 = self.graph_cache[i]
+                if not rhs0: raise ValueError("Rule in graph_cache should have RHS")
+                rhs = rhs0
+            self.rhs_view.setVisible(True)
+            self.lhs_view.set_graph(lhs)
+            self.rhs_view.set_graph(rhs)
+        elif part[2] == 'rewrite' and part[3] in self.state.rewrites:
+            rw = self.state.rewrites[part[3]]
+            if not rw.stub:
+                if rw.status == RewriteState.UNCHECKED:
+                    rw.status = RewriteState.CHECKING
+                    def check_finished(i: int) -> Callable:
+                        def f() -> None:
+                            self.graph_cache.pop(i, None)
+                            self.show_at_cursor()
+                        return f
+
+                    check_thread = CheckThread(rw, self)
+                    check_thread.finished.connect(check_finished(i))
+                    check_thread.start()
+
+            if i not in self.graph_cache:
+                lhs = rw.lhs.copy() if rw.lhs else Graph()
+                rhs = rw.rhs.copy() if rw.rhs else Graph()
+                convex_layout(lhs)
+                convex_layout(rhs)
+                self.graph_cache[i] = (lhs, rhs)
+            else:
+                lhs, rhs0 = self.graph_cache[i]
+                if not rhs0: raise ValueError("Rewrite step in graph_cache should have RHS")
+                rhs = rhs0
+
+            if rw.status == RewriteState.VALID:
+                self.code_view.set_current_region((part[0], part[1]), status=STATUS_GOOD)
+            elif rw.status == RewriteState.INVALID:
+                self.code_view.set_current_region((part[0], part[1]), status=STATUS_BAD)
+
+            self.rhs_view.setVisible(True)
+            self.lhs_view.set_graph(lhs)
+            if rhs: self.rhs_view.set_graph(rhs)
+        else:
+            self.rhs_view.setVisible(False)
+            self.lhs_view.set_graph(Graph())
 
     def next_rewrite_at_cursor(self) -> None:
         self.update_state()
