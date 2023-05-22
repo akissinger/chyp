@@ -61,15 +61,29 @@ Any terms can be combined in parallel, but for sequential composition `S ; T` th
 
     let b = g * g ; id * sw * id ; f * f
 
+There is also a special generator `id0 : 0 -> 0`, corresponding to the empty diagram, i.e. the "identity" process on zero wires.
+
 Note that, as you type in the bottom half of the screen, Chyp will automatically update the proof state and the graph view in the top half. This gives instant feedback, which is handy when building complicated terms. As soon as Chyp is able to parse your code, it will highlight to current statement and show the associated diagram(s) on top. To manually check your code, press `CTRL+R`. This is mainly useful for getting useful errors printed in the terminal if something is wrong.
 
-While combining `id` and `sw` suffices for building any permutation of wires, this is not very convenient for more complicated permutations. Hence, there is a more powerful version of `sw` which takes an arbitrary permutation. `sw[x0, x1, ..., xk]` defines the map on `k+1` wires that sends input `xi` to output `i` (counting from 0). `sw` is actually shorthand for `sw[1,0]`. Using this notation, we could equivalently write `b` from above as:
+While combining `id` and `sw` suffices for building any permutation of wires, this is not very convenient for more complicated permutations. Hence, there is a more powerful version of `sw` which takes an arbitrary permutation. `sw[x0, x1, ..., xk]` defines the map on `k+1` wires that sends input `xi` to output `i` (counting from 0). `sw` is actually shorthand for `sw[1, 0]`. Using this notation, we could equivalently write `b` from above as:
 
-    let b = g * g ; sw[0,2,1,3] ; f * f
+    let b = g * g ; sw[0, 2, 1, 3] ; f * f
 
 Note these indices are local to the swap map, so splitting or combining swap maps will change some indices in general. For example:
 
     sw[1, 2, 0] * sw[1, 0] = sw[1, 2, 0, 4, 3]
+
+The `def` statement is a close cousin to the `let` statement, but its behavior is slightly different. If we change `let` to `def` in the example above, we get:
+
+    def a = g * h ; h * f
+
+Before, when we used `a` in another term, it would immediately be expanded to the RHS, but now if we use `a`, e.g. in:
+
+    let x = a ; a
+    
+we'll just see two `a`-labelled boxes. This is because, behind the scenes `def` introduces a new generator called `a` and a new rule, called `a_def`, that can be used to explicitly fold/unfold `a` in a proof.
+
+To see how this works, we'll first need to introduce rules and rewriting.
 
 
 ## Rules and rewriting
@@ -87,15 +101,45 @@ Now for the good part! The `rewrite` statement represents a transitive chain of 
       = id * f ; f ; g ; g * id by assoc
       = g * f ; id * id * g ; id * sw * id ; f * f ; g * id by bialg
 
-Now, when we place the cursor over any step of this rule, it is highlighted in green, and it shows where that rule is applied. The green highlighting is indicating that Chyp has successfully checked this step. Namely, it has matched the LHS of the given rule on the previous term, rewritten the LHS to the RHS, and checked the result is the same as the term given.
+Now, when we place the cursor over any step of this rule, it is highlighted in green, and it shows where that rule is applied. The green highlighting is indicating that Chyp has successfully checked this step. Namely, it has matched the LHS of the given rule on the previous term, rewritten the LHS to the RHS, and checked the result is the same as the term given. If we make a mistake in the example above (e.g. try to replace `assoc` with `bialg` or `sw` with `id * id`), that line will turn red. This means Chyp was _not_ able to find a matching for the rule given which implies the given equality.
+
+By default, Chyp tries to apply rules from left to right. We can apply a rule in the other direction by prefixing the rule name with `-`. For example, the proof above can be done backwards as follows:
+
+    rewrite ba1_backwards :
+      f * id ; f ; g ; g * id
+      = id * f ; f ; g ; g * id by assoc
+      = g * f ; id * id * g ; id * sw * id ; f * f ; g * id by bialg
 
 The golden rule of Chyp is that _only connectivity matters_. So, if two terms give the same diagram, like `a * b ; c * d` and `(a ; c) * (b ; d)`, Chyp treats them as identical. Since under the hood, Chyp does everything with graph rewriting and not term rewriting, the prover handles all of this extra book-keeping for you.
 
-Note that, if we make a mistake in the example above (e.g. try to replace `assoc` with `bialg` or `sw` with `id * id`), that line will turn red. This means Chyp was _not_ able to find a matching for the rule given which implies the given equality.
+Sometimes it can be helpful for readability to do a trivial proof step that does nothing but write the same string diagram differently. There is a special rule called `refl` (for reflexivity) for this. For example:
+
+    rewrite foo :
+      a * b ; c * d
+      = (a ; c) * (b ; d) by refl
+
+In fact, we can omit the `by refl`. The following is equivalent:
+
+    rewrite foo :
+      a * b ; c * d
+      = (a ; c) * (b ; d)
+
+
+The `def` statement introduced in the previous section is just syntactic sugar for a `gen` followed by a rule. That is:
+
+    def a = g * h ; h * f
+
+is equivalent to:
+
+    gen a : 2 -> 2
+    rule a_def : a = g * h ; h * f
+
+Note that Chyp automatically figures out the arity and coarity for the new generator, since it has to match that of the given RHS.
+
 
 ## Automatically rewriting terms
 
-Finally, note that it is not so convenient to manually type in the results of rewriting a term. Chyp's solution for this is to introduce "holes", which you can then ask the rewriter to fill. For example, try typing this:
+Usually it is not very convenient to manually type in the results of rewriting a term. Chyp's solution for this is to introduce "holes", which you can then ask the rewriter to fill. For example, try typing this:
 
     rewrite ba1 :
       f * id ; f ; g ; g * id
@@ -122,34 +166,65 @@ Then press `CTRL+N`, followed by `CTRL+SHIFT+Enter` 3 times, and Chyp will compu
 
 How to we know it's a normal form? Pressing `CTRL+SHIFT+Enter` one more time will result in a red line that reads `  = ? by bialg`, which means Chyp wasn't able to find any more matchings of the `bialg` rule.
 
-# Grammar
 
-The Chyp language is very small. The full grammar, which is essentially the one used in [chyp/parser.py](https://github.com/akissinger/chyp/blob/master/chyp/parser.py), is the following:
+## Modules and importing
 
-```lark
+As structures and proofs get more complicated, we may want to split them into multiple files. Every `*.chyp` file defines a module, which can be imported in other `*.chyp` file. Suppose for example we define the following file `monoid.chyp`:
 
-start : statement*
-statement : gen | let | rule | rewrite
-gen : "gen" var ":" num "->" num
-let : "let" var "=" term
-rule : "rule" var ":" term "=" term
-rewrite : "rewrite" var ":" term rewrite_part*
-rewrite_part : "=" term_hole "by" inverse? rule_ref
-inverse : "-"
-term  : par_term | seq
-par_term : "(" term ")" | par | perm | id | term_ref
-par : par_term "*" par_term
-seq : term ";" term
-perm : "sw" ( "[" num ("," num)* "]" )?
-id : "id"
-term_hole : term | "?"
+    gen m : 2 -> 1
+    gen u : 0 -> 1
+    rule assoc : m * id ; m = id * m ; m
+    rule unitL : u * id ; m = id
+    rule unitR : id * u ; m = id
 
-num : INT
-var : IDENTIFIER
-term_ref : IDENTIFIER
-rule_ref : IDENTIFIER
+If we want to define commutative monoids, we could start a new file `cmonoid.chyp` in the same directory and write:
 
-```
+    import monoid
+    rule comm : sw ; m = m
 
-The parser ignores whitespace and comments starting with `#`.
+By default, this loads all of the generators and rules from the first file into the second one. We may not want this, if there is some possibility that the symbols in one file will clash with the symbols in another. We can give a module its own namespace by adding `as ...` to the import statement:
+
+    import monoid as M   # m is now M.m, u is M.u, assoc is M.assoc, etc.
+
+This is especially important if we want to have multiple copies of the same structure. For example, we could start defining commutative semirings in a third file, `csemiring.chyp`:
+
+    import cmonoid as M1
+    import cmonoid as M2
+
+    gen cp : 1 -> 2
+    rule dist :
+      M1.m * id ; M2.m = 
+      = id * M1.m ; M2.m = cp * id * id ; id * sw * id ; M2.m * M2.m ; M1.m
+
+You can also alias generators in imported modules as follows:
+
+    gen m1 : 2 -> 1
+    gen u1 : 0 -> 1
+    gen m2 : 2 -> 1
+    gen u2 : 0 -> 1
+    import cmonoid as M1(m = m1, u = u1)
+    import cmonoid as M2(m = m2, u = u2)
+
+    gen cp : 1 -> 2
+    rule dist :
+      m1 * id ; m2 = 
+      = id * m1 ; m2 = cp * id * id ; id * sw * id ; m2 * m2 ; m1
+
+This is especially convenient if modules share generators in non-trivial ways. For example, a pair of Frobenius algebras interacting as a bialgebra could be defined this way, assuming `frobenius.chyp` and `bialg.chyp` have already been defined:
+
+    gen m1 : 2 -> 1
+    gen u1 : 0 -> 1
+    gen n1 : 1 -> 2
+    gen v1 : 1 -> 0
+
+    gen m2 : 2 -> 1
+    gen u2 : 0 -> 1
+    gen n2 : 1 -> 2
+    gen v2 : 1 -> 0
+
+    import frobenius(m = m1, u = u1, n = n1, v = v1) as F1
+    import frobenius(m = m2, u = u2, n = n2, v = v2) as F2
+    import bialg(m = m1, u = u1, n = n2, v = v2) as B1
+    import bialg(m = m2, u = u2, n = n1, v = v1) as B2
+
 
