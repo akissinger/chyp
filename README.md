@@ -167,7 +167,7 @@ Then press `CTRL+N`, followed by `CTRL+SHIFT+Enter` 3 times, and Chyp will compu
 How to we know it's a normal form? Pressing `CTRL+SHIFT+Enter` one more time will result in a red line that reads `  = ? by bialg`, which means Chyp wasn't able to find any more matchings of the `bialg` rule.
 
 
-## Modules and importing
+# Modules and importing
 
 As structures and proofs get more complicated, we may want to split them into multiple files. Every `*.chyp` file defines a module, which can be imported in other `*.chyp` file. Suppose for example we define the following file `monoid.chyp`:
 
@@ -227,4 +227,14 @@ This is especially convenient if modules share generators in non-trivial ways. F
     import bialg(m = m1, u = u1, n = n2, v = v2) as B1
     import bialg(m = m2, u = u2, n = n1, v = v1) as B2
 
+
+## Finding modules
+
+The `import` statement always looks for `*.chyp` files in the same directory of the current file. Chyp doesn't have a notion of "search paths" for modules, but this might be added in the future.
+
+Files can be imported from subdirectories by adding dots:
+
+    import algebra.frobenius  # imports algebra/frobenius.chyp
+
+You can go to a file being imported by placing the cursor on the import statement and pressing `CTRL+G`.
 
