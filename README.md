@@ -175,7 +175,7 @@ How to we know it's a normal form? Pressing `CTRL+SHIFT+Enter` one more time wil
 
 # Modules and importing
 
-As structures and proofs get more complicated, we may want to split them into multiple files. Every `*.chyp` file defines a module, which can be imported in other `*.chyp` file. Suppose for example we define the following file `monoid.chyp`:
+As structures and proofs get more complicated, we may want to split them into multiple files. Every chyp file defines a module, which can be imported in other chyp files. Suppose for example we define the following file `monoid.chyp`:
 
     gen m : 2 -> 1
     gen u : 0 -> 1
