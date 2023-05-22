@@ -1,32 +1,84 @@
-gen m1 : 2 -> 1   "ffffff"
-gen u1 : 0 -> 1   "ffffff"
-gen n1 : 1 -> 2   "ffffff"
-gen v1 : 1 -> 0   "ffffff"
+# In this document, we'll define two special symmetric Frobenius algebras that
+# interact as a bialgebra. For convenience, we'll give local names and colors
+# for the generators of the two Frobenius algebras:
 
-gen m2 : 2 -> 1   "aaaaaa"
-gen u2 : 0 -> 1   "aaaaaa"
-gen n2 : 1 -> 2   "aaaaaa"
-gen v2 : 1 -> 0   "aaaaaa"
+gen m1 : 2 -> 1   "d8f8d8"
+gen u1 : 0 -> 1   "d8f8d8"
+gen n1 : 1 -> 2   "d8f8d8"
+gen v1 : 1 -> 0   "d8f8d8"
 
-gen cup1 : 0 -> 2 "ffffff"
-gen cap1 : 2 -> 0 "ffffff"
-gen cup2 : 0 -> 2 "aaaaaa"
-gen cap2 : 2 -> 0 "aaaaaa"
+gen m2 : 2 -> 1   "e8a6a6"
+gen u2 : 0 -> 1   "e8a6a6"
+gen n2 : 1 -> 2   "e8a6a6"
+gen v2 : 1 -> 0   "e8a6a6"
 
+
+# Cups and caps are derived generators, but we use them a lot, so we'll give
+# them local names/colors too.
+
+gen cup1 : 0 -> 2 "d8f8d8"
+gen cap1 : 2 -> 0 "d8f8d8"
+gen cup2 : 0 -> 2 "e8a6a6"
+gen cap2 : 2 -> 0 "e8a6a6"
+
+# These imports make our two sets of generators in special symmetric Frobenius algebras:
 import ssfa as F1(m=m1, u=u1, n=n1, v=v1, cup=cup1, cap=cap1)
 import ssfa as F2(m=m2, u=u2, n=n2, v=v2, cup=cup2, cap=cap2)
+
+# These imports make the monoid of one SSFA form a Hopf algebra with the comonoid of the other:
 import hopf as H1(m=m1, u=u1, n=n2, v=v2)
 import hopf as H2(m=m2, u=u2, n=n1, v=v1)
 
-let m1_t2 = (cup2 * cup2 ; id * sw * id ; id * id * m1) * id ; id * id * cap2
+# We additionally assume the units of one algebra can be transposed in the other
+rule u1_tr :
+  u1 * id ; cap2 = v1
 
+rule u2_tr :
+  u2 * id ; cap1 = v2
+
+# From this the analogous rules for counits follows
+rewrite v1_tr :
+  cup2 ; id * v1
+  = cup2 * u1 ; id * sw ; id * cap2 by -u1_tr
+  = cup2 * u1 ; id * cap2 by F2.symm_cap
+  = u1 by F2.yankL
+
+rewrite v2_tr :
+  cup1 ; id * v2
+  = cup1 * u2 ; id * sw ; id * cap1 by -u2_tr
+  = cup1 * u2 ; id * cap1 by F1.symm_cap
+  = u2 by F1.yankL
+
+# We define the dualiser as the cap for F2 followed by the cup for F1:
 def d = id * cup1 ; cap2 * id
 
-rule d_anti_hm : m1 ; d = d * d ; sw ; m1
+# We can prove the dualiser behaves as an antipode for H2
+rewrite d_antip :
+  n1 ; id * d ; m2
+  = n1 * cup1 ; id * sw[2, 0, 1] ; m2 * cap2 by d_def
+  = n1 * cup1 ; id * sw * id ; m2 * cap2 by F1.symm_cup
+  = n1 * u1 ; id * id * n1 ; id * sw * id ; m2 * cap2 by F1.cup_def
+  = n1 * u1 ; id * id * n1 ; id * sw * id ; m2 * m2 ; id * v2 by F2.cap_def
+  = id * u1 ; m2 ; n1 ; id * v2 by -H2.bialg
+  = u1 * id ; n2 * id ; sw[1, 2, 0] ; n1 * cap2 ; id * v2 by -F2.n_capL
+  = u1 * u1 * id ; sw[1, 2, 0] ; n1 * cap2 ; id * v2 by H1.ucp
+  = u1 * cup1 * id ; sw[1, 3, 0, 2] ; id * cap2 * v2 by -F1.cup_def
+  = u1 * cup1 * id ; sw * sw ; id * cap2 * v2 by F2.symm_cap
+  = cup1 * v1 ; id * v2 by u1_tr
+  = v1 ; u2 by v2_tr
 
-rewrite d_flip :
-  d * d ; sw ; m1 ; v1
-  = m1 ; d ; v1 by -d_anti_hm
+# ...and hence equals H2.s by uniqueness
+rewrite d_is_s :
+  d
+  = d * u2 ; sw ; m2 by -H2.unitL
+  = u2 * n1 ; id * v1 * d ; m2 by -H2.counitL
+  = n1 ; n1 * d ; H2.s * id * id ; m2 * id ; m2 by -H2.antiL
+  = n1 ; H2.s * n1 ; m2 * d ; m2 by H2.coassoc
+  = n1 ; H2.s * n1 ; id * id * d ; id * m2 ; m2 by H2.assoc
+  = n1 * u2 ; H2.s * v1 * id ; m2 by d_antip
+  = n1 ; H2.s * v1 by H2.unitR
+  = H2.s by H2.counitR
 
+show d_is_s
 
 
