@@ -49,7 +49,13 @@ Generators are defined via the `gen` statement, which takes a name, a number of 
     gen g : 1 -> 2
     gen h : 1 -> 1
 
-These can be combined via parallel composition `*` and sequential composition `;`. We can build composed maps from simpler ones using a `let` statement:
+These can be given a colors by providing one or two hex codes after the definition, defining the background and forground color, respectively:
+
+    gen f : 2 -> 1 "00ff00"            # green background, default (black) foreground
+    gen g : 1 -> 2 "000000" "ffffff"   # black background, white foreground
+    gen h : 1 -> 1 "0000ff" "0000ff"   # blue background, blue foreground (i.e. hidden text)
+
+Generators can be combined via parallel composition `*` and sequential composition `;`. We can build composed maps from simpler ones using a `let` statement:
 
     let a = (g * h) ; (h * f)
 

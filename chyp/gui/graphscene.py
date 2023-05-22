@@ -57,19 +57,16 @@ class EItem(QGraphicsRectItem):
             else:
                 self.setBrush(QBrush(QColor(200,200,255)))
 
+            pen = QPen(QColor(0,0,0))
             if ed.highlight:
-                # pen = QPen(QColor(0,150,0))
-                pen = self.pen()
                 pen.setWidth(3)
-                self.setPen(pen)
-            else:
-                self.setPen(QPen(QColor(0,0,0)))
+            self.setPen(pen)
 
     def paint(self, painter: QPainter, option: QStyleOptionGraphicsItem, widget: Optional[QWidget]=None) -> None:
         super().paint(painter, option, widget)
 
         if self.fg != '':
-            self.setPen(QPen(QColor(self.fg)))
+            painter.setPen(QPen(QColor(self.fg)))
         painter.setFont(QFont("sans", 11))
         painter.drawText(self.boundingRect(), Qt.AlignmentFlag.AlignCenter, str(self.value)) # type:ignore
 
