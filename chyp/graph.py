@@ -134,7 +134,7 @@ class Graph:
         self.vdata[v] = VData(x, y, value)
         return v
 
-    def add_edge(self, s:List[int], t:List[int], value:Any="", x:float=0, y:float=0, hyper:bool=True, name:int=-1) -> int:
+    def add_edge(self, s:List[int], t:List[int], value:Any="", x:float=0, y:float=0, fg:str='', bg:str='', hyper:bool=True, name:int=-1) -> int:
         """Add an edge to the graph
         
         :param s:     A list of source vertices
@@ -155,7 +155,7 @@ class Graph:
         else:
             e = name
 
-        self.edata[e] = EData(s, t, value, x, y, '', '', hyper)
+        self.edata[e] = EData(s, t, value, x, y, fg, bg, hyper)
         for v in s: self.vdata[v].out_edges.add(e)
         for v in t: self.vdata[v].in_edges.add(e)
         return e
@@ -347,7 +347,7 @@ class Graph:
             ed = other.edge_data(e)
             self.add_edge([vmap[v] for v in ed.s],
                           [vmap[v] for v in ed.t],
-                          ed.value, ed.x, ed.y - min_other + 1)
+                          ed.value, ed.x, ed.y - min_other + 1, ed.fg, ed.bg, ed.hyper)
         
         self.set_inputs(self.inputs() + [vmap[v] for v in other.inputs()])
         self.set_outputs(self.outputs() + [vmap[v] for v in other.outputs()])
@@ -378,7 +378,7 @@ class Graph:
             ed = other.edge_data(e)
             self.add_edge([vmap[v] for v in ed.s],
                           [vmap[v] for v in ed.t],
-                          ed.value, ed.x - min_other, ed.y)
+                          ed.value, ed.x - min_other, ed.y, ed.fg, ed.bg, ed.hyper)
         
         plug1 = self.outputs()
         plug2 = [vmap[v] for v in other.inputs()]
@@ -402,11 +402,11 @@ class Graph:
         g.compose(other)
         return g
 
-def gen(value: str, arity: int, coarity: int) -> Graph:
+def gen(value: str, arity: int, coarity: int, fg: str='', bg: str='') -> Graph:
     g = Graph()
     inputs = [g.add_vertex(-1.5, i - (arity-1)/2) for i in range(arity)]
     outputs = [g.add_vertex(1.5, i - (coarity-1)/2) for i in range(coarity)]
-    g.add_edge(inputs, outputs, value)
+    g.add_edge(inputs, outputs, value, fg=fg, bg=bg)
     g.set_inputs(inputs)
     g.set_outputs(outputs)
     return g

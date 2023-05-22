@@ -157,9 +157,12 @@ class ChypParseData(Transformer):
 
     @v_args(meta=True)
     def gen(self, meta: Meta, items: List[Any]) -> None:
-        name, arity, coarity = items[:3]
+        name = items[0]
+        arity = items[1]
+        coarity = items[2]
+        (fg,bg) = items[3] if items[3] else ('','')
         if not name in self.graphs:
-            self.graphs[name] = gen(name, arity, coarity)
+            self.graphs[name] = gen(name, arity, coarity, fg, bg)
         else:
             g = self.graphs[name]
             inp = len(g.inputs())
@@ -193,19 +196,24 @@ class ChypParseData(Transformer):
 
     @v_args(meta=True)
     def def_statement(self, meta: Meta, items: List[Any]) -> None:
-        name, graph = items[:2]
+        name = items[0]
+        graph = items[1]
+        (fg,bg) = items[2] if items[2] else ('','')
         rule_name = name + '_def'
         if not name in self.graphs and not rule_name in self.rules:
             if graph:
-                lhs = gen(name, len(graph.inputs()), len(graph.outputs()))
+                lhs = gen(name, len(graph.inputs()), len(graph.outputs()), fg, bg)
                 self.graphs[name] = lhs
                 self.rules[rule_name] = Rule(lhs, graph, rule_name, True)
         else:
             self.errors.append((self.file_name, meta.line, "Term '{}' or rule '{}' already defined.".format(name, rule_name)))
         self.parts.append((meta.start_pos, meta.end_pos, 'rule', rule_name))
 
-    def gen_color(self, items: List[Any]) -> List[str]:
-        return ['#' + str(it)[1:-1] for it in items]
+    def gen_color(self, items: List[Any]) -> Tuple[str,str]:
+        return (items[1], items[0]) if len(items) == 2 else ('', items[0])
+
+    def color(self, items: List[Any]) -> str:
+        return '#' + ''.join([str(it) for it in items])
 
     @v_args(meta=True)
     def import_statement(self, meta: Meta, items: List[Any]) -> None:

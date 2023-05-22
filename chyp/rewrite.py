@@ -87,7 +87,7 @@ def dpo(r: Rule, m: Match) -> Iterable[Match]:
         ed = r.rhs.edge_data(e)
         e1 = h.add_edge([m1.vmap[v] for v in ed.s],
                         [m1.vmap[v] for v in ed.t],
-                        ed.value, ed.x, ed.y, ed.hyper)
+                        ed.value, ed.x, ed.y, ed.fg, ed.bg, ed.hyper)
         m1.emap[e] = e1
         m1.eimg.add(e1)
 

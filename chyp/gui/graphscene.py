@@ -34,6 +34,9 @@ class EItem(QGraphicsRectItem):
         self.g = g
         self.e = e
         ed = g.edge_data(e)
+        self.bg = ed.bg
+        self.fg = ed.fg
+        self.value = ed.value
         self.num_s = len(ed.s)
         self.num_t = len(ed.t)
         self.is_id = isinstance(ed.value, str) and str(ed.value) == 'id'
@@ -49,7 +52,11 @@ class EItem(QGraphicsRectItem):
             if self.num_s <= 1 and self.num_t <= 1:
                 self.setRect(-0.5 * BOX_WIDTH * SCALE, -0.4 * SCALE, BOX_WIDTH * SCALE, 0.8 * SCALE)
 
-            self.setBrush(QBrush(QColor(200,200,255)))
+            if self.bg != '':
+                self.setBrush(QBrush(QColor(self.bg)))
+            else:
+                self.setBrush(QBrush(QColor(200,200,255)))
+
             if ed.highlight:
                 # pen = QPen(QColor(0,150,0))
                 pen = self.pen()
@@ -60,10 +67,11 @@ class EItem(QGraphicsRectItem):
 
     def paint(self, painter: QPainter, option: QStyleOptionGraphicsItem, widget: Optional[QWidget]=None) -> None:
         super().paint(painter, option, widget)
-        ed = self.g.edge_data(self.e)
 
+        if self.fg != '':
+            self.setPen(QPen(QColor(self.fg)))
         painter.setFont(QFont("sans", 11))
-        painter.drawText(self.boundingRect(), Qt.AlignmentFlag.AlignCenter, str(ed.value)) # type:ignore
+        painter.drawText(self.boundingRect(), Qt.AlignmentFlag.AlignCenter, str(self.value)) # type:ignore
 
 class VItem(QGraphicsEllipseItem):
     def __init__(self, g: Graph, v: int) -> None:
