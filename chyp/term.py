@@ -32,25 +32,25 @@ def layer_decomp(g: Graph) -> List[List[int]]:
     """
 
     e_layers = []
-
-    v_pos = dict()
-    e_pos = dict()
     v_layer = []
+    v_placed = set()
 
+
+    # first, mark all of the inputs as 'placed' and add dummy edges for any input that is also an output
     outputs = set(g.outputs())
-    for i,v in enumerate(g.inputs()):
+    for v in g.inputs():
         if v in outputs: g.insert_id_after(v)
         v_layer.append(v)
-        v_pos[v] = i
+        v_placed.add(v)
     
     new_ids = set()
     edges = set(g.edges())
 
+    # next, place edges in layers
     while len(edges) > 0:
-        # v_layers.append(v_layer)
         ready = set()
         for e in edges:
-            if all(v in v_pos for v in g.source(e)):
+            if all(v in v_placed for v in g.source(e)):
                 ready.add(e)
         outputs = set(g.outputs())
         for v in v_layer:
@@ -62,13 +62,10 @@ def layer_decomp(g: Graph) -> List[List[int]]:
         e_layer = []
         for e in ready:
             src = g.source(e)
-            e_pos[e] = sum(v_pos[v] for v in src)/len(src) if len(src) != 0 else 0
             e_layer.append(e)
             edges.discard(e)
         if all(e in new_ids for e in e_layer):
             raise ValueError("Could not make progress. Is graph acyclic?")
-
-        list.sort(e_layer, key=lambda e: e_pos[e])
 
         e_layers.append(e_layer)
 
@@ -76,10 +73,36 @@ def layer_decomp(g: Graph) -> List[List[int]]:
             v_layer = []
             for e in e_layer:
                 for v in g.target(e):
-                    v_pos[v] = len(v_layer)
+                    v_placed.add(v)
                     v_layer.append(v)
 
-    # v_layers.append(g.outputs().copy())
+    # finally attempt to minimise crossings by sorting edges according to the ideal positions of their source and
+    # target vertices. This is done in a forward (it=0) and backward (it=1) pass.
+    for it in range(2):
+        rng = range(len(e_layers)) if it == 0 else range(len(e_layers)-1,-1,-1)
+        for j in rng:
+            inp = [v for e in e_layers[j-1] for v in g.target(e)] if j > 0 else list(g.inputs())
+            inp_pos = { v : i/len(inp) for i, v in enumerate(inp) }
+
+            # during the forward pass, ignore the positions of outputs
+            if it != 0:
+                outp = [v for e in e_layers[j+1] for v in g.source(e)] if j < len(e_layers)-1 else list(g.outputs())
+                outp_pos = { v : i/len(outp) for i, v in enumerate(outp) }
+            else:
+                outp_pos = None
+
+            e_pos = {}
+            for e in e_layers[j]:
+                src = g.source(e)
+                e_pos[e] = sum(inp_pos[v] for v in src)/len(src) if len(src) != 0 else 0
+
+                # during the backward pass, weight the positions of outputs more heavily than inputs
+                if outp_pos:
+                    tgt = g.target(e)
+                    e_pos[e] += 2 * sum(outp_pos[v] for v in tgt)/len(tgt) if len(tgt) != 0 else 0
+
+            list.sort(e_layers[j], key=lambda e: e_pos[e])
+
     return e_layers
 
 def perm_to_s(perm: List[int]) -> str:
