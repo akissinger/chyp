@@ -14,6 +14,7 @@
 # limitations under the License.
 
 from __future__ import annotations
+import itertools
 from typing import Optional, List, Tuple
 
 from PySide6.QtCore import Qt, QPointF
@@ -71,14 +72,26 @@ class EItem(QGraphicsRectItem):
         painter.drawText(self.boundingRect(), Qt.AlignmentFlag.AlignCenter, str(self.value)) # type:ignore
 
 class VItem(QGraphicsEllipseItem):
-    def __init__(self, g: Graph, v: int) -> None:
+    def __init__(self, g: Graph, v: int, eitem: Optional[EItem]=None, i: int=-1) -> None:
         super().__init__(-0.0625 * SCALE, -0.0625 * SCALE, 0.125 * SCALE, 0.125 * SCALE)
         self.setVisible(False)
         self.g = g
         self.v = v
+        self.eitem = eitem
+        self.i = i
         vd = g.vertex_data(v)
         self.setPos(vd.x * SCALE, vd.y * SCALE)
         self.setBrush(QBrush(QColor(0,0,0)))
+
+    def refresh(self):
+        if self.eitem and self.i != -1:
+            x_shift = 0.7 * SCALE
+            if self.eitem.num_t == 1:
+                y_shift = 0
+            else:
+                y_shift = ((self.i / (self.eitem.num_t - 1)) - 0.5) * SCALE
+            p = self.eitem.pos()
+            self.setPos(p.x() + x_shift, p.y() + y_shift)
 
 class TItem(QGraphicsPathItem):
     def __init__(self, vitem: VItem, eitem: EItem, i: int, src: bool) -> None:
@@ -152,9 +165,16 @@ class GraphScene(QGraphicsScene):
             ei[e] = EItem(self.g, e)
             self.addItem(ei[e])
 
-        for v in self.g.vertices():
+        for v in itertools.chain(self.g.inputs(), self.g.outputs()):
             vi[v] = VItem(self.g, v)
             self.addItem(vi[v])
+
+        for e in self.g.edges():
+            ed = self.g.edge_data(e)
+            for i, v in enumerate(ed.t):
+                if not v in vi:
+                    vi[v] = VItem(self.g, v, ei[e], i)
+                    self.addItem(vi[v])
 
         for e in self.g.edges():
             ed = self.g.edge_data(e)
@@ -185,14 +205,17 @@ class GraphScene(QGraphicsScene):
         for it,pos in self.drag_items:
             it.setPos(QPointF(pos.x() + dx, pos.y() + dy))
 
-        # update positions for any tentacles attached to dragged items
         for it in self.items():
+            # update positions for any vertices and tentacles attached to dragged items
             if isinstance(it, TItem):
                 for it1,_ in self.drag_items:
-                    if it.vitem == it1 or it.eitem == it1:
+                    if it.vitem == it1 or it.eitem == it1 or it.vitem.eitem == it1:
+                        it.vitem.refresh()
                         it.refresh()
                         break
-            elif isinstance(it, VItem) or (isinstance(it, EItem) and it.is_id):
+
+            # if the mouse is near a vertex or identity box, make it visible
+            if isinstance(it, VItem) or (isinstance(it, EItem) and it.is_id):
                 if abs(it.pos().x() - p.x()) < 10 and abs(it.pos().y() - p.y()) < 10:
                     it.setVisible(True)
                 else:
