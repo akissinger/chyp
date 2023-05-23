@@ -33,21 +33,37 @@ def convex_layout(g: Graph) -> None:
       1. inputs and outputs must be in order and at least 1.0 apart
       2. edges must be in order and not overlapping
     """
-    v_layers, e_layers = layer_decomp(g)
+    e_layers = layer_decomp(g)
 
     # initialise x-coordinates and rough y-coordinates
-    x = -(len(v_layers) - 1) * 1.5
-    for layer in range(len(v_layers)):
-        for i, v in enumerate(v_layers[layer]):
-            vd = g.vertex_data(v)
-            vd.x = x if layer == 0 or layer == len(v_layers)-1 else x - 0.8
-            vd.y = i - (len(v_layers[layer])-1)/2
-        if layer >= len(e_layers): break
-        for i, e in enumerate(e_layers[layer]):
+    x = -(len(e_layers) + 1) * 1.5
+    inp = list(g.inputs())
+    for i, v in enumerate(inp):
+        vd = g.vertex_data(v)
+        vd.x = x + 1.5
+        vd.y = i - (len(inp)-1)/2
+
+    x += 3.0
+
+    for e_layer in e_layers:
+        v_layer = []
+        for i, e in enumerate(e_layer):
             ed = g.edge_data(e)
-            ed.x = x + 1.5
-            ed.y = 2 * i - (len(e_layers[layer])-1)
+            ed.x = x
+            ed.y = 2 * i - (len(e_layer)-1)
+            v_layer += ed.t
+
+        for i, v in enumerate(v_layer):
+            vd = g.vertex_data(v)
+            vd.x = x + 0.7
+            vd.y = i - (len(v_layer)-1)/2
         x += 3.0
+
+    outp = list(g.outputs())
+    for i, v in enumerate(outp):
+        vd = g.vertex_data(v)
+        vd.x = x - 1.5
+        vd.y = i - (len(outp)-1)/2
 
     if g.num_vertices() == 0 or g.num_edges() == 0: return
 
@@ -128,66 +144,66 @@ def convex_layout(g: Graph) -> None:
                 g.vertex_data(v).y = ed.y + yshift_v
 
 
-def layer_layout(g: Graph) -> None:
-    """A simple layout using `layer_decomp`.
+# def layer_layout(g: Graph) -> None:
+#     """A simple layout using `layer_decomp`.
 
-    Vertices are evenly spaced around the x-axis and edges are placed
-    as close to the average y-coordinate of their inputs as possible.
-    """
-    v_layers, e_layers = layer_decomp(g)
-    x = -(len(v_layers) - 1) * 1.5
-    for l in range(len(e_layers)):
-        v_layer = v_layers[l]
-        e_layer = e_layers[l]
-        for i, v in enumerate(v_layer):
-            vd = g.vertex_data(v)
-            vd.x = x
-            vd.y = i - ((len(v_layer) - 1) * 0.5)
+#     Vertices are evenly spaced around the x-axis and edges are placed
+#     as close to the average y-coordinate of their inputs as possible.
+#     """
+#     v_layers, e_layers = layer_decomp(g)
+#     x = -(len(v_layers) - 1) * 1.5
+#     for l in range(len(e_layers)):
+#         v_layer = v_layers[l]
+#         e_layer = e_layers[l]
+#         for i, v in enumerate(v_layer):
+#             vd = g.vertex_data(v)
+#             vd.x = x
+#             vd.y = i - ((len(v_layer) - 1) * 0.5)
 
-        # place edges, starting from the middle and working outward
-        end = len(e_layer)
-        start = math.ceil(end/2)
+#         # place edges, starting from the middle and working outward
+#         end = len(e_layer)
+#         start = math.ceil(end/2)
 
-        max_y = 0.0 # max y-coordinate for edges above the middle
-        min_y = 0.0 # min y-coordinate for edges below the middle
+#         max_y = 0.0 # max y-coordinate for edges above the middle
+#         min_y = 0.0 # min y-coordinate for edges below the middle
 
-        # for an odd number of edges, place the middle edge first
-        if start > end/2:
-            i = start-1
-            ed = g.edge_data(e_layer[i])
-            ed.x = x + 1.5
-            ed.y = sum(g.vertex_data(v).y for v in ed.s)/len(ed.s) if len(ed.s) != 0 else 0
-            pad = ed.box_size() * 0.5
-            min_y = pad
-            max_y = -pad
+#         # for an odd number of edges, place the middle edge first
+#         if start > end/2:
+#             i = start-1
+#             ed = g.edge_data(e_layer[i])
+#             ed.x = x + 1.5
+#             ed.y = sum(g.vertex_data(v).y for v in ed.s)/len(ed.s) if len(ed.s) != 0 else 0
+#             pad = ed.box_size() * 0.5
+#             min_y = pad
+#             max_y = -pad
 
-        for i1 in range(start, end):
-            i0 = end - i1 - 1
+#         for i1 in range(start, end):
+#             i0 = end - i1 - 1
 
-            # place one edge above max_y
-            ed = g.edge_data(e_layer[i0])
-            pad = ed.box_size() * 0.5
-            ed.x = x + 1.5
-            ed.y = min(max_y - pad,
-                       sum(g.vertex_data(v).y for v in ed.s)/len(ed.s)
-                           if len(ed.s) != 0 else 0)
-            max_y = ed.y - pad
+#             # place one edge above max_y
+#             ed = g.edge_data(e_layer[i0])
+#             pad = ed.box_size() * 0.5
+#             ed.x = x + 1.5
+#             ed.y = min(max_y - pad,
+#                        sum(g.vertex_data(v).y for v in ed.s)/len(ed.s)
+#                            if len(ed.s) != 0 else 0)
+#             max_y = ed.y - pad
 
-            # place one edge below min_y
-            ed = g.edge_data(e_layer[i1])
-            pad = ed.box_size() * 0.5
-            ed.x = x + 1.5
-            ed.y = max(min_y + pad,
-                       sum(g.vertex_data(v).y for v in ed.s)/len(ed.s)
-                           if len(ed.s) != 0 else 0)
-            min_y = ed.y + pad
+#             # place one edge below min_y
+#             ed = g.edge_data(e_layer[i1])
+#             pad = ed.box_size() * 0.5
+#             ed.x = x + 1.5
+#             ed.y = max(min_y + pad,
+#                        sum(g.vertex_data(v).y for v in ed.s)/len(ed.s)
+#                            if len(ed.s) != 0 else 0)
+#             min_y = ed.y + pad
 
-        x += 3.0
+#         x += 3.0
 
-    for i, v in enumerate(v_layers[-1]):
-        vd = g.vertex_data(v)
-        vd.x = x
-        vd.y = i - ((len(v_layers[-1]) - 1) * 0.5)
+#     for i, v in enumerate(v_layers[-1]):
+#         vd = g.vertex_data(v)
+#         vd.x = x
+#         vd.y = i - ((len(v_layers[-1]) - 1) * 0.5)
 
 
 

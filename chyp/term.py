@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import List, Tuple
+from typing import List
 from .graph import Graph
 
 # def ready_edges(g: Graph, edges: Set[int], v_pos: Mapping[int,float]) -> Set[int]:
@@ -24,15 +24,13 @@ from .graph import Graph
 #             ready.add(e)
 #     return ready
 
-def layer_decomp(g: Graph) -> Tuple[List[List[int]], List[List[int]]]:
+def layer_decomp(g: Graph) -> List[List[int]]:
     """Decompose a graph into regular and singular layers
 
-    Returns a pair of lists, sorting the vertices and edges of
-    `g` into layers, respectively. Note that this can modify `g`
-    by introducing extra vertices and identity boxes.
+    Returns a list, sorting the edges of `g` into layers. Note that this
+    can modify `g` by introducing extra vertices and identity boxes.
     """
 
-    v_layers = []
     e_layers = []
 
     v_pos = dict()
@@ -49,8 +47,7 @@ def layer_decomp(g: Graph) -> Tuple[List[List[int]], List[List[int]]]:
     edges = set(g.edges())
 
     while len(edges) > 0:
-        v_layers.append(v_layer)
-
+        # v_layers.append(v_layer)
         ready = set()
         for e in edges:
             if all(v in v_pos for v in g.source(e)):
@@ -82,9 +79,8 @@ def layer_decomp(g: Graph) -> Tuple[List[List[int]], List[List[int]]]:
                     v_pos[v] = len(v_layer)
                     v_layer.append(v)
 
-
-    v_layers.append(g.outputs().copy())
-    return (v_layers, e_layers)
+    # v_layers.append(g.outputs().copy())
+    return e_layers
 
 def perm_to_s(perm: List[int]) -> str:
     if len(perm) == 1:
@@ -119,15 +115,17 @@ def graph_to_term(g: Graph) -> str:
     """
 
     g = g.copy()
-    v_layers, e_layers = layer_decomp(g)
+    e_layers = layer_decomp(g)
+
+    in_layer = list(g.inputs())
 
     # build a list of terms to be sequentially composed
     seq = []
     for i in range(len(e_layers)):
-        # compute the permulation from the current vertex layer to inputs of the edge layer
-        s_layer = [v for e in e_layers[i] for v in g.source(e)]
-        v_pos = { v : j for j,v in enumerate(v_layers[i]) }
-        v_perm = [v_pos[v] for v in s_layer]
+        # compute the permutation from the current vertex layer to inputs of the edge layer
+        v_pos = { v : j for j,v in enumerate(in_layer) }
+        out_layer = [v for e in e_layers[i] for v in g.source(e)]
+        v_perm = [v_pos[v] for v in out_layer]
 
         # append it as a layer of swap maps
         if v_perm != list(range(len(v_perm))):
@@ -138,15 +136,19 @@ def graph_to_term(g: Graph) -> str:
         par = [str(g.edge_data(e).value) for e in e_layers[i]]
         seq.append(' * '.join(par))
 
-        # compute the permulation from the outputs of the edge layer to the next vertex layer
-        t_layer = [v for e in e_layers[i] for v in g.target(e)]
-        v_pos = { v : j for j,v in enumerate(t_layer) }
-        v_perm = [v_pos[v] for v in v_layers[i+1]]
+        # compute the permutation from the outputs of the edge layer to the next vertex layer
+        in_layer = [v for e in e_layers[i] for v in g.target(e)]
 
-        # append it as a layer of swap maps
-        if v_perm != list(range(len(v_perm))):
-            perms = split_perm(v_perm)
-            seq.append(' * '.join([perm_to_s(p) for p in perms]))
+
+    # compute the permutation from the final vertex layer to the outputs
+    v_pos = { v : j for j,v in enumerate(in_layer) }
+    out_layer = list(g.outputs())
+    v_perm = [v_pos[v] for v in out_layer]
+
+    # append it as a layer of swap maps
+    if v_perm != list(range(len(v_perm))):
+        perms = split_perm(v_perm)
+        seq.append(' * '.join([perm_to_s(p) for p in perms]))
 
     return ' ; '.join(seq)
 
