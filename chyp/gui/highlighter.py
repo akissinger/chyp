@@ -63,13 +63,13 @@ class ChypHighlighter(QSyntaxHighlighter):
             x,y = m.span(2)
             self.setFormat(x, y-x, QColor(NUM))
 
-        for m in re.finditer('#.*$', text):
-            x,y = m.span(0)
-            self.setFormat(x, y-x, QColor(COMMENT))
-
         for m in re.finditer('"[^"]*"', text):
             x,y = m.span(0)
             self.setFormat(x, y-x, QColor(STRING))
+
+        for m in re.finditer('#.*$', text):
+            x,y = m.span(0)
+            self.setFormat(x, y-x, QColor(COMMENT))
 
         # highlight the region that is currently in focus
         if self.region:
