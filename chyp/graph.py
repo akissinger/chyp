@@ -402,6 +402,12 @@ class Graph:
         g.compose(other)
         return g
 
+    def unhighlight(self):
+        for vd in self.vdata.values():
+            vd.highlight = False
+        for ed in self.edata.values():
+            ed.highlight = False
+
 def gen(value: str, arity: int, coarity: int, fg: str='', bg: str='') -> Graph:
     g = Graph()
     inputs = [g.add_vertex(-1.5, i - (arity-1)/2) for i in range(arity)]

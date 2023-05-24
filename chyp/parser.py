@@ -315,7 +315,11 @@ class ChypParseData(Transformer):
                             self.errors.append((self.file_name, meta.line, "Trying to prove converse for unknown rule: " + base_name))
                     else:
                         if not name in self.rules:
-                            self.rules[name] = Rule(term, rhs, name=name, equiv=all_equiv)
+                            rule = Rule(term.copy(), rhs.copy(), name=name, equiv=all_equiv)
+                            # remove any highlights placed there by the first/last proof step
+                            rule.lhs.unhighlight()
+                            rule.rhs.unhighlight()
+                            self.rules[name] = rule
                         else:
                             self.errors.append((self.file_name, meta.line, "Rule '{}' already defined.".format(name)))
                 except RuleError as e:

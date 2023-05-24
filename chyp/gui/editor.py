@@ -198,6 +198,7 @@ class Editor(QWidget):
                     def check_finished(i: int) -> Callable:
                         def f() -> None:
                             self.graph_cache.pop(i, None)
+                            self.current_part = -1
                             self.show_at_cursor()
                         return f
 
