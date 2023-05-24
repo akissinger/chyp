@@ -124,7 +124,7 @@ Sometimes it can be helpful for readability to do a trivial proof step that does
       a * b ; c * d
       = (a ; c) * (b ; d) by refl
 
-In fact, we can omit the `by refl`. The following is equivalent:
+Formally, `refl` is defined as `id0 = id0`, i.e. the empty graph equals itself, which always matches exactly once on any graph. If we drop the `by` clause, Chyp automatically assumes `by refl`, so the following is equivalent:
 
     rewrite foo :
       a * b ; c * d
@@ -216,6 +216,8 @@ You can also alias generators in imported modules as follows:
       m1 * id ; m2 = 
       = id * m1 ; m2 = cp * id * id ; id * sw * id ; m2 * m2 ; m1
 
+Even though we now have short aliases for generators, the rules still live in their respective namespaces. For example, `M1.assoc` can be used to rewrite `m1 * id ; m1` to `id * m1 ; m1` and `M2.assoc` will rewrite `m2 * id ; m2` to `id * m2 ; m2`.
+
 This is especially convenient if modules share generators in non-trivial ways. For example, a pair of Frobenius algebras interacting as a bialgebra could be defined this way, assuming `frobenius.chyp` and `bialg.chyp` have already been defined:
 
     gen m1 : 2 -> 1
@@ -228,10 +230,45 @@ This is especially convenient if modules share generators in non-trivial ways. F
     gen n2 : 1 -> 2
     gen v2 : 1 -> 0
 
-    import frobenius(m = m1, u = u1, n = n1, v = v1) as F1
-    import frobenius(m = m2, u = u2, n = n2, v = v2) as F2
-    import bialg(m = m1, u = u1, n = n2, v = v2) as B1
-    import bialg(m = m2, u = u2, n = n1, v = v1) as B2
+    import frobenius as F1(m = m1, u = u1, n = n1, v = v1)
+    import frobenius as F2(m = m2, u = u2, n = n2, v = v2)
+    import bialg as B1(m = m1, u = u1, n = n2, v = v2)
+    import bialg as B2(m = m2, u = u2, n = n1, v = v1)
+
+We can even set the generators in an imported module equal to arbitrary terms, as long as the types match.
+
+To understand how this works, it is useful to know that this is just some syntactic sugar that takes advantage of the behaviour of the `gen` statement. Normally, the `gen` statement will add a new generator to the current namespace. However, if a term with that name already exists, it will simply check the already existing term has the right arity and coarity. This allows us to alias generators in a module using `let` statements _before_ it is imported. So, in fact, the line:
+
+    import frobenius as F1(m = m1, u = u1, n = n1, v = v1)
+
+is exactly equivalent to:
+
+    let F1.m = m1
+    let F1.u = u1
+    let F1.n = n1
+    let F1.v = v1
+    import frobenius as F1
+
+Whenever an `m` is encountered in `frobenius.chyp` (which will be interpreted as `F1.m`), it will automatically get replaced by `m1` thanks to the `let` statement.
+
+If we alias generators to some more complicated terms, these just end up the RHS of the `let` statements. For example, we could get the "almost" Frobenius algebra laws of the [ZW calculus](https://arxiv.org/abs/1501.07082) with a statement like this:
+
+
+    gen m : 2 -> 1
+    gen u : 0 -> 1
+    gen n : 1 -> 2
+    gen v : 1 -> 0
+    gen d : 1 -> 1
+
+    import frobenius as W(m = d * d ; m, u = u, n = d ; n, v = d ; v)
+
+where the last line is equivalent to:
+
+    let W.m = d * d ; m
+    let W.u = u
+    let W.n = d ; n
+    let W.v = d ; v
+    import frobenius as W
 
 
 ## Finding modules
