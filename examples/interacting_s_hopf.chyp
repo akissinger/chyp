@@ -57,14 +57,14 @@ let d_inv = id * cup2 ; cap1 * id
 
 rewrite d_d_inv :
   d ; d_inv
-  = cup1 * id ; sw[1, 2, 0] ; d_inv * cap2 by d_def
-  = cup2 * id ; sw[2, 0, 1] ; cap2 * id by F1.yankL
+  = cup2 * cup1 * id ; sw[1, 3, 0, 4, 2] ; id * cap1 * cap2 by d_def
+  = id * cup2 ; cap2 * id by F1.yankL
   = id by F2.yankR
 
 rewrite d_inv_d :
   d_inv ; d
-  = d_inv * cup1 ; cap2 * id by d_def
-  = cup1 * id ; sw[2, 0, 1] ; cap1 * id by F2.yankL
+  = cup2 * id * cup1 ; sw[1, 3, 2, 0] * id ; cap2 * cap1 * id by d_def
+  = id * cup1 ; cap1 * id by F2.yankL
   = id by F1.yankR
 
 # The dualiser preserves (co)units

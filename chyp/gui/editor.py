@@ -261,11 +261,11 @@ class Editor(QWidget):
                     cursor.setPosition(start)
                     cursor.setPosition(end, mode=QTextCursor.MoveMode.KeepAnchor)
 
-                    self.blockSignals(True)
+                    # self.blockSignals(True)
                     cursor.insertText(rw_term)
                     self.code_view.setTextCursor(cursor)
-                    self.blockSignals(False)
-                    self.update_state()
+                    # self.blockSignals(False)
+                    # self.update_state()
 
     def repeat_step_at_cursor(self) -> None:
         self.update_state()
