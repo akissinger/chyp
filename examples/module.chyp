@@ -1,0 +1,7 @@
+gen m : 2 -> 1
+gen u : 0 -> 1
+
+gen k : 2 -> 1
+
+rule assoc : m * id ; k = id * k ; k
+rule unit : u * id ; k = id

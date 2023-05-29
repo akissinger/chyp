@@ -26,6 +26,12 @@ rewrite kf_flip :
 
 rule ssym : kf = v
 
+rewrite foo :
+  kf
+  = cup * id ; sw[1, 2, 0] ; m * id ; m ; v by cap_def
+  = u * id ; n * id ; sw[1, 2, 0] ; m * id ; m ; v by cup_def
+  = u * id ; n * id ; sw[1, 2, 0] ; m * id ; cap by -cap_def
+  = cup * id ; sw[1, 2, 0] ; m * id ; cap by -cup_def
 
 # First, we prove symmetry. This one is a bit tricky to follow. The main thing to note is the two
 # steps "-yankR" and "yankR" are essentially invoking cyclicity of the partial trace.
@@ -39,6 +45,8 @@ rewrite symm_cap :
   = sw ; cup * m ; id * m ; sw ; cap by assoc
   = sw ; m ; v by ssym
   = sw ; cap by -cap_def
+
+show symm_cap
 
 # Once we prove the cap is symmetric, the cup follows from the yanking rules
 rewrite symm_cup :

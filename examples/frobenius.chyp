@@ -3,7 +3,7 @@
 
 
 # First, introduce generators for multiplication (m), unit (u), comultiplication (n),
-# and counit (v).
+# and counit (v).j
 gen m : 2 -> 1
 gen u : 0 -> 1
 gen n : 1 -> 2
@@ -40,11 +40,15 @@ rewrite frobL :
   = u * m ; id * n ; m * id by frob
   = m ; n by unitL
 
+show frobL
+
 # ...the other is easy:
 rewrite frobR :
   id * n ; m * id
   = n * id ; id * m by -frob
   = m ; n by frobL
+
+show frobR
 
 # Going back the other way, we have:
 rewrite frob_again:

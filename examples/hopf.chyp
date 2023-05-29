@@ -30,21 +30,40 @@ rule uv : u ; v = id0
 rule antiL : n ; s * id ; m = v ; u
 rule antiR : n ; id * s ; m = v ; u
 
-
-# first, lets define a comonoid on 2 in terms of (n,v), and prove "2" versions
-# of the comonoid rules.
+# First, we can show that the product of the hopf algebra with itself is also a Hopf algebra
+# Here are the generators: 
+def m2 = id * sw * id ; m * m
+def u2 = u * u
 def n2 = n * n ; id * sw * id
+def v2 = v * v
+def s2 = s * s
 
-# Note we could also do this with:
-#
-#   let n2 = n * n ; id * sw * id
-#
-# but using a gen/rule pair lets us explicitly fold and unfold n2, which
-# makes some of the proofs later easier to read.
+# Then proofs of the monoid laws:
+rewrite assoc2 :
+  m2 * id * id ; m2
+  = m2 * id * id ; id * sw * id ; m * m by m2_def
+  = id * sw[1, 3, 0, 2] * id ; m * id * m * id ; m * m by m2_def
+  = id * sw[1, 3, 0, 2] * id ; m * id * id * m ; m * m by assoc
+  = id * sw[1, 3, 0, 2] * id ; id * m * id * m ; m * m by assoc
+  = id * id * m2 ; id * sw * id ; m * m by -m2_def
+  = id * id * m2 ; m2 by -m2_def
+
+rewrite unitL2 :
+  u2 * id * id ; m2
+  = u2 * id * id ; id * sw * id ; m * m by m2_def
+  = u * id * u * id ; m * m by u2_def
+  = u * id * id ; m * id by unitL
+  = id * id by unitL
+
+rewrite unitR2 :
+  id * id * u2 ; m2
+  = id * u2 * id ; id * id * sw ; m * m by m2_def
+  = id * u * u * id ; id * id * sw ; m * m by u2_def
+  = id * u * id ; m * id by unitR
+  = id * id by unitR
 
 
 # Next come proofs of the comonoid laws:
-
 rewrite coassoc2 :
   n2 ; n2 * id * id
   = n2 ; n * n * id * id ; id * sw * id * id * id by n2_def
@@ -66,6 +85,62 @@ rewrite counitR2 :
   = n * id ; id * v * id by counitR
   = id * id by counitR
 
+# then the Hopf algebra laws
+rewrite bialg2 :
+  m2 ; n2
+  = id * sw * id ; m * m ; n2 by m2_def
+  = id * sw * id ; m * m ; n * n ; id * sw * id by n2_def
+  = id * sw * id ; m * n * n ; id * id * sw * id ; n * m * m ; id * sw * id by bialg
+  = n * n * n * n ; id * sw[3, 1, 5, 0, 4, 2] * id ; m * m * m * m by bialg
+  = n * n * n * n ; id * sw[3, 1, 5, 0, 2, 4] * id ; m * m * m2 by -m2_def
+  = n * n * n * n ; id * sw[1, 3, 5, 0, 2, 4] * id ; m2 * m2 by -m2_def
+  = n * n * n2 ; id * sw[1, 3, 4, 0, 2] * id * id ; m2 * m2 by -n2_def
+  = n2 * n2 ; id * id * sw[2, 3, 0, 1] * id * id ; m2 * m2 by -n2_def
+
+rewrite ucp2 :
+  u2 ; n2
+  = u * u ; n2 by u2_def
+  = u * u ; n * n ; id * sw * id by n2_def
+  = u * u * u ; n * id * id ; id * sw * id by ucp
+  = u * u * u * u by ucp
+  = u * u * u2 by -u2_def
+  = u2 * u2 by -u2_def
+
+rewrite vcp2 :
+  m2 ; v2
+  = m2 ; v * v by v2_def
+  = id * sw * id ; m * m ; v * v by m2_def
+  = id * sw * id ; m * v * v ; v by vcp
+  = v * v * v * v by vcp
+  = v2 * v * v by -v2_def
+  = v2 * v2 by -v2_def
+
+rewrite uv2 :
+  u2 ; v2
+  = u * u ; v2 by u2_def
+  = u * u ; v * v by v2_def
+  = u ; v by uv
+  = id0 by uv
+
+rewrite antiL2 :
+  n2 ; s2 * id * id ; m2
+  = n * n ; id * sw * id ; s2 * id * id ; m2 by n2_def
+  = n * n ; id * sw * id ; s2 * id * id ; id * sw * id ; m * m by m2_def
+  = n * n ; s * id * s * id ; m * m by s2_def
+  = n * v * u ; s * id * id ; m * id by antiL
+  = v * u * v * u by antiL
+  = u * v2 * u by -v2_def
+  = v2 ; u2 by -u2_def
+
+rewrite antiR2 :
+  n2 ; id * id * s2 ; m2
+  = n * n ; id * sw * id ; id * id * s2 ; m2 by n2_def
+  = n * n ; id * id * sw ; id * s2 * id ; id * id * sw ; m * m by m2_def
+  = n * n ; id * s * id * s ; m * m by s2_def
+  = n * v * u ; id * s * id ; m * id by antiR
+  = v * u * v * u by antiR
+  = u * v2 * u by -v2_def
+  = v2 * u2 by -u2_def
 
 # Now, we'll show some properties of Hopf algebras
 
@@ -136,13 +211,15 @@ rewrite s_anti_hm :
 
 
 # This implies that the antipode squared is a homomorphism:
-def s2 = s ; s
+def ss = s ; s
 
 rewrite s2_hm :
-  m ; s2
-  = m ; s ; s by s2_def
+  m ; ss
+  = m ; s ; s by ss_def
   = s * s ; sw ; m ; s by s_anti_hm
   = s * s ; s * s ; m by s_anti_hm
-  = s * s2 ; s * id ; m by -s2_def
-  = s2 * s2 ; m by -s2_def
+  = s * ss ; s * id ; m by -ss_def
+  = ss * ss ; m by -s2_def
+
+
 

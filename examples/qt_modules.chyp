@@ -1,0 +1,23 @@
+import quasi_tri
+
+gen k : 2 -> 1
+gen l : 2 -> 1
+import module as K(m=m, u=u, k=k)
+import module as L(m=m, u=u, k=l)
+
+def ra = r * id * id ; id * sw * id ; k * l
+def ria = ri * id * id ; id * sw * id ; k * l
+
+let br = ra ; sw
+let bri = sw ; ri * id * id ; id * sw * id ; k * l
+
+rewrite yb_lem :
+  (r ; sw) * ra ; id * k * id
+  = r * r * id * id ; sw * id * sw * id ; id * id * k * l ; id * k * id by ra_def
+  = r * r * id * id ; sw * id * sw * id ; id * m * id * l ; id * k * id by -K.assoc
+  = r * id * id ; id * sw * id ; k * n * id ; sw[2, 0, 1] * id ; id * id * l by -qtR
+
+rewrite yang_baxter :
+  br * id ; id * br ; br * id
+  = r * ra * id ; sw[3, 1, 4, 0, 2] ; id * l * k ; ra * id ; sw * id by ra_def
+  = id * br ; br * id ; id * br

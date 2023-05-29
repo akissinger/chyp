@@ -1,0 +1,113 @@
+import hopf
+
+gen r : 0 -> 2
+gen ri : 0 -> 2
+
+rule rri : r * ri ; m2 = u2
+rule rir : ri * r ; m2 = u2
+
+def rL = r * id * id ; m2
+def rR = id * id * r ; m2
+
+rewrite rL_unfold :
+  rL
+  = r * id * id ; m2 by rL_def
+  = r * id * id ; id * sw * id ; m * m by m2_def
+
+rewrite rR_unfold :
+  rR
+  = id * id * r ; m2 by rR_def
+  = id * r * id ; id * id * sw ; m * m by m2_def
+
+rule qt : n ; sw ; rL = n ; rR
+rule qtL : r ; n * id = r * r ; id * sw * id ; id * id * m
+rule qtR : r ; id * n = r ; id * r * id ; m * id * id
+
+def riL = ri * id * id ; m2
+def riR = id * id * ri ; m2
+
+rewrite rLrR_comm :
+  rL ; rR
+  = r * id * id ; m2 ; rR by rL_def
+  = r * id * r * id ; id * id * id * sw[2, 0, 1] ; m2 * id * id ; m2 by rR_def
+  = r * id * r * id ; id * id * id * sw[2, 0, 1] ; id * id * m2 ; m2 by assoc2
+  = r * rR ; m2 by -rR_def
+  = rR ; rL by -rL_def
+
+rewrite riLrR_comm :
+  riL ; rR
+  = ri * id * id ; m2 ; rR by riL_def
+  = ri * id * r * id ; id * id * id * sw[2, 0, 1] ; m2 * id * id ; m2 by rR_def
+  = ri * id * r * id ; id * id * id * sw[2, 0, 1] ; id * id * m2 ; m2 by assoc2
+  = id * id * r ; m2 ; riL by -riL_def
+  = rR ; riL by -rR_def
+
+rewrite rriL :
+  rL ; riL
+  = r * id * id ; m2 ; riL by rL_def
+  = ri * r * id * id ; id * id * m2 ; m2 by riL_def
+  = ri * r * id * id ; m2 * id * id ; m2 by -assoc2
+  = u2 * id * id ; m2 by rir
+  = id * id by unitL2
+
+rewrite qt_n :
+  n ; sw
+  = n ; sw ; rL ; riL by -rriL
+  = n ; rR ; riL by qt
+
+let h = sw[2, 4, 0, 5, 1, 3] ; m * m * m
+
+let br = sw ; rL
+
+rewrite calc0 :
+  u * u * u ; br * id ; id * br ; br * id
+  = r * u * u * u ; m2 * id ; id * sw ; id * rL ; sw * id ; rL * id by rL_def
+  = u * r * u * u ; sw * sw * id ; m * id * m ; id * rL ; sw * id ; rL * id by m2_def
+  = u * r * u ; sw * sw ; m * rL ; sw * id ; rL * id by unitR
+  = r * u ; id * sw ; id * rL ; sw * id ; rL * id by unitR
+  = r * r * u ; sw[2, 0, 1] * sw ; id * m2 ; sw * id ; rL * id by rL_def
+  = u * r * r ; sw * sw * id ; m * id * m ; rL * id by m2_def
+  = r * r ; id * sw * id ; rL * m by unitR
+  = r ; n * id ; rL * id by -qtL
+
+rewrite calc1 :
+  u * u * u ; id * br ; br * id ; id * br
+  = u * r * u * u ; sw[2, 0, 1] * id * id ; m * m * id ; id * rL ; sw * id ; id * rL by rL_unfold
+  = r * u * u ; sw * id * id ; id * m * id ; id * rL ; sw * id ; id * rL by unitR
+  = r * u ; id * sw ; rL * id ; id * sw ; id * rL by unitR
+  = r * r * u ; id * sw[1, 2, 0] * id ; m * id * m ; id * rL by rL_unfold
+  = r * r ; id * sw[1, 2, 0] ; m * rL by unitR
+  = r ; id * n ; id * rL by -qtR
+
+def yb_lhs_state = r * r ; id * sw * id ; rL * m
+def yb_rhs_state = r * r ; id * sw[1, 2, 0] ; m * rL
+
+def m3 = sw[0, 3, 1, 4, 2, 5] ; m * m * m
+
+rewrite un_state_lhs :
+  yb_lhs_state * id * id * id ; m3 ; sw[2, 1, 0]
+  = r * r * id * id * id ; id * sw * id * id * id * id ; rL * m * id * id * id ; m3 ; sw[2, 1, 0] by yb_lhs_state_def
+  = r * r * r * id * id * id ; id * sw * sw * id * id * id * id ; m * m * m * id * id * id ; m3 ; sw[2, 1, 0] by rL_unfold
+  = sw[2, 0, 1] ; r * r * r * id * id * id ; sw[3, 1, 5, 0, 6, 4, 2] * sw ; m * m * id * m * id * id ; id * sw * sw * id ; m * m * m by m3_def
+  = sw[2, 1, 0] ; r * r * r * id * id * id ; sw[3, 1, 6, 5, 0, 7, 4, 2] * id ; m * id * id * m * m * id ; m * m * m by assoc
+  = sw[2, 1, 0] ; r * r * r * id * id * id ; sw[3, 1, 6, 5, 0, 7, 4, 2] * id ; id * m * id * m * m * id ; m * m * m by assoc
+  = sw[2, 1, 0] ; r * r * r * id * id * id ; sw[3, 1, 6, 5, 0, 7, 4, 2] * id ; id * m * id * m * id * m ; m * m * m by assoc
+  = sw[1, 2, 0] ; r * r * rL * id ; sw[1, 5, 3, 4, 2, 0] * id ; m * m * id * m ; id * id * m by -rL_unfold
+  = r * id * rL ; sw[1, 4, 0, 2, 3] ; m * m * id ; id * rL ; id * sw by -rL_unfold
+  = id * rL ; id * sw ; rL * id ; sw * id ; id * rL ; id * sw by -rL_unfold
+
+rewrite yb_lem1 :
+  r * r * r ; id * sw * sw * id ; m * m * m
+  = r * r ; id * sw * id ; rL * m by -rL_unfold
+  = r ; n * id ; rL * id by -qtL
+
+rewrite yb_lem2 :
+  r * r * r ; sw[2, 4, 0, 5, 1, 3] ; m * m * m
+  = r * r ; id * sw[1, 2, 0] ; m * rL by -rL_unfold
+  = r ; id * n ; id * rL by -qtR
+  = r ; id * n ; id * rR ; id * riL ; id * sw ; id * rL by qt_n
+  = r * r ; id * sw[1, 2, 0] ; m * rR ; id * riL ; id * sw ; id * rL by qtR
+  = r * r * r ; sw[2, 0, 1] * sw * id ; m * m * m ; id * riL ; id * sw ; id * rL by rR_unfold
+  = r * r ; id * id * n * id ; sw[2, 0, 1] * id * id ; m * m * id ; id * riL ; id * sw ; id * rL by -qtL
+
+
