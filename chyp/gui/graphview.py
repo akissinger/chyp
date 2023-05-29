@@ -31,4 +31,5 @@ class GraphView(QGraphicsView):
 
     def set_graph(self, g: Graph) -> None:
         self.graph_scene.set_graph(g)
+        self.repaint()
         self.centerOn(0,0)
