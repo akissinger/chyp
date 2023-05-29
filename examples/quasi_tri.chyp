@@ -1,14 +1,31 @@
+# This file defines quasi-triangular Hopf algebras, and proves some standard facts about them.
+
+# A quasi-triangular hopf algebra is a Hopf algebra H:
 import hopf
 
+# With a distinguished invertible element of H (X) H...
 gen r : 0 -> 2
 gen ri : 0 -> 2
-
 rule rri : r * ri ; m2 = u2
 rule rir : ri * r ; m2 = u2
 
+
+# Satisfying 3 extra properties. These properties are easier to state in terms
+# of the left and right action of r/ri on H (X) H, defined as:
 def rL = r * id * id ; m2
 def rR = id * id * r ; m2
+def riL = ri * id * id ; m2
+def riR = id * id * ri ; m2
 
+
+# The three properties are:
+rule qt : n ; sw = n ; rL ; riR
+rule qtL : r ; n * id = r * r ; id * sw * id ; id * id * m
+rule qtR : r ; id * n = r ; id * r * id ; m * id * id
+
+###########################################################################
+
+# We'll introduce some extra rules the let us (un)fold rL and rR in one step:
 rewrite rL_unfold :
   rL
   = r * id * id ; m2 by rL_def
@@ -19,30 +36,17 @@ rewrite rR_unfold :
   = id * id * r ; m2 by rR_def
   = id * r * id ; id * id * sw ; m * m by m2_def
 
-rule qt : n ; sw ; rL = n ; rR
-rule qtL : r ; n * id = r * r ; id * sw * id ; id * id * m
-rule qtR : r ; id * n = r ; id * r * id ; m * id * id
+# and commute with m2
+rewrite rL_comm :
+  rL * id * id ; id * sw * id ; m * m
+  = id * sw * id ; id * r * id * id * id ; sw * sw * id * id ; m * id * m * id ; m * m by rL_unfold
+  = id * sw * id ; id * r * id * m ; sw * sw * id ; m * id * m ; m * id by assoc
+  = id * sw * id ; r * m * m ; id * sw * id ; m * m by assoc
+  = id * sw * id ; m * m ; rL by -rL_unfold
 
-def riL = ri * id * id ; m2
-def riR = id * id * ri ; m2
 
-rewrite rLrR_comm :
-  rL ; rR
-  = r * id * id ; m2 ; rR by rL_def
-  = r * id * r * id ; id * id * id * sw[2, 0, 1] ; m2 * id * id ; m2 by rR_def
-  = r * id * r * id ; id * id * id * sw[2, 0, 1] ; id * id * m2 ; m2 by assoc2
-  = r * rR ; m2 by -rR_def
-  = rR ; rL by -rL_def
-
-rewrite riLrR_comm :
-  riL ; rR
-  = ri * id * id ; m2 ; rR by riL_def
-  = ri * id * r * id ; id * id * id * sw[2, 0, 1] ; m2 * id * id ; m2 by rR_def
-  = ri * id * r * id ; id * id * id * sw[2, 0, 1] ; id * id * m2 ; m2 by assoc2
-  = id * id * r ; m2 ; riL by -riL_def
-  = rR ; riL by -rR_def
-
-rewrite rriL :
+# r(L/R) and ri(L/R) are mutually inverse:
+rewrite rL_riL :
   rL ; riL
   = r * id * id ; m2 ; riL by rL_def
   = ri * r * id * id ; id * id * m2 ; m2 by riL_def
@@ -50,64 +54,107 @@ rewrite rriL :
   = u2 * id * id ; m2 by rir
   = id * id by unitL2
 
-rewrite qt_n :
-  n ; sw
-  = n ; sw ; rL ; riL by -rriL
-  = n ; rR ; riL by qt
+rewrite riR_rR :
+  riR ; rR
+  = riR * r ; m2 by rR_def
+  = id * ri * id * r ; id * sw[2, 0, 1] * id * id ; m2 * id * id ; m2 by riR_def
+  = id * ri * id * r ; id * sw[2, 0, 1] * id * id ; id * id * m2 ; m2 by assoc2
+  = id * id * u2 ; m2 by rir
+  = id * id by unitR2
 
-let h = sw[2, 4, 0, 5, 1, 3] ; m * m * m
 
+# Using this fact, we can state the first quasi-triangularity law this way:
+rewrite n_rL :
+  n ; rL
+  = n ; rL ; riR ; rR by -riR_rR
+  = n ; sw ; rR by -qt
+
+
+# Now, we'll show that the following "braiding" map:
 let br = sw ; rL
 
-rewrite calc0 :
-  u * u * u ; br * id ; id * br ; br * id
-  = r * u * u * u ; m2 * id ; id * sw ; id * rL ; sw * id ; rL * id by rL_def
-  = u * r * u * u ; sw * sw * id ; m * id * m ; id * rL ; sw * id ; rL * id by m2_def
-  = u * r * u ; sw * sw ; m * rL ; sw * id ; rL * id by unitR
-  = r * u ; id * sw ; id * rL ; sw * id ; rL * id by unitR
-  = r * r * u ; sw[2, 0, 1] * sw ; id * m2 ; sw * id ; rL * id by rL_def
-  = u * r * r ; sw * sw * id ; m * id * m ; rL * id by m2_def
-  = r * r ; id * sw * id ; rL * m by unitR
-  = r ; n * id ; rL * id by -qtL
+# satisfies the famous "Yang-Baxter equation":
+#
+#    br * id ; id * br ; br * id = id * br ; br * id ; id * br
+#
 
-rewrite calc1 :
-  u * u * u ; id * br ; br * id ; id * br
-  = u * r * u * u ; sw[2, 0, 1] * id * id ; m * m * id ; id * rL ; sw * id ; id * rL by rL_unfold
-  = r * u * u ; sw * id * id ; id * m * id ; id * rL ; sw * id ; id * rL by unitR
-  = r * u ; id * sw ; rL * id ; id * sw ; id * rL by unitR
-  = r * r * u ; id * sw[1, 2, 0] * id ; m * id * m ; id * rL by rL_unfold
-  = r * r ; id * sw[1, 2, 0] ; m * rL by unitR
-  = r ; id * n ; id * rL by -qtR
 
-def yb_lhs_state = r * r ; id * sw * id ; rL * m
-def yb_rhs_state = r * r ; id * sw[1, 2, 0] ; m * rL
+# start by considering the LHS and RHS of this equation applied to the unit:
+def yb1 = u * u * u ; br * id ; id * br ; br * id
+def yb2 = u * u * u ; id * br ; br * id ; id * br
 
-def m3 = sw[0, 3, 1, 4, 2, 5] ; m * m * m
+# if we can prove those two states are equal, we will be able to prove the full YB equation
+# by letting them both act on H (X) H (X) H.
 
-rewrite un_state_lhs :
-  yb_lhs_state * id * id * id ; m3 ; sw[2, 1, 0]
-  = r * r * id * id * id ; id * sw * id * id * id * id ; rL * m * id * id * id ; m3 ; sw[2, 1, 0] by yb_lhs_state_def
-  = r * r * r * id * id * id ; id * sw * sw * id * id * id * id ; m * m * m * id * id * id ; m3 ; sw[2, 1, 0] by rL_unfold
-  = sw[2, 0, 1] ; r * r * r * id * id * id ; sw[3, 1, 5, 0, 6, 4, 2] * sw ; m * m * id * m * id * id ; id * sw * sw * id ; m * m * m by m3_def
-  = sw[2, 1, 0] ; r * r * r * id * id * id ; sw[3, 1, 6, 5, 0, 7, 4, 2] * id ; m * id * id * m * m * id ; m * m * m by assoc
-  = sw[2, 1, 0] ; r * r * r * id * id * id ; sw[3, 1, 6, 5, 0, 7, 4, 2] * id ; id * m * id * m * m * id ; m * m * m by assoc
-  = sw[2, 1, 0] ; r * r * r * id * id * id ; sw[3, 1, 6, 5, 0, 7, 4, 2] * id ; id * m * id * m * id * m ; m * m * m by assoc
-  = sw[1, 2, 0] ; r * r * rL * id ; sw[1, 5, 3, 4, 2, 0] * id ; m * m * id * m ; id * id * m by -rL_unfold
-  = r * id * rL ; sw[1, 4, 0, 2, 3] ; m * m * id ; id * rL ; id * sw by -rL_unfold
-  = id * rL ; id * sw ; rL * id ; sw * id ; id * rL ; id * sw by -rL_unfold
 
-rewrite yb_lem1 :
-  r * r * r ; id * sw * sw * id ; m * m * m
-  = r * r ; id * sw * id ; rL * m by -rL_unfold
-  = r ; n * id ; rL * id by -qtL
+# First simplify the LHS state:
+rewrite yb1_simp :
+  yb1
+  = u * u * u ; rL * id ; id * sw ; id * rL ; sw * id ; rL * id by yb1_def
+  = u * u * r * u ; sw[2, 0, 1] * sw ; id * id * rL * id ; id * id * sw[1, 2, 0] ; id * rL * m ; id * id * sw ; m * id * id by rL_unfold
+  = u * r * u * r * u ; sw * sw[3, 1, 0, 2] * id ; id * id * m * id * m ; id * rL * m ; id * id * sw ; m * id * id by rL_unfold
+  = r * u * r * r * u * u ; id * sw[2, 1, 0] * sw[1, 3, 2, 4, 0] ; id * m * id * m * m * id ; id * id * id * id * sw ; m * m * m by rL_unfold
+  = r * u * r * u * r ; id * sw[2, 1, 0] * sw[2, 1, 0] * id ; id * m * id * m * m ; m * m * id by unitR
+  = r * u * r * r ; id * sw[2, 1, 0] * sw * id ; id * m * m * m ; m * id * id by unitR
+  = r * r * r ; id * sw * sw * id ; m * m * m by unitR
+  = r * r ; id * id * n * id ; id * sw * id * id ; m * m * id by -qtL
+  = r ; n * id ; rL * id by -rL_unfold
+  = r ; n * id ; sw * id ; rR * id by n_rL
 
-rewrite yb_lem2 :
-  r * r * r ; sw[2, 4, 0, 5, 1, 3] ; m * m * m
-  = r * r ; id * sw[1, 2, 0] ; m * rL by -rL_unfold
-  = r ; id * n ; id * rL by -qtR
-  = r ; id * n ; id * rR ; id * riL ; id * sw ; id * rL by qt_n
-  = r * r ; id * sw[1, 2, 0] ; m * rR ; id * riL ; id * sw ; id * rL by qtR
-  = r * r * r ; sw[2, 0, 1] * sw * id ; m * m * m ; id * riL ; id * sw ; id * rL by rR_unfold
-  = r * r ; id * id * n * id ; sw[2, 0, 1] * id * id ; m * m * id ; id * riL ; id * sw ; id * rL by -qtL
+# Next, simplify the RHS state:
+rewrite yb2_simp :
+  yb2
+  = u * u * u ; id * rL ; sw * id ; rL * id ; id * sw ; id * rL by yb2_def
+  = u * u * u * r ; id * rL * id * id ; sw * sw * id ; rL * m * id ; id * sw[1, 2, 0] ; id * id * m by rL_unfold
+  = u * u * r * r * u ; sw[2, 0, 1] * sw[1, 2, 0] * id ; id * rL * id * id * m ; id * id * sw * id * id ; m * m * m by rL_unfold
+  = u * r * r * r * u * u ; sw[3, 1, 0, 5, 2, 7, 6, 4] * id ; id * m * id * m * id * m ; m * m * m by rL_unfold
+  = u * r * r * r * u ; sw[3, 1, 0, 5, 2, 7, 6, 4] ; id * m * id * m * m ; m * m * id by unitR
+  = u * r * r * r ; sw[3, 1, 0, 5, 2, 6, 4] ; id * m * m * m ; m * id * id by unitR
+  = r * r * r ; sw[2, 0, 4, 1, 5, 3] ; m * m * m by unitR
+  = r * r ; id * sw * id ; id * n * id * id ; sw[2, 0, 1] * id * id ; m * m * id by -qtL
+  = r ; n * id ; sw * id ; rR * id by -rR_unfold
+
+# now we can prove the Yang Baxter rule, in "state" form
+rewrite yang_baxter :
+  yb1
+  = r ; n * id ; sw * id ; rR * id by yb1_simp
+  = yb2 by -yb2_simp
+
+show yang_baxter
+
+# Now prove that this holds for the map familiar "map" form the yang-baxter equations, by simplifying the left action of yb1:
+rewrite yb_map_lhs :
+  yb1 * id * id * id ; m3 ; sw[2, 1, 0]
+  = u * u * u * id * id * id ; rL * id * id * id * id ; id * sw * id * id * id ; id * rL * id * id * id ; sw * id * id * id * id ;
+    rL * id * id * id * id ; m3 ; sw[2, 1, 0] by yb1_def
+  = sw[1, 2, 0] ; u * u * u * id * id * id ; id * id * id * sw * id ; id * rL * id * id * id ; 
+    id * sw * id * id * id ; rL * id * id * id * id ; sw[1, 3, 0, 2] * id * id ; m * rL * id * id ; id * sw[1, 2, 0] * id ; id * m * m by m3_def
+  = u * u * u * id * id * id ; id * id * id * id * sw ; id * rL * id * id * id ; id * sw[1, 3, 2, 0] * id ; rL * id * id * m ; sw[1, 2, 0] * id * id ; m * m * id ; id * rL ; id * sw by rL_comm
+  = u * id * u * u * id * id ; id * id * id * id * sw ; m * rL * id * id ; id * sw[1, 2, 0] * id ; id * m * m ; rL * id ; sw * id ; id * rL ; id * sw by rL_comm
+  = u * id * u * u * id * id ; id * id * id * sw * id ; m * m * m ; id * rL ; id * sw ; rL * id ; sw * id ; id * rL ; id * sw by rL_comm
+  = u * id * u * id * id ; m * m * id ; id * rL ; id * sw ; rL * id ; sw * id ; id * rL ; id * sw by unitL
+  = u * id * rL ; id * id * sw ; m * id * id ; rL * id ; sw * id ; id * rL ; id * sw by unitL
+  = id * rL ; id * sw ; rL * id ; sw * id ; id * rL ; id * sw by unitL
+
+# ...and the left action of yb2:
+rewrite yb_map_rhs :
+  yb2 * id * id * id ; m3 ; sw[2, 1, 0]
+  = u * u * u * id * id * id ; id * rL * id * id * id ; sw * id * id * id * id ; rL * id * id * id * id ; id * sw * id * id * id ; id * rL * id * id * id ; m3 ; sw[2, 1, 0] by yb2_def
+  = u * u * u * id * id * id ; id * id * id * id * sw ; rL * id * id * id * id ; sw * id * sw * id ; id * rL * id * id * id ; id * sw[1, 2, 0] * id * id ; rL * id * m * id ; sw[1, 2, 0] * sw ; m * m * id by m3_def
+  = sw * id ; u * u * u * id * id * id ; id * id * sw * sw ; rL * id * id * id * id ; sw[1, 2, 0] * id * id * id ; m * rL * id * id ; id * sw[1, 2, 0] * id ; id * m * m ; rL * id ; sw * id by rL_comm
+  = u * u * id * id * u * id ; id * id * sw * id * id ; rL * id * id * m ; sw[1, 2, 0] * id * id ; m * m * id ; id * rL ; id * sw ; rL * id ; sw * id by rL_comm
+  = u * id * u * u * id * id ; id * id * id * sw * id ; m * m * m ; rL * id ; sw * id ; id * rL ; id * sw ; rL * id ; sw * id by rL_comm
+  = u * id * u * id * id ; m * m * id ; rL * id ; sw * id ; id * rL ; id * sw ; rL * id ; sw * id by unitL
+  = u * id * id * id ; m * id * id ; rL * id ; sw * id ; id * rL ; id * sw ; rL * id ; sw * id by unitL
+  = rL * id ; sw * id ; id * rL ; id * sw ; rL * id ; sw * id by unitL
+
+# chaining these proofs together gives us a proof of the map form of the Yang Baxter equation:
+rewrite yang_baxter_map :
+  br * id ; id * br ; br * id
+  = sw[1, 2, 0] ; yb1 * id * id * id ; id * id * id * sw * id ; m3 by -yb_map_lhs
+  = sw[1, 2, 0] ; yb2 * id * id * id ; id * id * id * sw * id ; m3 by yang_baxter
+  = id * br ; br * id ; id * br by yb_map_rhs
+
+show yang_baxter_map
 
 

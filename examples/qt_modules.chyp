@@ -1,23 +1,72 @@
-import quasi_tri
+gen m : 2 -> 1
+gen u : 0 -> 1
+gen n : 1 -> 2
+gen v : 1 -> 0
+gen s : 1 -> 1
+gen r : 0 -> 2
+gen rL : 2 -> 2
+import quasi_tri as H(m=m, u=u, n=n, v=v, s=s, r=r, rL=rL)
 
-gen k : 2 -> 1
-gen l : 2 -> 1
-import module as K(m=m, u=u, k=k)
-import module as L(m=m, u=u, k=l)
+gen a : 2 -> 1
+gen b : 2 -> 1
+gen c : 2 -> 1
+import module as A(m=m, u=u, a=a)
+import module as B(m=m, u=u, a=b)
+import module as C(m=m, u=u, a=c)
 
-def ra = r * id * id ; id * sw * id ; k * l
-def ria = ri * id * id ; id * sw * id ; k * l
+def rL_ab = r * id * id ; id * sw * id ; a * b
+let br_ab = sw ; rL_ab
+def rL_bc = r * id * id ; id * sw * id ; b * c
+let br_bc = sw ; rL_bc
+def rL_ac = r * id * id ; id * sw * id ; a * c
+let br_ac = sw ; rL_ac
 
-let br = ra ; sw
-let bri = sw ; ri * id * id ; id * sw * id ; k * l
+rewrite rL_ab_comm :
+  rL * id * id ; id * sw * id ; a * b
+  = id * sw * id ; id * r * id * id * id ; sw * sw * id * id ; m * id * m * id ; a * b by H.rL_unfold
+  = id * sw * id ; r * a * id * id ; id * sw * id * id ; a * m * id ; id * b by A.assoc
+  = id * sw * id ; r * a * b ; id * sw * id ; a * b by B.assoc
+  = id * sw * id ; a * b ; rL_ab by -rL_ab_def
 
-rewrite yb_lem :
-  (r ; sw) * ra ; id * k * id
-  = r * r * id * id ; sw * id * sw * id ; id * id * k * l ; id * k * id by ra_def
-  = r * r * id * id ; sw * id * sw * id ; id * m * id * l ; id * k * id by -K.assoc
-  = r * id * id ; id * sw * id ; k * n * id ; sw[2, 0, 1] * id ; id * id * l by -qtR
+rewrite rL_bc_comm :
+  rL * id * id ; id * sw * id ; b * c
+  = id * sw * id ; id * r * id * id * id ; sw * sw * id * id ; m * id * m * id ; b * c by H.rL_unfold
+  = id * sw * id ; r * b * id * id ; id * sw * id * id ; b * m * id ; id * c by B.assoc
+  = id * sw * id ; r * b * c ; id * sw * id ; b * c by C.assoc
+  = id * sw * id ; b * c ; rL_bc by -rL_bc_def
 
-rewrite yang_baxter :
-  br * id ; id * br ; br * id
-  = r * ra * id ; sw[3, 1, 4, 0, 2] ; id * l * k ; ra * id ; sw * id by ra_def
-  = id * br ; br * id ; id * br
+rewrite rL_ac_comm :
+  rL * id * id ; id * sw * id ; a * c
+  = id * sw * id ; id * r * id * id * id ; sw * sw * id * id ; m * id * m * id ; a * c by H.rL_unfold
+  = id * sw * id ; r * a * id * id ; id * sw * id * id ; a * m * id ; id * c by A.assoc
+  = id * sw * id ; r * a * c ; id * sw * id ; a * c by C.assoc
+  = id * sw * id ; a * c ; rL_ac by -rL_ac_def
+
+
+rewrite yb_mod_lem1 :
+  H.yb1 * id * id * id ; sw[0, 3, 1, 4, 2, 5]; a * b * c
+  = u * u * u * id * id * id ; rL * id * id * id * id ; id * sw * id * id * id ; id * rL * id * id * id ; sw * sw[1, 2, 0] * id ; rL * id * id * c ; id * sw * id * id ; a * b * id by H.yb1_def
+  = u * u * u * id * id * id ; id * rL * id * id * id ; id * sw[1, 2, 0] * id * id ; rL * id * b * id ; id * sw[1, 2, 0] * id ; a * id * c ; rL_ab * id by rL_ab_comm
+  = u * u * u * id * id * id ; rL * a * id * id ; id * sw[2, 1, 0] * id ; b * id * c ; id * rL_ac ; sw * id ; rL_ab * id by rL_ac_comm
+  = sw[1, 2, 0] ; u * u * id * u * id * id ; id * sw * sw * id ; b * c * a ; rL_bc * id ; id * sw ; id * rL_ac ; sw * id ; rL_ab * id by rL_bc_comm
+  = id * u * id * u * id ; id * b * c ; id * rL_bc ; sw * id ; id * rL_ac ; sw * id ; rL_ab * id by A.unit
+  = id * id * u * id ; id * id * c ; id * rL_bc ; sw * id ; id * rL_ac ; sw * id ; rL_ab * id by B.unit
+  = id * rL_bc ; id * sw ; rL_ac * id ; id * sw ; rL_ab * id by C.unit
+
+rewrite yb_mod_lem2 :
+  H.yb2 * id * id * id ; sw[0, 3, 1, 4, 2, 5]; a * b * c
+  = u * u * u * id * id * id ; id * rL * id * id * id ; sw * sw * id * id ; rL * id * id * id * id ; id * sw[1, 2, 0] * id * id ; a * rL * id * id ; id * id * sw * id ; id * b * c by H.yb2_def
+  = u * u * u * id * id * id ; id * rL * id * id * id ; sw * sw * id * id ; rL * id * b * id ; id * sw[1, 2, 0] * id ; a * id * c ; id * rL_bc by rL_bc_comm
+  = u * u * id * u * id * id ; id * id * id * id * sw ; rL * id * c * id ; id * sw[1, 2, 0] * id ; a * id * b ; rL_ac * id ; id * sw ; id * rL_bc by rL_ac_comm
+  = u * id * u * u * id * id ; id * id * id * sw * id ; a * b * c ; rL_ab * id ; sw * id ; id * rL_ac ; sw * id ; id * rL_bc by rL_ab_comm
+  = id * u * id * u * id ; id * b * c ; rL_ab * id ; sw * id ; id * rL_ac ; sw * id ; id * rL_bc by A.unit
+  = u * rL_ab * id ; sw * sw ; id * c * id ; rL_ac * id ; id * sw ; id * rL_bc by B.unit
+  = rL_ab * id ; id * sw ; rL_ac * id ; id * sw ; id * rL_bc by C.unit
+
+rewrite yang_baxter_mod :
+  id * br_ab ; br_ac * id ; id * br_bc
+  = sw[2, 1, 0] ; H.yb2 * id * id * id ; id * sw[2, 0, 3, 1] * id ; a * b * c by -yb_mod_lem2
+  = sw[2, 1, 0] ; H.yb1 * id * id * id ; id * sw[2, 0, 3, 1] * id ; a * b * c by -H.yang_baxter
+  = sw * id ; rL_bc * id ; id * sw ; id * rL_ac ; sw * id ; rL_ab * id by yb_mod_lem1
+  = br_bc * id ; id * br_ac ; br_ab * id
+

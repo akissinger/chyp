@@ -142,6 +142,48 @@ rewrite antiR2 :
   = u * v2 * u by -v2_def
   = v2 * u2 by -u2_def
 
+# we can also define multiplicity-3 versions. we'll just do the monoid structure:
+def m3 = sw[0, 3, 1, 4, 2, 5] ; m * m * m
+def u3 = u * u * u
+
+# at this point, it becomes combinatorically challenging to "fold" definition of m3 correctly, so
+# we'll normalise the LHS and RHS with respect to the rules 'm3_def' and 'assoc'. In the future, there
+# could be a tactic for this, but for now, we need to do it by hand:
+rewrite assoc3_lhs :
+  m3 * id * id * id ; m3
+  = m3 * id * id * id ; id * sw[2, 0, 3, 1] * id ; m * m * m by m3_def
+  = id * sw[2, 0, 3, 5, 1, 4] * id * id ; m * m * id * m * id * id ; id * sw * sw * id ; m * m * m by m3_def
+  = id * sw[2, 0, 3, 5, 1, 6, 4] * id ; m * m * id * id * id * m ; id * sw * sw * id ; m * m * m by assoc
+  = id * sw[2, 0, 5, 1, 3, 6, 4] * id ; m * id * id * id * m * m ; id * sw * sw * id ; m * m * m by assoc
+  = id * id * sw[1, 4, 0, 2, 5, 3] * id ; id * id * m * id * m * m ; id * sw * sw * id ; m * m * m by assoc
+
+rewrite assoc3_rhs :
+  id * id * id * m3 ; m3
+  = id * id * id * id * sw[2, 0, 3, 1] * id ; id * id * id * m * m * m ; m3 by m3_def
+  = id * id * sw[1, 4, 0, 2, 5, 3] * id ; id * id * m * id * m * m ; id * sw * sw * id ; m * m * m by m3_def
+
+# since the normal forms are equal, we can complete the proof as follows:
+rewrite assoc3 :
+  m3 * id * id * id ; m3
+  = id * id * sw[1, 4, 0, 2, 5, 3] * id ; id * id * m * id * m * m ; id * sw * sw * id ; m * m * m by assoc3_lhs
+  = id * id * id * m3 ; m3 by -assoc3_rhs
+
+rewrite unitL3 :
+  u3 * id * id * id ; m3
+  = u * u * u * id * id * id ; m3 by u3_def
+  = u * id * u * u * id * id ; id * id * id * sw * id ; m * m * m by m3_def
+  = u * id * u * id * id ; m * m * id by unitL
+  = u * id * id * id ; m * id * id by unitL
+  = id * id * id by unitL
+
+rewrite unitR3 :
+  id * id * id * u3 ; m3
+  = id * id * id * u * u * u ; m3 by u3_def
+  = id * u * u * id * u * id ; id * id * sw * sw ; m * m * m by m3_def
+  = id * u * id * u * id ; m * m * id by unitR
+  = id * u * id * id ; m * id * id by unitR
+  = id * id * id by unitR
+
 # Now, we'll show some properties of Hopf algebras
 
 
@@ -219,7 +261,7 @@ rewrite s2_hm :
   = s * s ; sw ; m ; s by s_anti_hm
   = s * s ; s * s ; m by s_anti_hm
   = s * ss ; s * id ; m by -ss_def
-  = ss * ss ; m by -s2_def
+  = ss * ss ; m by -ss_def
 
 
 
