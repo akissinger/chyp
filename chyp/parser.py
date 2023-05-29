@@ -229,7 +229,7 @@ class ChypParseData(Transformer):
                     lhs = self.graphs[name]
                     inp = len(lhs.inputs())
                     outp = len(lhs.outputs())
-                    if inp == arity or outp == coarity:
+                    if inp == arity and outp == coarity:
                         self.rules[rule_name] = Rule(lhs, graph, rule_name, True)
                     else:
                         self.errors.append((self.file_name, meta.line, "Term '{}' already defined with incompatible type {} -> {}.".format(name, inp, outp)))
