@@ -14,8 +14,34 @@
 # limitations under the License.
 
 from __future__ import annotations
+from typing import Iterator
+from typing_extensions import override
+
+from ..graph import Graph
 from . import Tactic
 
 
 class RuleTac(Tactic):
-    pass
+    @override
+    def make_rhs(self) -> Iterator[Graph]:
+        if len(self.args) == 0: raise StopIteration()
+        for _, m_rhs in self.rewrite_lhs(self.args[0]):
+            yield m_rhs.cod
+
+    @override
+    def check(self) -> None:
+        if len(self.args) == 0:
+            return
+
+        # apply a single rewrite rule in all possible ways
+        for m_lhs, m_rhs in self.rewrite_lhs(self.args[0]):
+            # if the LHS and RHS are isomorphic, close the goal...
+            iso = self.validate_goal()
+            if iso:
+                # ...and highlight the part that was rewritten
+                rhs_verts = set(iso.vmap[v] for v in m_rhs.vimg)
+                rhs_edges = set(iso.emap[e] for e in m_rhs.eimg)
+                self.highlight_lhs(m_lhs.vimg, m_lhs.eimg)
+                self.highlight_rhs(rhs_verts, rhs_edges)
+                return
+

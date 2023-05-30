@@ -77,9 +77,11 @@ class ChypParseData(Transformer):
         self.file_name = file_name
         self.import_depth = 0
 
+        self.sequence: int = 0
         self.graphs: Dict[str, Graph] = dict()
         self.rules: Dict[str, Rule] = {'refl': Rule(Graph(), Graph(), name="refl")}
-        self.rewrites: Dict[str, Tuple[int, int, bool, Optional[Rule],
+        self.rule_sequence: Dict[str, int] = {'refl': 0}
+        self.rewrites: Dict[str, Tuple[int, int, int, bool, Optional[Rule],
                                        Optional[Graph], Optional[Graph],
                                        Optional[Graph], Optional[Graph]]] = dict()
         self.errors: List[Tuple[str, int, str]] = list()
@@ -203,6 +205,8 @@ class ChypParseData(Transformer):
             if lhs and rhs:
                 try:
                     self.rules[name] = Rule(lhs, rhs, name, invertible)
+                    self.sequence += 1
+                    self.rule_sequence[name] = self.sequence
                 except RuleError as e:
                     self.errors.append((self.file_name, meta.line, str(e)))
         else:
@@ -282,7 +286,7 @@ class ChypParseData(Transformer):
 
         if len(rw_parts) == 0:
             self.parts.append((meta.start_pos, meta.end_pos, "rewrite", name))
-            self.rewrites[name] = (0,0,False,None,term,None,None,None)
+            self.rewrites[name] = (self.sequence, 0,0,False,None,term,None,None,None)
         else:
             start = meta.start_pos
             lhs = term
@@ -300,7 +304,8 @@ class ChypParseData(Transformer):
             for i, rw_part in enumerate(rw_parts):
                 end, t_start, t_end, equiv, rule, rhs = rw_part
                 all_equiv = all_equiv and equiv
-                self.rewrites[name + ":" + str(i)] = (t_start, t_end, equiv, rule, lhs, rhs,
+                self.rewrites[name + ":" + str(i)] = (self.sequence,
+                                                      t_start, t_end, equiv, rule, lhs, rhs,
                                                       lhs_match if i == 0 else None,
                                                       rhs_match if i == last_i else None)
                 lhs = rhs.copy() if rhs else None
@@ -320,6 +325,8 @@ class ChypParseData(Transformer):
                             rule.lhs.unhighlight()
                             rule.rhs.unhighlight()
                             self.rules[name] = rule
+                            self.sequence += 1
+                            self.rule_sequence[name] = self.sequence
                         else:
                             self.errors.append((self.file_name, meta.line, "Rule '{}' already defined.".format(name)))
                 except RuleError as e:
@@ -368,6 +375,8 @@ def parse(code: str='', file_name: str='', namespace: str='', parent: Optional[C
         parse_data.graphs = parent.graphs
         parse_data.rules = parent.rules
         parse_data.errors = parent.errors
+        parse_data.rule_sequence = parent.rule_sequence
+        parse_data.sequence = parent.sequence
         parse_data.import_depth = parent.import_depth + 1
         if parse_data.import_depth > 255:
             parse_data.errors += [(parent.file_name, -1, "Maximum import depth (255) exceeded. Probably a cyclic import.")]
@@ -392,6 +401,9 @@ def parse(code: str='', file_name: str='', namespace: str='', parent: Optional[C
             parse_data.errors += [(file_name, e.line, msg + e_lines[0] + '\n' + len(msg)*' ' + e_lines[1])]
         else:
             parse_data.errors += [(file_name, e.line, msg + e_lines[0])]
+
+    if parent:
+        parent.sequence = parse_data.sequence
 
     return parse_data
 
