@@ -13,19 +13,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import annotations
 from typing import Dict, List, Optional, Tuple
+
+from chyp.tactic import Tactic
 
 from .matcher import find_iso, match_rule
 from .parser import parse
 from .rewrite import dpo
 from .graph import Graph
 from .rule import Rule
-
-# class SemanticError(Exception):
-#     def __init__(self, line: int, message: str):
-#         self.line = line
-#         self.message = message
-#         super().__init__(str(self.line) + ": " + self.message)
+from .tactic.ruletac import RuleTac
 
 
 class RewriteState:
@@ -35,6 +33,7 @@ class RewriteState:
     INVALID = 3
 
     def __init__(self,
+                 state: State,
                  term_pos: Tuple[int,int] = (0,0),
                  equiv: bool=True,
                  rule: Optional[Rule]=None,
@@ -43,6 +42,7 @@ class RewriteState:
                  lhs_match: Optional[Graph]=None,
                  rhs_match: Optional[Graph]=None,
                  stub: bool=False) -> None:
+        self.state = state
         self.status = RewriteState.UNCHECKED
         self.term_pos = term_pos
         self.equiv = equiv
@@ -51,6 +51,7 @@ class RewriteState:
         self.rhs = rhs
         self.lhs_match = lhs_match
         self.rhs_match = rhs_match
+        self.tactic: Tactic = RuleTac(self)
         self.stub = stub
 
     def check(self) -> None:
@@ -101,7 +102,7 @@ class State:
 
         for name, (t_start, t_end, equiv, rule, lhs, rhs, lhs_match, rhs_match) in parse_data.rewrites.items():
             stub = not (':' in name)
-            self.rewrites[name] = RewriteState((t_start, t_end), equiv, rule, lhs, rhs, lhs_match, rhs_match, stub)
+            self.rewrites[name] = RewriteState(self, (t_start, t_end), equiv, rule, lhs, rhs, lhs_match, rhs_match, stub)
 
     def part_with_index_at(self, pos: int) -> Optional[Tuple[int, Tuple[int,int,str,str]]]:
         p0 = (0, self.parts[0]) if len(self.parts) >= 1 else None
