@@ -39,28 +39,17 @@ rewrite rR_unfold :
 # and commute with m2
 rewrite rL_comm :
   rL * id * id ; id * sw * id ; m * m
-  = id * sw * id ; id * r * id * id * id ; sw * sw * id * id ; m * id * m * id ; m * m by rL_unfold
-  = id * sw * id ; id * r * id * m ; sw * sw * id ; m * id * m ; m * id by assoc
-  = id * sw * id ; r * m * m ; id * sw * id ; m * m by assoc
-  = id * sw * id ; m * m ; rL by -rL_unfold
+  = id * sw * id ; m * m ; rL by simp(assoc, rL_unfold)
 
 
 # r(L/R) and ri(L/R) are mutually inverse:
 rewrite rL_riL :
   rL ; riL
-  = r * id * id ; m2 ; riL by rL_def
-  = ri * r * id * id ; id * id * m2 ; m2 by riL_def
-  = ri * r * id * id ; m2 * id * id ; m2 by -assoc2
-  = u2 * id * id ; m2 by rir
-  = id * id by unitL2
+  = id * id by simp(rL_def, riL_def, -assoc2, rir, unitL2)
 
 rewrite riR_rR :
   riR ; rR
-  = riR * r ; m2 by rR_def
-  = id * ri * id * r ; id * sw[2, 0, 1] * id * id ; m2 * id * id ; m2 by riR_def
-  = id * ri * id * r ; id * sw[2, 0, 1] * id * id ; id * id * m2 ; m2 by assoc2
-  = id * id * u2 ; m2 by rir
-  = id * id by unitR2
+  = id * id by simp(rR_def, riR_def, assoc2, rir, unitR2)
 
 
 # Using this fact, we can state the first quasi-triangularity law this way:
@@ -84,76 +73,47 @@ def yb1 = u * u * u ; br * id ; id * br ; br * id
 def yb2 = u * u * u ; id * br ; br * id ; id * br
 
 # if we can prove those two states are equal, we will be able to prove the full YB equation
-# by letting them both act on H (X) H (X) H.
+# by letting them both act on H (X) H (X) H:
+rewrite yb1_act :
+  yb1 * sw[2, 1, 0] ; m3
+  = sw * id ; rL * id ; id * sw ; id * rL ; sw * id ; rL * id by simp(yb1_def, m3_def, rL_comm, unitL)
 
+rewrite yb2_act :
+  yb2 * sw[2, 1, 0] ; m3
+  = id * sw ; id * rL ; sw * id ; rL * id ; id * sw ; id * rL by simp(yb2_def, m3_def, rL_comm, unitL)
 
 # First simplify the LHS state:
 rewrite yb1_simp :
   yb1
-  = u * u * u ; rL * id ; id * sw ; id * rL ; sw * id ; rL * id by yb1_def
-  = u * u * r * u ; sw[2, 0, 1] * sw ; id * id * rL * id ; id * id * sw[1, 2, 0] ; id * rL * m ; id * id * sw ; m * id * id by rL_unfold
-  = u * r * u * r * u ; sw * sw[3, 1, 0, 2] * id ; id * id * m * id * m ; id * rL * m ; id * id * sw ; m * id * id by rL_unfold
-  = r * u * r * r * u * u ; id * sw[2, 1, 0] * sw[1, 3, 2, 4, 0] ; id * m * id * m * m * id ; id * id * id * id * sw ; m * m * m by rL_unfold
-  = r * u * r * u * r ; id * sw[2, 1, 0] * sw[2, 1, 0] * id ; id * m * id * m * m ; m * m * id by unitR
-  = r * u * r * r ; id * sw[2, 1, 0] * sw * id ; id * m * m * m ; m * id * id by unitR
-  = r * r * r ; id * sw * sw * id ; m * m * m by unitR
-  = r * r ; id * id * n * id ; id * sw * id * id ; m * m * id by -qtL
-  = r ; n * id ; rL * id by -rL_unfold
-  = r ; n * id ; sw * id ; rR * id by n_rL
+  = r * r * r ; id * sw * sw * id ; m * m * m by simp(yb1_def, rL_unfold, unitR)
+  = r * r ; id * sw * id ; rL * m by -rL_unfold
+  = r ; n * id ; rL * id by -qtL
 
 # Next, simplify the RHS state:
 rewrite yb2_simp :
   yb2
-  = u * u * u ; id * rL ; sw * id ; rL * id ; id * sw ; id * rL by yb2_def
-  = u * u * u * r ; id * rL * id * id ; sw * sw * id ; rL * m * id ; id * sw[1, 2, 0] ; id * id * m by rL_unfold
-  = u * u * r * r * u ; sw[2, 0, 1] * sw[1, 2, 0] * id ; id * rL * id * id * m ; id * id * sw * id * id ; m * m * m by rL_unfold
-  = u * r * r * r * u * u ; sw[3, 1, 0, 5, 2, 7, 6, 4] * id ; id * m * id * m * id * m ; m * m * m by rL_unfold
-  = u * r * r * r * u ; sw[3, 1, 0, 5, 2, 7, 6, 4] ; id * m * id * m * m ; m * m * id by unitR
-  = u * r * r * r ; sw[3, 1, 0, 5, 2, 6, 4] ; id * m * m * m ; m * id * id by unitR
-  = r * r * r ; sw[2, 0, 4, 1, 5, 3] ; m * m * m by unitR
-  = r * r ; id * sw * id ; id * n * id * id ; sw[2, 0, 1] * id * id ; m * m * id by -qtL
-  = r ; n * id ; sw * id ; rR * id by -rR_unfold
+  = r * r * r ; sw[2, 0, 4, 1, 5, 3] ; m * m * m by simp(yb2_def, rL_unfold, unitR)
+  = r * r ; id * sw[1, 2, 0] ; rR * m by -rR_unfold
+  = r ; n * id ; sw * id ; rR * id by -qtL
 
 # now we can prove the Yang Baxter rule, in "state" form
 rewrite yang_baxter :
   yb1
-  = r ; n * id ; sw * id ; rR * id by yb1_simp
+  = r ; n * id ; rL * id by yb1_simp
+  = r ; n * id ; sw * id ; rR * id by n_rL
   = yb2 by -yb2_simp
 
 show yang_baxter
 
 # Now prove that this holds for the map familiar "map" form the yang-baxter equations, by simplifying the left action of yb1:
-rewrite yb_map_lhs :
-  yb1 * id * id * id ; m3 ; sw[2, 1, 0]
-  = u * u * u * id * id * id ; rL * id * id * id * id ; id * sw * id * id * id ; id * rL * id * id * id ; sw * id * id * id * id ;
-    rL * id * id * id * id ; m3 ; sw[2, 1, 0] by yb1_def
-  = sw[1, 2, 0] ; u * u * u * id * id * id ; id * id * id * sw * id ; id * rL * id * id * id ; 
-    id * sw * id * id * id ; rL * id * id * id * id ; sw[1, 3, 0, 2] * id * id ; m * rL * id * id ; id * sw[1, 2, 0] * id ; id * m * m by m3_def
-  = u * u * u * id * id * id ; id * id * id * id * sw ; id * rL * id * id * id ; id * sw[1, 3, 2, 0] * id ; rL * id * id * m ; sw[1, 2, 0] * id * id ; m * m * id ; id * rL ; id * sw by rL_comm
-  = u * id * u * u * id * id ; id * id * id * id * sw ; m * rL * id * id ; id * sw[1, 2, 0] * id ; id * m * m ; rL * id ; sw * id ; id * rL ; id * sw by rL_comm
-  = u * id * u * u * id * id ; id * id * id * sw * id ; m * m * m ; id * rL ; id * sw ; rL * id ; sw * id ; id * rL ; id * sw by rL_comm
-  = u * id * u * id * id ; m * m * id ; id * rL ; id * sw ; rL * id ; sw * id ; id * rL ; id * sw by unitL
-  = u * id * rL ; id * id * sw ; m * id * id ; rL * id ; sw * id ; id * rL ; id * sw by unitL
-  = id * rL ; id * sw ; rL * id ; sw * id ; id * rL ; id * sw by unitL
 
-# ...and the left action of yb2:
-rewrite yb_map_rhs :
-  yb2 * id * id * id ; m3 ; sw[2, 1, 0]
-  = u * u * u * id * id * id ; id * rL * id * id * id ; sw * id * id * id * id ; rL * id * id * id * id ; id * sw * id * id * id ; id * rL * id * id * id ; m3 ; sw[2, 1, 0] by yb2_def
-  = u * u * u * id * id * id ; id * id * id * id * sw ; rL * id * id * id * id ; sw * id * sw * id ; id * rL * id * id * id ; id * sw[1, 2, 0] * id * id ; rL * id * m * id ; sw[1, 2, 0] * sw ; m * m * id by m3_def
-  = sw * id ; u * u * u * id * id * id ; id * id * sw * sw ; rL * id * id * id * id ; sw[1, 2, 0] * id * id * id ; m * rL * id * id ; id * sw[1, 2, 0] * id ; id * m * m ; rL * id ; sw * id by rL_comm
-  = u * u * id * id * u * id ; id * id * sw * id * id ; rL * id * id * m ; sw[1, 2, 0] * id * id ; m * m * id ; id * rL ; id * sw ; rL * id ; sw * id by rL_comm
-  = u * id * u * u * id * id ; id * id * id * sw * id ; m * m * m ; rL * id ; sw * id ; id * rL ; id * sw ; rL * id ; sw * id by rL_comm
-  = u * id * u * id * id ; m * m * id ; rL * id ; sw * id ; id * rL ; id * sw ; rL * id ; sw * id by unitL
-  = u * id * id * id ; m * id * id ; rL * id ; sw * id ; id * rL ; id * sw ; rL * id ; sw * id by unitL
-  = rL * id ; sw * id ; id * rL ; id * sw ; rL * id ; sw * id by unitL
 
 # chaining these proofs together gives us a proof of the map form of the Yang Baxter equation:
 rewrite yang_baxter_map :
   br * id ; id * br ; br * id
-  = sw[1, 2, 0] ; yb1 * id * id * id ; id * id * id * sw * id ; m3 by -yb_map_lhs
+  = sw[1, 2, 0] ; yb1 * id * id * id ; id * id * id * sw * id ; m3 by -yb1_act
   = sw[1, 2, 0] ; yb2 * id * id * id ; id * id * id * sw * id ; m3 by yang_baxter
-  = id * br ; br * id ; id * br by yb_map_rhs
+  = id * br ; br * id ; id * br by yb2_act
 
 show yang_baxter_map
 

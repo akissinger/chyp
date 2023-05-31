@@ -27,23 +27,25 @@ class SimpTac(Tactic):
     def name(self) -> str:
         return 'simp'
 
-    def __repeat(self, m: Callable):
+    def __repeat(self, rw: Callable[[str], bool]):
         got_match = True
         i = 0
         while got_match and i < SimpTac.MAX_DEPTH:
             got_match = False
             for r in self.args:
-                while m(r) and i < SimpTac.MAX_DEPTH:
+                # print('rewriting: ' + r)
+                while rw(r) and i < SimpTac.MAX_DEPTH:
+                    # print('success')
                     got_match = True
                     i += 1
 
     def make_rhs(self) -> Iterator[Graph]:
-        self.__repeat(self.rewrite_lhs)
+        self.__repeat(self.rewrite_lhs1)
         lhs = self.lhs()
         if lhs: yield lhs
 
     def check(self) -> None:
-        self.__repeat(self.rewrite_lhs)
-        self.__repeat(self.rewrite_rhs)
+        self.__repeat(self.rewrite_lhs1)
+        self.__repeat(self.rewrite_rhs1)
         self.validate_goal()
 

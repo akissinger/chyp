@@ -16,14 +16,13 @@
 from __future__ import annotations
 from typing import Dict, List, Optional, Tuple
 
-from chyp.tactic import Tactic
+from .tactic import Tactic
+from .tactic.simptac import SimpTac
+from .tactic.ruletac import RuleTac
 
-from .matcher import find_iso, match_rule
 from .parser import parse
-from .rewrite import dpo
 from .graph import Graph
 from .rule import Rule
-from .tactic.ruletac import RuleTac
 
 
 class RewriteState:
@@ -61,6 +60,8 @@ class RewriteState:
         tactic_args = [] if tactic_args is None else tactic_args
         if tactic == 'rule':
             self.tactic: Tactic = RuleTac(self, tactic_args)
+        elif tactic == 'simp':
+            self.tactic = SimpTac(self, tactic_args)
         else:
             self.tactic = Tactic(self, tactic_args)
         self.stub = stub
