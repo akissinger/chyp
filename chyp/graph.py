@@ -402,13 +402,13 @@ class Graph:
         g.compose(other)
         return g
 
-    def highlight(self, vertices: Set[int], edges: Set[int]):
+    def highlight(self, vertices: Set[int], edges: Set[int]) -> None:
         for v, vd in self.vdata.items():
             vd.highlight = v in vertices
         for e, ed in self.edata.items():
             ed.highlight = e in edges
 
-    def unhighlight(self):
+    def unhighlight(self) -> None:
         for vd in self.vdata.values():
             vd.highlight = False
         for ed in self.edata.values():

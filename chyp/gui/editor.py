@@ -22,9 +22,9 @@ from PySide6.QtWidgets import QHBoxLayout, QSplitter, QTreeView, QVBoxLayout, QW
 from ..layout import convex_layout
 from ..graph import Graph
 from ..state import RewriteState, State
-from ..term import graph_to_term
-from ..matcher import match_rule
-from ..rewrite import rewrite
+# from ..term import graph_to_term
+# from ..matcher import match_rule
+# from ..rewrite import rewrite
 
 from .errorlist import ErrorListModel
 from .graphview import GraphView
@@ -237,48 +237,39 @@ class Editor(QWidget):
         part = self.state.part_at(pos)
         if part and part[2] == 'rewrite' and part[3] in self.state.rewrites:
             rw = self.state.rewrites[part[3]]
-            if rw.rule and rw.lhs:
-                start, end = rw.term_pos
-                text = self.code_view.toPlainText()
-                term = text[start:end]
-                seen = set([term])
+            start, end = rw.term_pos
+            text = self.code_view.toPlainText()
+            term = text[start:end]
+            rw_term = rw.tactic.next_rhs(term)
 
-                found_prev = (term == '?')
-                rw_term = None
-                for m in match_rule(rw.rule, rw.lhs):
-                    t = graph_to_term(rewrite(rw.rule, m))
-                    if found_prev and not t in seen:
-                        rw_term = t
-                        break
-                    elif not rw_term:
-                        rw_term = t
+            if rw_term:
+                cursor = self.code_view.textCursor()
+                cursor.clearSelection()
+                cursor.setPosition(start)
+                cursor.setPosition(end, mode=QTextCursor.MoveMode.KeepAnchor)
 
-                    seen.add(t)
-                    found_prev = (term == t)
-
-                if rw_term:
-                    cursor = self.code_view.textCursor()
-                    cursor.clearSelection()
-                    cursor.setPosition(start)
-                    cursor.setPosition(end, mode=QTextCursor.MoveMode.KeepAnchor)
-
-                    # self.blockSignals(True)
-                    cursor.insertText(rw_term)
-                    self.code_view.setTextCursor(cursor)
-                    # self.blockSignals(False)
-                    # self.update_state()
+                # self.blockSignals(True)
+                cursor.insertText(rw_term)
+                self.code_view.setTextCursor(cursor)
+                # self.blockSignals(False)
+                # self.update_state()
 
     def repeat_step_at_cursor(self) -> None:
         self.update_state()
         pos = self.code_view.textCursor().position()
         part = self.state.part_at(pos)
         if part and part[2] == 'rewrite' and part[3] in self.state.rewrites:
-            rule = self.state.rewrites[part[3]].rule
+            rw = self.state.rewrites[part[3]]
+            tactic = rw.tactic.name()
+            args = ', '.join(rw.tactic.args)
 
-            if rule:
-                self.code_view.add_line_below('  = ? by ' + rule.name)
-                self.update_state()
-                self.next_rewrite_at_cursor()
+            if tactic == 'rule':
+                self.code_view.add_line_below('  = ? by ' + args)
+            else:
+                self.code_view.add_line_below(f'  = ? by {tactic}({args})')
+
+            self.update_state()
+            self.next_rewrite_at_cursor()
 
     def update_state(self) -> None:
         self.state = State()

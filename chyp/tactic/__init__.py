@@ -15,7 +15,7 @@
 
 from __future__ import annotations
 from typing import Iterator, List, Optional, Set, Tuple
-
+import re
 
 from ..term import graph_to_term
 from ..graph import Graph
@@ -24,6 +24,8 @@ from ..rule import Rule
 from ..matcher import Match, match_rule, find_iso
 from .. import state
 
+RULE_NAME_RE = re.compile('(-)?\\s*([a-zA-Z_][\\.a-zA-Z0-9_]*)')
+
 class Tactic:
     _state: state.State
     _local_state: state.RewriteState
@@ -31,68 +33,57 @@ class Tactic:
     def __init__(self, local_state: state.RewriteState, args: List[str]) -> None:
         self._local_state = local_state
         self._state = local_state.state
-        self._goal_lhs = None
-        self._goal_rhs = None
+        self._goal_lhs: Optional[Graph] = None
+        self._goal_rhs: Optional[Graph] = None
         self._goal_stack: List[Tuple[Graph,Graph]] = []
         self.args = args
 
     def has_goal(self) -> bool:
         return self._goal_lhs is not None and self._goal_rhs is not None
 
-    def push_goal(self) -> None:
-        if not self._goal_lhs or not self._goal_rhs: return
-        self._goal_stack.append((self._goal_lhs.copy(), self._goal_rhs.copy()))
+    # def push_goal(self) -> None:
+    #     if not self._goal_lhs or not self._goal_rhs: return
+    #     self._goal_stack.append((self._goal_lhs.copy(), self._goal_rhs.copy()))
 
-    def pop_goal(self) -> bool:
-        if len(self._goal_stack) > 0:
-            self._goal_lhs, self._goal_rhs = self._goal_stack.pop()
-            return True
-        else:
-            return False
+    # def pop_goal(self) -> bool:
+    #     if len(self._goal_stack) > 0:
+    #         self._goal_lhs, self._goal_rhs = self._goal_stack.pop()
+    #         return True
+    #     else:
+    #         return False
 
-    def lookup_rule(self, rule_name: str) -> Optional[Rule]:
+    def lookup_rule(self, rule_expr: str) -> Optional[Rule]:
+        m = RULE_NAME_RE.match(rule_expr)
+        if not m: return None
+        converse = m.group(1) == '-'
+        rule_name = m.group(2)
         if rule_name in self._state.rule_sequence and self._state.rule_sequence[rule_name] <= self._local_state.sequence:
-            return self._state.rules[rule_name]
+            rule = self._state.rules[rule_name]
+            return rule.converse() if converse else rule
         else:
             return None
 
-    def rewrite_lhs(self, rule_name: str, converse: bool=False) -> Iterator[Tuple[Match,Match]]:
-        if not self._goal_lhs:
-            raise StopIteration
+    def rewrite_lhs(self, rule_expr: str, converse: bool=False) -> Iterator[Tuple[Match,Match]]:
+        if not self._goal_lhs: return None
+        rule = self.lookup_rule(rule_expr)
+        if not rule: return None
+        if converse and not rule.equiv: return None
 
-        rule = self.lookup_rule(rule_name)
-
-        if not rule:
-            raise StopIteration
-
-        if converse and not rule.equiv:
-            raise StopIteration
-
-        rewrite_id = 0
         for m_lhs in match_rule(rule, self._goal_lhs):
             for m_rhs in dpo(rule, m_lhs):
                 self._goal_lhs = m_rhs.cod.copy()
                 yield (m_lhs, m_rhs)
-                rewrite_id += 1
 
-    def rewrite_rhs(self, rule_name: str, converse: bool=False) -> Iterator[Tuple[Match,Match]]:
-        if not self._goal_rhs:
-            raise StopIteration
+    def rewrite_rhs(self, rule_expr: str, converse: bool=False) -> Iterator[Tuple[Match,Match]]:
+        if not self._goal_rhs: return None
+        rule = self.lookup_rule(rule_expr)
+        if not rule: return None
+        if not converse and not rule.equiv: return None
 
-        rule = self.lookup_rule(rule_name)
-
-        if not rule:
-            raise StopIteration
-
-        if not converse and not rule.equiv:
-            raise StopIteration
-
-        rewrite_id = 0
         for m_lhs in match_rule(rule, self._goal_rhs):
             for m_rhs in dpo(rule, m_lhs):
                 self._goal_rhs = m_rhs.cod.copy()
                 yield (m_lhs, m_rhs)
-                rewrite_id += 1
 
     def validate_goal(self) -> Optional[Match]:
         if not self._goal_lhs or not self._goal_rhs: return None
@@ -104,18 +95,30 @@ class Tactic:
         else:
             return None
 
-    def highlight_lhs(self, vertices: Set[int], edges: Set[int]):
+    def lhs(self) -> Optional[Graph]:
+        if not self._goal_lhs is None:
+            return self._goal_lhs.copy()
+        else:
+            return None
+
+    def rhs(self) -> Optional[Graph]:
+        if not self._goal_rhs is None:
+            return self._goal_rhs.copy()
+        else:
+            return None
+
+    def highlight_lhs(self, vertices: Set[int], edges: Set[int]) -> None:
         if self._local_state.lhs:
             self._local_state.lhs.highlight(vertices, edges)
 
-    def highlight_rhs(self, vertices: Set[int], edges: Set[int]):
+    def highlight_rhs(self, vertices: Set[int], edges: Set[int]) -> None:
         if self._local_state.rhs:
             self._local_state.rhs.highlight(vertices, edges)
 
-    def _reset(self):
+    def _reset(self) -> None:
         self._goal_lhs = self._local_state.lhs.copy() if self._local_state.lhs else None
         self._goal_rhs = self._local_state.rhs.copy() if self._local_state.rhs else None
-        self._goal_stack: List[Tuple[Graph,Graph]] = []
+        self._goal_stack = []
 
     def next_rhs(self, current: str) -> Optional[str]:
         self._reset()
@@ -144,12 +147,17 @@ class Tactic:
             self._local_state.status = state.RewriteState.INVALID
 
     # tactics should override this method
-    def check(self) -> None:
-        raise NotImplementedError('Tactic.check() must be implemented in subclass')
+    def name(self) -> str:
+        return 'refl'
 
-    # tactics that can synthesise an RHS should override this method
+    # tactics should override this method
+    def check(self) -> None:
+        self.validate_goal()
+
+    # tactics that can synthesize an RHS should override this method
     def make_rhs(self) -> Iterator[Graph]:
-        raise StopIteration
+        lhs = self.lhs()
+        if lhs: yield lhs
 
 
 

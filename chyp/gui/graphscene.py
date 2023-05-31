@@ -83,11 +83,11 @@ class VItem(QGraphicsEllipseItem):
         self.setPos(vd.x * SCALE, vd.y * SCALE)
         self.setBrush(QBrush(QColor(0,0,0)))
 
-    def refresh(self):
+    def refresh(self) -> None:
         if self.eitem and self.i != -1:
             x_shift = 0.7 * SCALE
             if self.eitem.num_t == 1:
-                y_shift = 0
+                y_shift = 0.0
             else:
                 y_shift = ((self.i / (self.eitem.num_t - 1)) - 0.5) * SCALE
             p = self.eitem.pos()

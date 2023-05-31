@@ -30,8 +30,11 @@ GRAMMAR = Lark("""
     let : "let" var "=" term
     rule : "rule" var ":" term (eq | le) term
     rewrite : "rewrite" [converse] var ":" term rewrite_part*
-    rewrite_part : (eq | le) term_hole [ "by" [ converse ] rule_ref ]
+    rewrite_part : (eq | le) term_hole [ "by" tactic ]
     converse : "-"
+
+    LPAREN: "("
+    tactic : [ converse ] IDENT | IDENT LPAREN [ TACTIC_ARG ("," TACTIC_ARG)* ] ")"
     ?term  : par_term | seq
     ?par_term : "(" term ")" | par | perm | id | id0 | term_ref
     par : par_term "*" par_term
@@ -54,6 +57,7 @@ GRAMMAR = Lark("""
     term_hole : term | "?"
     color : HEXDIGIT HEXDIGIT HEXDIGIT HEXDIGIT HEXDIGIT HEXDIGIT
     IDENT: ("_"|LETTER) ("_"|"."|LETTER|DIGIT)*
+    TACTIC_ARG: /[^(),]+/
 
     %import common.LETTER
     %import common.DIGIT
@@ -81,7 +85,7 @@ class ChypParseData(Transformer):
         self.graphs: Dict[str, Graph] = dict()
         self.rules: Dict[str, Rule] = {'refl': Rule(Graph(), Graph(), name="refl")}
         self.rule_sequence: Dict[str, int] = {'refl': 0}
-        self.rewrites: Dict[str, Tuple[int, int, int, bool, Optional[Rule],
+        self.rewrites: Dict[str, Tuple[int, int, int, bool, str, List[str],
                                        Optional[Graph], Optional[Graph],
                                        Optional[Graph], Optional[Graph]]] = dict()
         self.errors: List[Tuple[str, int, str]] = list()
@@ -229,6 +233,8 @@ class ChypParseData(Transformer):
                     lhs = gen(name, arity, coarity, fg, bg)
                     self.graphs[name] = lhs
                     self.rules[rule_name] = Rule(lhs, graph, rule_name, True)
+                    self.sequence += 1
+                    self.rule_sequence[rule_name] = self.sequence
                 else:
                     lhs = self.graphs[name]
                     inp = len(lhs.inputs())
@@ -239,7 +245,7 @@ class ChypParseData(Transformer):
                         self.errors.append((self.file_name, meta.line, "Term '{}' already defined with incompatible type {} -> {}.".format(name, inp, outp)))
 
         else:
-            self.errors.append((self.file_name, meta.line, "Rule '{}' already defined.".format(name, rule_name)))
+            self.errors.append((self.file_name, meta.line, "Rule '{}' already defined.".format(rule_name)))
         self.parts.append((meta.start_pos, meta.end_pos, 'rule', rule_name))
 
     def gen_color(self, items: List[Any]) -> Tuple[str,str]:
@@ -286,7 +292,7 @@ class ChypParseData(Transformer):
 
         if len(rw_parts) == 0:
             self.parts.append((meta.start_pos, meta.end_pos, "rewrite", name))
-            self.rewrites[name] = (self.sequence, 0,0,False,None,term,None,None,None)
+            self.rewrites[name] = (self.sequence, 0,0,False,"",[],term,None,None,None)
         else:
             start = meta.start_pos
             lhs = term
@@ -302,10 +308,11 @@ class ChypParseData(Transformer):
 
             last_i = len(rw_parts)-1
             for i, rw_part in enumerate(rw_parts):
-                end, t_start, t_end, equiv, rule, rhs = rw_part
+                end, t_start, t_end, equiv, tactic, tactic_args, rhs = rw_part
                 all_equiv = all_equiv and equiv
                 self.rewrites[name + ":" + str(i)] = (self.sequence,
-                                                      t_start, t_end, equiv, rule, lhs, rhs,
+                                                      t_start, t_end, equiv, tactic, tactic_args,
+                                                      lhs, rhs,
                                                       lhs_match if i == 0 else None,
                                                       rhs_match if i == last_i else None)
                 lhs = rhs.copy() if rhs else None
@@ -316,6 +323,11 @@ class ChypParseData(Transformer):
                     if converse:
                         if base_name in self.rules:
                             self.rules[base_name].equiv = True
+
+                            # TODO: this will stop the <= version of the rule from being usable before the converse is
+                            # proven. While this is sound and workable, it might confuse people.
+                            self.sequence += 1
+                            self.rule_sequence[base_name] = self.sequence
                         else:
                             self.errors.append((self.file_name, meta.line, "Trying to prove converse for unknown rule: " + base_name))
                     else:
@@ -333,19 +345,34 @@ class ChypParseData(Transformer):
                     self.errors.append((self.file_name, meta.line, str(e)))
 
     @v_args(meta=True)
-    def rewrite_part(self, meta: Meta, items: List[Any]) -> Tuple[int, int, int, bool, Optional[Rule], Optional[Graph]]:
+    def rewrite_part(self, meta: Meta, items: List[Any]) -> Tuple[int, int, int, bool, str, List[str], Optional[Graph]]:
         equiv = items[0]
         t_start,t_end,rhs = items[1]
-        converse = True if items[2] else False
+        if items[2]:
+            tactic, tactic_args = items[2]
+        else:
+            tactic, tactic_args = ("rule", ["refl"])
 
-        rule = items[3] if items[3] else self.rules['refl']
-        if rule and converse:
-            rule = rule.converse()
+        # converse = True if items[2] else False
 
-        if equiv and rule and not rule.equiv:
-            rule = None
+        # rule = items[3] if items[3] else self.rules['refl']
+        # if rule and converse:
+        #     rule = rule.converse()
+        # if equiv and rule and not rule.equiv:
+        #     rule = None
 
-        return (meta.end_pos, t_start, t_end, equiv, rule, rhs)
+        return (meta.end_pos, t_start, t_end, equiv, tactic, tactic_args, rhs)
+
+    def tactic(self, items: List[Any]) -> Tuple[str, List[str]]:
+        if len(items) >= 2 and str(items[1]) == "(": #)
+            args = items[2:] if not items[2] is None else []
+            # arg_str = ', '.join(args)
+            # print(f"got tactic: {items[0]}({arg_str})")
+            return (items[0], args)
+        else:
+            rule_expr = ('-' if items[0] else '') + items[1]
+            # print(f"defaulting to rule tactic: rule({rule_expr})")
+            return ("rule", [rule_expr])
 
 
     @v_args(meta=True)

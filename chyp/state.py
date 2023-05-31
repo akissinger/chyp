@@ -37,7 +37,8 @@ class RewriteState:
                  state: State,
                  term_pos: Tuple[int,int] = (0,0),
                  equiv: bool=True,
-                 rule: Optional[Rule]=None,
+                 tactic: str='',
+                 tactic_args: Optional[List[str]]=None,
                  lhs: Optional[Graph]=None,
                  rhs: Optional[Graph]=None,
                  lhs_match: Optional[Graph]=None,
@@ -51,44 +52,50 @@ class RewriteState:
         self.status = RewriteState.UNCHECKED
         self.term_pos = term_pos
         self.equiv = equiv
-        self.rule = rule
+        # self.rule = rule
         self.lhs = lhs
         self.rhs = rhs
         self.lhs_match = lhs_match
         self.rhs_match = rhs_match
-        self.tactic: Tactic = RuleTac(self, [rule.name] if rule else [])
+
+        tactic_args = [] if tactic_args is None else tactic_args
+        if tactic == 'rule':
+            self.tactic: Tactic = RuleTac(self, tactic_args)
+        else:
+            self.tactic = Tactic(self, tactic_args)
         self.stub = stub
 
     def check(self) -> None:
-        if self.rule and self.lhs and self.rhs:
-            # check for any constraints on the LHS and RHS first
-            if self.lhs_match and not find_iso(self.lhs, self.lhs_match):
-                self.status = RewriteState.INVALID
-            if self.rhs_match and not find_iso(self.rhs, self.rhs_match):
-                self.status = RewriteState.INVALID
+        self.tactic.run_check()
+        # if self.rule and self.lhs and self.rhs:
+        #     # check for any constraints on the LHS and RHS first
+        #     if self.lhs_match and not find_iso(self.lhs, self.lhs_match):
+        #         self.status = RewriteState.INVALID
+        #     if self.rhs_match and not find_iso(self.rhs, self.rhs_match):
+        #         self.status = RewriteState.INVALID
 
-            # if all LHS/RHS constraints are satisfied, try to prove the rule step by rewriting
-            if self.status == RewriteState.CHECKING:
-                for m_lhs in match_rule(self.rule, self.lhs):
-                    for m_rhs in dpo(self.rule, m_lhs):
-                        iso = find_iso(m_rhs.cod, self.rhs)
-                        if iso:
-                            self.status = RewriteState.VALID
+        #     # if all LHS/RHS constraints are satisfied, try to prove the rule step by rewriting
+        #     if self.status == RewriteState.CHECKING:
+        #         for m_lhs in match_rule(self.rule, self.lhs):
+        #             for m_rhs in dpo(self.rule, m_lhs):
+        #                 iso = find_iso(m_rhs.cod, self.rhs)
+        #                 if iso:
+        #                     self.status = RewriteState.VALID
 
-                            for v in m_lhs.dom.vertices():
-                                self.lhs.vertex_data(m_lhs.vmap[v]).highlight = True
-                            for e in m_lhs.dom.edges():
-                                self.lhs.edge_data(m_lhs.emap[e]).highlight = True
+        #                     for v in m_lhs.dom.vertices():
+        #                         self.lhs.vertex_data(m_lhs.vmap[v]).highlight = True
+        #                     for e in m_lhs.dom.edges():
+        #                         self.lhs.edge_data(m_lhs.emap[e]).highlight = True
 
-                            for v in m_rhs.dom.vertices():
-                                self.rhs.vertex_data(iso.vmap[m_rhs.vmap[v]]).highlight = True
-                            for e in m_rhs.dom.edges():
-                                self.rhs.edge_data(iso.emap[m_rhs.emap[e]]).highlight = True
+        #                     for v in m_rhs.dom.vertices():
+        #                         self.rhs.vertex_data(iso.vmap[m_rhs.vmap[v]]).highlight = True
+        #                     for e in m_rhs.dom.edges():
+        #                         self.rhs.edge_data(iso.emap[m_rhs.emap[e]]).highlight = True
 
-                            break
+        #                     break
 
-        if self.status != RewriteState.VALID:
-            self.status = RewriteState.INVALID
+        # if self.status != RewriteState.VALID:
+        #     self.status = RewriteState.INVALID
 
 class State:
     def __init__(self) -> None:
@@ -107,9 +114,9 @@ class State:
         self.parts = parse_data.parts
         self.errors = parse_data.errors
 
-        for name, (sequence, t_start, t_end, equiv, rule, lhs, rhs, lhs_match, rhs_match) in parse_data.rewrites.items():
+        for name, (sequence, t_start, t_end, equiv, tactic, tactic_args, lhs, rhs, lhs_match, rhs_match) in parse_data.rewrites.items():
             stub = not (':' in name)
-            self.rewrites[name] = RewriteState(sequence, self, (t_start, t_end), equiv, rule, lhs, rhs, lhs_match, rhs_match, stub)
+            self.rewrites[name] = RewriteState(sequence, self, (t_start, t_end), equiv, tactic, tactic_args, lhs, rhs, lhs_match, rhs_match, stub)
 
     def part_with_index_at(self, pos: int) -> Optional[Tuple[int, Tuple[int,int,str,str]]]:
         p0 = (0, self.parts[0]) if len(self.parts) >= 1 else None

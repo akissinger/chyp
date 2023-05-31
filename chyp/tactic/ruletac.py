@@ -15,20 +15,20 @@
 
 from __future__ import annotations
 from typing import Iterator
-from typing_extensions import override
 
 from ..graph import Graph
 from . import Tactic
 
 
 class RuleTac(Tactic):
-    @override
+    def name(self) -> str:
+        return 'rule'
+
     def make_rhs(self) -> Iterator[Graph]:
         if len(self.args) == 0: raise StopIteration()
         for _, m_rhs in self.rewrite_lhs(self.args[0]):
             yield m_rhs.cod
 
-    @override
     def check(self) -> None:
         if len(self.args) == 0:
             return
