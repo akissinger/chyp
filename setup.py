@@ -10,7 +10,7 @@ data_files = []
 
 setuptools.setup(
     name="chyp",
-    version="0.4.2",
+    version="0.5",
     author="Aleks Kissinger",
     author_email="aleks0@gmail.com",
     description="An interactive theorem prover for string diagrams",
