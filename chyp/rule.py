@@ -34,16 +34,16 @@ class Rule:
         self.name = name
         self.equiv = equiv
 
-    def converse(self) -> Optional[Rule]:
-        if self.equiv:
-            if self.name.startswith('-'):
-                name = self.name[1:]
-            else:
-                name = '-' + self.name
+    def copy(self) -> Rule:
+        return Rule(self.lhs.copy(), self.rhs.copy(), self.name, self.equiv)
 
-            return Rule(self.rhs.copy(), self.lhs.copy(), name, True)
+    def converse(self) -> Rule:
+        if self.name.startswith('-'):
+            name = self.name[1:]
         else:
-            return None
+            name = '-' + self.name
+
+        return Rule(self.rhs.copy(), self.lhs.copy(), name, True)
 
     def is_left_linear(self) -> bool:
         """Returns True if boundary on lhs embeds injectively"""

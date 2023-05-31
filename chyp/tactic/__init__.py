@@ -52,38 +52,45 @@ class Tactic:
     #     else:
     #         return False
 
-    def lookup_rule(self, rule_expr: str) -> Optional[Rule]:
+    def lookup_rule(self, rule_expr: str) -> Tuple[Optional[Rule],bool]:
         m = RULE_NAME_RE.match(rule_expr)
-        if not m: return None
+        if not m: return (None, False)
         converse = m.group(1) == '-'
         rule_name = m.group(2)
         if rule_name in self._state.rule_sequence and self._state.rule_sequence[rule_name] <= self._local_state.sequence:
             rule = self._state.rules[rule_name]
-            return rule.converse() if converse else rule
+            if converse:
+                return (rule.converse(), True)
+            else:
+                return (rule.copy(), False)
         else:
+            return (None, False)
+
+    def rewrite_lhs(self, rule_expr: str) -> Iterator[Tuple[Match,Match]]:
+        if not self._goal_lhs: return None
+        rule, converse = self.lookup_rule(rule_expr)
+        if not rule: return None
+        if converse and not rule.equiv:
             return None
 
-    def rewrite_lhs(self, rule_expr: str, converse: bool=False) -> Iterator[Tuple[Match,Match]]:
-        if not self._goal_lhs: return None
-        rule = self.lookup_rule(rule_expr)
-        if not rule: return None
-        if converse and not rule.equiv: return None
+        for m_g in match_rule(rule, self._goal_lhs):
+            for m_h in dpo(rule, m_g):
+                self._goal_lhs = m_h.cod.copy()
+                yield (m_g, m_h)
 
-        for m_lhs in match_rule(rule, self._goal_lhs):
-            for m_rhs in dpo(rule, m_lhs):
-                self._goal_lhs = m_rhs.cod.copy()
-                yield (m_lhs, m_rhs)
 
-    def rewrite_rhs(self, rule_expr: str, converse: bool=False) -> Iterator[Tuple[Match,Match]]:
+    def rewrite_rhs(self, rule_expr: str) -> Iterator[Tuple[Match,Match]]:
         if not self._goal_rhs: return None
-        rule = self.lookup_rule(rule_expr)
+        rule, converse = self.lookup_rule(rule_expr)
         if not rule: return None
-        if not converse and not rule.equiv: return None
+        if not converse and not rule.equiv:
+            return None
 
-        for m_lhs in match_rule(rule, self._goal_rhs):
-            for m_rhs in dpo(rule, m_lhs):
-                self._goal_rhs = m_rhs.cod.copy()
-                yield (m_lhs, m_rhs)
+        for m_g in match_rule(rule, self._goal_rhs):
+            for m_h in dpo(rule, m_g):
+                self._goal_rhs = m_h.cod.copy()
+                yield (m_g, m_h)
+
 
     def validate_goal(self) -> Optional[Match]:
         if not self._goal_lhs or not self._goal_rhs: return None
