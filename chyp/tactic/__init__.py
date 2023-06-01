@@ -35,11 +35,14 @@ class Tactic:
         self.__state = local_state.state
         self.__goal_lhs: Optional[Graph] = None
         self.__goal_rhs: Optional[Graph] = None
+        self.__errors: Set[str] = set()
         # self.__goal_stack: List[Tuple[Graph,Graph]] = []
         self.args = args
 
     def error(self, message: str) -> None:
-        self.__state.errors.append((self.__state.file_name, self.__local_state.line_number, message))
+        if not message in self.__errors:
+            self.__state.errors.append((self.__state.file_name, self.__local_state.line_number, message))
+            self.__errors.add(message)
 
     def has_goal(self) -> bool:
         return self.__goal_lhs is not None and self.__goal_rhs is not None
@@ -144,6 +147,7 @@ class Tactic:
             self.__local_state.rhs.highlight(vertices, edges)
 
     def __reset(self) -> None:
+        self.__errors.clear()
         self.__goal_lhs = self.__local_state.lhs.copy() if self.__local_state.lhs else None
         self.__goal_rhs = self.__local_state.rhs.copy() if self.__local_state.rhs else None
         # self.__goal_stack = []
