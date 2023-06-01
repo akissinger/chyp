@@ -39,6 +39,7 @@ class RewriteState:
     def __init__(self,
                  sequence: int,
                  state: State,
+                 line_number: int = 0,
                  term_pos: Tuple[int,int] = (0,0),
                  equiv: bool=True,
                  tactic: str='',
@@ -56,6 +57,7 @@ class RewriteState:
 
         self.state = state
         self.status = RewriteState.UNCHECKED
+        self.line_number = line_number
         self.term_pos = term_pos
         self.equiv = equiv
         self.lhs = lhs
@@ -319,11 +321,12 @@ class State(lark.Transformer):
 
             last_i = len(rw_parts)-1
             for i, rw_part in enumerate(rw_parts):
-                end, t_start, t_end, equiv, tactic, tactic_args, rhs = rw_part
+                line_number, end, t_start, t_end, equiv, tactic, tactic_args, rhs = rw_part
                 all_equiv = all_equiv and equiv
                 self.rewrites[name + ":" + str(i)] = RewriteState(
                         self.sequence,
                         self,
+                        line_number,
                         (t_start, t_end),
                         equiv,
                         tactic, tactic_args,
@@ -360,7 +363,7 @@ class State(lark.Transformer):
                     self.errors.append((self.file_name, meta.line, str(e)))
 
     @v_args(meta=True)
-    def rewrite_part(self, meta: Meta, items: List[Any]) -> Tuple[int, int, int, bool, str, List[str], Optional[Graph]]:
+    def rewrite_part(self, meta: Meta, items: List[Any]) -> Tuple[int, int, int, int, bool, str, List[str], Optional[Graph]]:
         equiv = items[0]
         t_start,t_end,rhs = items[1]
         if items[2]:
@@ -376,7 +379,7 @@ class State(lark.Transformer):
         # if equiv and rule and not rule.equiv:
         #     rule = None
 
-        return (meta.end_pos, t_start, t_end, equiv, tactic, tactic_args, rhs)
+        return (meta.line, meta.end_pos, t_start, t_end, equiv, tactic, tactic_args, rhs)
 
     def tactic(self, items: List[Any]) -> Tuple[str, List[str]]:
         if len(items) >= 2 and str(items[1]) == "(": #)

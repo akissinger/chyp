@@ -88,6 +88,7 @@ def parse(code: str='', file_name: str='', namespace: str='', parent: Optional[s
     if parent:
         parse_data.graphs = parent.graphs
         parse_data.rules = parent.rules
+        parse_data.rewrites = parent.rewrites
         parse_data.errors = parent.errors
         parse_data.rule_sequence = parent.rule_sequence
         parse_data.sequence = parent.sequence

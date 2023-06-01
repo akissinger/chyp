@@ -38,6 +38,9 @@ class Tactic:
         # self.__goal_stack: List[Tuple[Graph,Graph]] = []
         self.args = args
 
+    def error(self, message: str) -> None:
+        self.__state.errors.append((self.__state.file_name, self.__local_state.line_number, message))
+
     def has_goal(self) -> bool:
         return self.__goal_lhs is not None and self.__goal_rhs is not None
 
@@ -54,23 +57,32 @@ class Tactic:
 
     def lookup_rule(self, rule_expr: str) -> Tuple[Optional[Rule],bool]:
         m = RULE_NAME_RE.match(rule_expr)
-        if not m: return (None, False)
+        if not m:
+            self.error('Bad rule expression: ' + rule_expr)
+            return (None, False)
         converse = m.group(1) == '-'
         rule_name = m.group(2)
-        if rule_name in self.__state.rule_sequence and self.__state.rule_sequence[rule_name] <= self.__local_state.sequence:
-            rule = self.__state.rules[rule_name]
-            if converse:
-                return (rule.converse(), True)
-            else:
-                return (rule.copy(), False)
-        else:
+
+        if not rule_name in self.__state.rule_sequence:
+            self.error(f'Rule {rule_name} not defined.')
             return (None, False)
+
+        if self.__state.rule_sequence[rule_name] > self.__local_state.sequence:
+            self.error(f'Attempting to use rule {rule_name} before it is defined/proven.')
+            return (None, False)
+
+        rule = self.__state.rules[rule_name]
+        if converse:
+            return (rule.converse(), True)
+        else:
+            return (rule.copy(), False)
 
     def rewrite_lhs(self, rule_expr: str) -> Iterator[Tuple[Match,Match]]:
         if not self.__goal_lhs: return None
         rule, converse = self.lookup_rule(rule_expr)
         if not rule: return None
         if converse and not rule.equiv:
+            self.error(f'Attempting to use converse of rule {rule_expr} without proof.')
             return None
 
         for m_g in match_rule(rule, self.__goal_lhs):
@@ -83,6 +95,7 @@ class Tactic:
         rule, converse = self.lookup_rule(rule_expr)
         if not rule: return None
         if not converse and not rule.equiv:
+            self.error(f'Attempting to use converse of rule {rule_expr} without proof.')
             return None
 
         for m_g in match_rule(rule, self.__goal_rhs):
