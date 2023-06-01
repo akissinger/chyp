@@ -19,6 +19,8 @@ from PySide6.QtCore import QByteArray, QFileInfo, QObject, QThread, QTimer, Qt, 
 from PySide6.QtGui import QTextCursor
 from PySide6.QtWidgets import QHBoxLayout, QSplitter, QTreeView, QVBoxLayout, QWidget
 
+from chyp.parser import parse
+
 from ..layout import convex_layout
 from ..graph import Graph
 from ..state import RewriteState, State
@@ -272,10 +274,9 @@ class Editor(QWidget):
             self.next_rewrite_at_cursor()
 
     def update_state(self) -> None:
-        self.state = State()
+        self.state = parse(self.doc.toPlainText(), self.doc.file_name)
         self.code_view.set_current_region(None)
         
-        self.state.update(self.doc.toPlainText(), self.doc.file_name)
         model = self.error_view.model()
         if isinstance(model, ErrorListModel):
             model.set_errors(self.state.errors)

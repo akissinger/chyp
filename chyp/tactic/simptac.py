@@ -27,7 +27,7 @@ class SimpTac(Tactic):
     def name(self) -> str:
         return 'simp'
 
-    def __repeat(self, rw: Callable[[str], bool]):
+    def __repeat(self, rw: Callable[[str], bool]) -> None:
         got_match = True
         i = 0
         while got_match and i < SimpTac.MAX_DEPTH:
