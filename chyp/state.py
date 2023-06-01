@@ -43,23 +43,26 @@ class RewriteState:
                  lhs_match: Optional[Graph]=None,
                  rhs_match: Optional[Graph]=None,
                  stub: bool=False) -> None:
+
         # store an integer representing my current location. This prevents cyclic dependencies of
         # rules used inside of tactics. TODO: this doesn't work quite right for <= rules, since it
         # doesn't store the location of the rule *and* its converse being proved.
         self.sequence = sequence
+
         self.state = state
         self.status = RewriteState.UNCHECKED
         self.term_pos = term_pos
         self.equiv = equiv
-        # self.rule = rule
         self.lhs = lhs
         self.rhs = rhs
         self.lhs_match = lhs_match
         self.rhs_match = rhs_match
 
         tactic_args = [] if tactic_args is None else tactic_args
+
+        self.tactic : Tactic
         if tactic == 'rule':
-            self.tactic: Tactic = RuleTac(self, tactic_args)
+            self.tactic = RuleTac(self, tactic_args)
         elif tactic == 'simp':
             self.tactic = SimpTac(self, tactic_args)
         else:
@@ -68,35 +71,6 @@ class RewriteState:
 
     def check(self) -> None:
         self.tactic.run_check()
-        # if self.rule and self.lhs and self.rhs:
-        #     # check for any constraints on the LHS and RHS first
-        #     if self.lhs_match and not find_iso(self.lhs, self.lhs_match):
-        #         self.status = RewriteState.INVALID
-        #     if self.rhs_match and not find_iso(self.rhs, self.rhs_match):
-        #         self.status = RewriteState.INVALID
-
-        #     # if all LHS/RHS constraints are satisfied, try to prove the rule step by rewriting
-        #     if self.status == RewriteState.CHECKING:
-        #         for m_lhs in match_rule(self.rule, self.lhs):
-        #             for m_rhs in dpo(self.rule, m_lhs):
-        #                 iso = find_iso(m_rhs.cod, self.rhs)
-        #                 if iso:
-        #                     self.status = RewriteState.VALID
-
-        #                     for v in m_lhs.dom.vertices():
-        #                         self.lhs.vertex_data(m_lhs.vmap[v]).highlight = True
-        #                     for e in m_lhs.dom.edges():
-        #                         self.lhs.edge_data(m_lhs.emap[e]).highlight = True
-
-        #                     for v in m_rhs.dom.vertices():
-        #                         self.rhs.vertex_data(iso.vmap[m_rhs.vmap[v]]).highlight = True
-        #                     for e in m_rhs.dom.edges():
-        #                         self.rhs.edge_data(iso.emap[m_rhs.emap[e]]).highlight = True
-
-        #                     break
-
-        # if self.status != RewriteState.VALID:
-        #     self.status = RewriteState.INVALID
 
 class State:
     def __init__(self) -> None:

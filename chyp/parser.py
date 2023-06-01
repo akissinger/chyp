@@ -73,8 +73,6 @@ GRAMMAR = Lark("""
     maybe_placeholders=True)
 
 
-source_cache: Dict[str, Tuple[float,str]] = dict()
-
 class ChypParseData(Transformer):
     def __init__(self, namespace: str, file_name: str) -> None:
         self.namespace = namespace
@@ -91,7 +89,7 @@ class ChypParseData(Transformer):
         self.errors: List[Tuple[str, int, str]] = list()
         self.parts: List[Tuple[int, int, str, str]] = list()
         self.parsed = False
-    
+
     # def start(self, items: List[List[Tuple[int,int,str,str]]]):
     #     pass
         
