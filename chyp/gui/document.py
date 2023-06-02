@@ -17,7 +17,7 @@ from __future__ import annotations
 from typing import List
 from PySide6.QtCore import QDir, QFileInfo, QSettings, Signal
 from PySide6.QtGui import QFont, QTextDocument
-from PySide6.QtWidgets import QFileDialog, QMessageBox, QPlainTextDocumentLayout, QWidget
+from PySide6.QtWidgets import QFileDialog, QMessageBox, QWidget
 
 from .highlighter import ChypHighlighter
 
