@@ -108,8 +108,9 @@ class Editor(QWidget):
     def invalidate_text(self) -> None:
         # cur = self.code_view.textCursor()
         # fmt = cur.blockFormat()
-        # if fmt.indent() != 1:
-        #     fmt.setIndent(1)
+        # if fmt.textIndent() != -50 or fmt.leftMargin() != 50:
+        #     fmt.setTextIndent(-50)
+        #     fmt.setLeftMargin(50)
         #     self.code_view.blockSignals(True)
         #     cur.setBlockFormat(fmt)
         #     self.code_view.blockSignals(False)

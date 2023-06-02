@@ -15,7 +15,7 @@
 
 from typing import Optional, Tuple
 import re
-from PySide6.QtGui import QColor, QSyntaxHighlighter, QTextDocument
+from PySide6.QtGui import QColor, QSyntaxHighlighter, QTextBlockFormat, QTextCursor, QTextDocument
 
 from .colors import current_theme
 

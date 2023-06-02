@@ -16,7 +16,7 @@
 from __future__ import annotations
 from typing import List
 from PySide6.QtCore import QDir, QFileInfo, QSettings, Signal
-from PySide6.QtGui import QFont, QTextDocument
+from PySide6.QtGui import QFont, QTextBlockFormat, QTextDocument
 from PySide6.QtWidgets import QFileDialog, QMessageBox, QWidget
 
 from .highlighter import ChypHighlighter
@@ -32,6 +32,12 @@ class ChypDocument(QTextDocument):
         # self.setDocumentLayout(QPlainTextDocumentLayout(self))
         self.highlighter = ChypHighlighter(self)
         self.file_name = ''
+        # cur = self.rootFrame().firstCursorPosition()
+        # bf = QTextBlockFormat()
+        # bf.setLeftMargin(50)
+        # bf.setTextIndent(-50)
+        # cur.mergeBlockFormat(bf)
+        
         
     def confirm_close(self) -> bool:
         if self.isModified():
@@ -67,6 +73,7 @@ class ChypDocument(QTextDocument):
         self.file_name = file_name
         with open(file_name) as f:
             self.setPlainText(f.read())
+
         self.add_to_recent_files(self.file_name)
         self.setModified(False)
         self.fileNameChanged.emit()

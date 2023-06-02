@@ -369,7 +369,7 @@ class State(lark.Transformer):
         if items[2]:
             tactic, tactic_args = items[2]
         else:
-            tactic, tactic_args = ("rule", ["refl"])
+            tactic, tactic_args = ("refl", [])
 
         # converse = True if items[2] else False
 

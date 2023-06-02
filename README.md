@@ -118,13 +118,7 @@ By default, Chyp tries to apply rules from left to right. We can apply a rule in
 
 The golden rule of Chyp is that _only connectivity matters_. So, if two terms give the same diagram, like `a * b ; c * d` and `(a ; c) * (b ; d)`, Chyp treats them as identical. Since under the hood, Chyp does everything with graph rewriting and not term rewriting, the prover handles all of this extra book-keeping for you.
 
-Sometimes it can be helpful for readability to do a trivial proof step that does nothing but write the same string diagram differently. There is a special rule called `refl` (for reflexivity) for this. For example:
-
-    rewrite foo :
-      a * b ; c * d
-      = (a ; c) * (b ; d) by refl
-
-Formally, `refl` is defined as `id0 = id0`, i.e. the empty graph equals itself, which always matches exactly once on any graph. If we drop the `by` clause, Chyp automatically assumes `by refl`, so the following is equivalent:
+Sometimes it can be helpful for readability to do a trivial proof step that does nothing but write the same string diagram differently. We can do this just by dropping the `by` clause in a proof step:
 
     rewrite foo :
       a * b ; c * d
@@ -171,6 +165,40 @@ Then press `CTRL+N`, followed by `CTRL+SHIFT+Enter` 3 times, and Chyp will compu
       = g * g * g ; id * id * id * sw * id ; id * g * f * g * g ; sw * sw * id * sw * id ; id * f * id * f * f ; sw * sw * id ; id * f * f by bialg
 
 How to we know it's a normal form? Pressing `CTRL+SHIFT+Enter` one more time will result in a red line that reads `  = ? by bialg`, which means Chyp wasn't able to find any more matchings of the `bialg` rule.
+
+## Tactics
+
+Tactics are the bread and butter of interactive theorem provers. These are routines that can be called to try to solve a given goal. In Chyp, a goal corresponds to a single proof step `LHS = RHS`. Chyp has three built in tactics: `refl`, `rule`, and `simp`. If you've been following along, you've actually been using the first two already.
+
+`refl`, which stands for "reflexivity of `=`", simply tries to prove `LHS` and `RHS` represent the same diagram, i.e. they are isomorphic cospans of hypergraphs. When you write a rewrite step without providing a rule, it is actually shorthand for applying the `refl` tactic. For example:
+
+    rewrite foo :
+      a * b ; c * d
+      = (a ; c) * (b ; d)
+
+is actually shorthand for:
+
+    rewrite foo :
+      a * b ; c * d
+      = (a ; c) * (b ; d) by refl()
+
+The `rule` tactic applies the given rewrite rule to the `LHS` in every possible way until it produces `RHS` (or fails). When you just provide a rule name `R` after `by`, this is shorthand for `by rule(R)`.
+
+Finally, and most interestingly, the `simp` tactic applies a list of given rules as much as possible to both the `LHS` and `RHS` then compares the resulting diagrams. It could be the case that the given set of rules is non-terminating (i.e. they can be applied forever without reaching a normal form), in which case `simp` gives up after 256 rule applications.
+
+This can be very useful if the set of rules provided actually yields unique normal forms. For example, the monoid laws:
+
+    gen u : 0 -> 1
+    gen m : 2 -> 1
+    rule unitL : u * id ; m = id
+    rule unitR : id * u ; m = id
+    rule assoc : m * id ; m = id * m ; m
+    
+always yield unique normal forms. so, we can prove any true equation involving a monoid in a single step using `simp`, e.g.
+
+    rewrite random_monoid_eq :
+      id * u * u * id ; m * m ; m
+      = id * u * id ; id * m ; m by simp(unitL, unitR, assoc)
 
 
 # Modules and importing
