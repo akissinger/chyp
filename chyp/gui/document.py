@@ -29,7 +29,7 @@ class ChypDocument(QTextDocument):
         super().__init__(parent)
         self.parent_widget = parent
         self.setDefaultFont(QFont("monospace", 14))
-        self.setDocumentLayout(QPlainTextDocumentLayout(self))
+        # self.setDocumentLayout(QPlainTextDocumentLayout(self))
         self.highlighter = ChypHighlighter(self)
         self.file_name = ''
         

@@ -13,22 +13,21 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from sys import prefix
 from typing import Iterable, Optional, Tuple
 import re
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QKeyEvent, QTextCursor
-from PySide6.QtWidgets import QCompleter, QPlainTextEdit
+from PySide6.QtWidgets import QCompleter, QTextEdit
 
 from .completion import CodeCompletionModel
 from .document import ChypDocument
 from .highlighter import BG, FG, NO_STATUS
 
 
-class CodeView(QPlainTextEdit):
+class CodeView(QTextEdit):
     def __init__(self) -> None:
         super().__init__()
-        self.setStyleSheet("QPlainTextEdit {background-color: %s; color: %s}" % (BG, FG))
+        self.setStyleSheet("QTextEdit {background-color: %s; color: %s}" % (BG, FG))
         self.completer = QCompleter(self)
         self.completer.setCompletionMode(QCompleter.CompletionMode.PopupCompletion)
         self.completer.setCaseSensitivity(Qt.CaseSensitivity.CaseSensitive)

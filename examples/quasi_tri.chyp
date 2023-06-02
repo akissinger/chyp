@@ -42,6 +42,7 @@ rewrite rL_comm :
   = id * sw * id ; m * m ; rL by simp(assoc, rL_unfold)
 
 
+
 # r(L/R) and ri(L/R) are mutually inverse:
 rewrite rL_riL :
   rL ; riL

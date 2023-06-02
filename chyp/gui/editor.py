@@ -106,6 +106,13 @@ class Editor(QWidget):
         self.code_view.setTextCursor(cursor)
 
     def invalidate_text(self) -> None:
+        # cur = self.code_view.textCursor()
+        # fmt = cur.blockFormat()
+        # if fmt.indent() != 1:
+        #     fmt.setIndent(1)
+        #     self.code_view.blockSignals(True)
+        #     cur.setBlockFormat(fmt)
+        #     self.code_view.blockSignals(False)
         self.parsed = False
         self.current_part = -1
         self.graph_cache = dict()
