@@ -17,14 +17,14 @@ from typing import Iterable, Optional, Tuple
 import re
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QKeyEvent, QTextCursor
-from PySide6.QtWidgets import QCompleter, QTextEdit
+from PySide6.QtWidgets import QCompleter, QPlainTextEdit
 
 from .completion import CodeCompletionModel
 from .document import ChypDocument
 from .highlighter import BG, FG, NO_STATUS
 
 
-class CodeView(QTextEdit):
+class CodeView(QPlainTextEdit):
     def __init__(self) -> None:
         super().__init__()
         self.setStyleSheet("QTextEdit {background-color: %s; color: %s}" % (BG, FG))
@@ -34,7 +34,6 @@ class CodeView(QTextEdit):
         self.completer.setModelSorting(QCompleter.ModelSorting.CaseSensitivelySortedModel)
         self.completer.setWidget(self)
         self.completion_model = CodeCompletionModel(self.completer)
-        # self.completion_model.set_completions(["foo", "bar", "baz"])
         self.completer.setModel(self.completion_model)
         self.completer.activated.connect(self.insert_completion)
 

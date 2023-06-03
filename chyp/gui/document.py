@@ -16,10 +16,32 @@
 from __future__ import annotations
 from typing import List
 from PySide6.QtCore import QDir, QFileInfo, QSettings, Signal
-from PySide6.QtGui import QFont, QTextBlockFormat, QTextDocument
-from PySide6.QtWidgets import QFileDialog, QMessageBox, QWidget
+from PySide6.QtGui import QFont, QTextDocument
+from PySide6.QtWidgets import QFileDialog, QMessageBox, QPlainTextDocumentLayout, QWidget
 
 from .highlighter import ChypHighlighter
+
+# class ChypDocumentLayout(QPlainTextDocumentLayout):
+#     def ensureBlockLayout(self, block: QTextBlock) -> None:
+#         if block.isValid() and block.layout().lineCount() == 0:
+#             self.layout_block(block)
+#         return super().ensureBlockLayout(block)
+
+#     def blockBoundingRect(self, block: QTextBlock) -> QRectF:
+#         if block.isValid():
+#             self.layout_block(block)
+#         return super().blockBoundingRect(block)
+
+#     def documentChanged(self, from_pos: int, to_pos: int, chars_added: int) -> None:
+#         super().documentChanged(from_pos, to_pos, chars_added)
+#         start_block = self.document().findBlock(from_pos)
+#         end_block = self.document().findBlock(to_pos)
+#         if start_block == end_block:
+#             self.layout_block(start_block)
+
+#     def layout_block(self, block: QTextBlock):
+#         print("layout block")
+
 
 class ChypDocument(QTextDocument):
     fileNameChanged = Signal()
@@ -29,15 +51,9 @@ class ChypDocument(QTextDocument):
         super().__init__(parent)
         self.parent_widget = parent
         self.setDefaultFont(QFont("monospace", 14))
-        # self.setDocumentLayout(QPlainTextDocumentLayout(self))
+        self.setDocumentLayout(QPlainTextDocumentLayout(self))
         self.highlighter = ChypHighlighter(self)
         self.file_name = ''
-        # cur = self.rootFrame().firstCursorPosition()
-        # bf = QTextBlockFormat()
-        # bf.setLeftMargin(50)
-        # bf.setTextIndent(-50)
-        # cur.mergeBlockFormat(bf)
-        
         
     def confirm_close(self) -> bool:
         if self.isModified():
