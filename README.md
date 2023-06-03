@@ -195,7 +195,7 @@ is actually shorthand for:
 
 Finally, the `simp` tactic applies a list of given rules as much as possible to both the `LHS` and `RHS` then compares the resulting diagrams. It could be the case that the given set of rules is non-terminating (i.e. they can be applied forever without reaching a normal form), in which case `simp` gives up after 256 rule applications.
 
-This can be very useful if the set of rules provided actually yields unique normal forms. For example, the monoid laws:
+This can be very useful if the set of rules provided actually yields unique normal forms, or in rewriting lingo the rules are [confluent and terminating](https://en.wikipedia.org/wiki/Rewriting). For example, the monoid laws:
 
     gen u : 0 -> 1
     gen m : 2 -> 1
@@ -203,11 +203,13 @@ This can be very useful if the set of rules provided actually yields unique norm
     rule unitR : id * u ; m = id
     rule assoc : m * id ; m = id * m ; m
     
-always yield unique normal forms. so, we can prove any true equation involving a monoid in a single step using `simp`, e.g.
+always yield unique normal forms. So, we can prove any true equation involving a monoid in a single step using `simp`, e.g.
 
     rewrite random_monoid_eq :
       id * u * u * id ; m * m ; m
       = id * u * id ; id * m ; m by simp(unitL, unitR, assoc)
+
+However, the beauty of interactive theorem provers is that sets of rules don't actually have to be that nice to benefit from automated tactics like `simp`, as long as they get a bit of help from a human when they get stuck.
 
 These three tactics are all implemented in the `chyp.tactic` module. [Tactic](https://github.com/akissinger/chyp/blob/master/chyp/tactic/__init__.py) implements `refl`, and the other tactics are implemented as subclasses of `Tactic` that should override the `check` method, which tries to close the current goal, and the `make_rhs` method, which returns an iterator over possible terms to fill in a hole `?`. Thanks to the API exposed by `Tactic`, the two tactics [RuleTac](https://github.com/akissinger/chyp/blob/master/chyp/tactic/ruletac.py) and [SimpTac](https://github.com/akissinger/chyp/blob/master/chyp/tactic/simptac.py) are very simple, and it shouldn't be too hard to implement more.
 
