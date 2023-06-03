@@ -182,9 +182,18 @@ is actually shorthand for:
       a * b ; c * d
       = (a ; c) * (b ; d) by refl()
 
-The `rule` tactic applies the given rewrite rule to the `LHS` in every possible way until it produces `RHS` (or fails). When you just provide a rule name `R` after `by`, this is shorthand for `by rule(R)`.
+Note the parentheses tell Chyp that this is a tactic and not a rule name. They are empty because `refl` takes zero arguments.
 
-Finally, and most interestingly, the `simp` tactic applies a list of given rules as much as possible to both the `LHS` and `RHS` then compares the resulting diagrams. It could be the case that the given set of rules is non-terminating (i.e. they can be applied forever without reaching a normal form), in which case `simp` gives up after 256 rule applications.
+The `rule` tactic applies the given rewrite rule to the `LHS` in every possible way until it produces `RHS` (or fails). Most of the rewrites we have done so far have used the rule tactic, which can be applied either explicitly or implicitly just by giving a rule name. Namely, for a rule `R`, writing:
+
+    rewrite foo : lhs = rhs by R
+
+is actually shorthand for:
+
+    rewrite foo : lhs = rhs by rule(R)
+
+
+Finally, the `simp` tactic applies a list of given rules as much as possible to both the `LHS` and `RHS` then compares the resulting diagrams. It could be the case that the given set of rules is non-terminating (i.e. they can be applied forever without reaching a normal form), in which case `simp` gives up after 256 rule applications.
 
 This can be very useful if the set of rules provided actually yields unique normal forms. For example, the monoid laws:
 
@@ -200,6 +209,9 @@ always yield unique normal forms. so, we can prove any true equation involving a
       id * u * u * id ; m * m ; m
       = id * u * id ; id * m ; m by simp(unitL, unitR, assoc)
 
+These three tactics are all implemented in the `chyp.tactic` module. [Tactic](https://github.com/akissinger/chyp/blob/master/chyp/tactic/__init__.py) implements `refl`, and the other tactics are implemented as subclasses of `Tactic` that should override the `check` method, which tries to close the current goal, and the `make_rhs` method, which returns an iterator over possible terms to fill in a hole `?`. Thanks to the API exposed by `Tactic`, the two tactics [RuleTac](https://github.com/akissinger/chyp/blob/master/chyp/tactic/ruletac.py) and [SimpTac](https://github.com/akissinger/chyp/blob/master/chyp/tactic/simptac.py) are very simple, and it shouldn't be too hard to implement more.
+
+In theory, if tactics only interact with the current goal via the public methods exposed by `Tactic`, it shouldn't be possible to prove anything that is not true. While this doesn't provide strong guarantees of soundness, like in the case of [LCF](https://en.wikipedia.org/wiki/Logic_for_Computable_Functions)-style theorem provers, it does attempt to provide some degree of assurance that (possibly very complex) tactics won't prove untrue statements.
 
 # Modules and importing
 
