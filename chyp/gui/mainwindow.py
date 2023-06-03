@@ -16,7 +16,7 @@
 from __future__ import annotations
 from typing import Callable, List, Optional
 from PySide6.QtCore import QByteArray, QDir, QFileInfo, QSettings, Qt
-from PySide6.QtGui import QActionGroup, QCloseEvent, QKeySequence
+from PySide6.QtGui import QActionGroup, QCloseEvent, QKeySequence, QTextCursor
 from PySide6.QtWidgets import QApplication, QFileDialog, QMainWindow, QMenuBar, QMessageBox, QTabWidget, QVBoxLayout, QWidget
 
 from .editor import Editor
@@ -147,7 +147,7 @@ class MainWindow(QMainWindow):
         editor = Editor()
         self.add_tab(editor, "Untitled")
 
-    def open(self, file_name: str='') -> None:
+    def open(self, file_name: str='', line_number: int=-1) -> None:
         conf = QSettings('chyp', 'chyp')
 
         # if no file name provided, show open dialog
@@ -159,23 +159,31 @@ class MainWindow(QMainWindow):
                                                        last_dir,
                                                        'chyp files (*.chyp)')
 
+        editor: Optional[Editor] = None
+
         # if file is already open, just focus the tab
         for i in range(self.tabs.count()):
             w = self.tabs.widget(i)
             if isinstance(w, Editor) and w.doc.file_name == file_name:
+                editor = w
                 self.tabs.setCurrentWidget(w)
-                return
 
-        try:
-            editor = Editor()
-            editor.doc.open(file_name)
-            conf.setValue('last_dir', QFileInfo(file_name).absolutePath())
-            self.remove_empty_editor()
-            self.update_recent_files()
-            editor.doc.fileNameChanged.connect(self.update_file_name)
-            self.add_tab(editor, editor.title())
-        except FileNotFoundError:
-            QMessageBox.warning(self, "File not found", "File not found: " + file_name)
+        if not editor:
+            try:
+                editor = Editor()
+                editor.doc.open(file_name)
+                conf.setValue('last_dir', QFileInfo(file_name).absolutePath())
+                self.remove_empty_editor()
+                self.update_recent_files()
+                editor.doc.fileNameChanged.connect(self.update_file_name)
+                self.add_tab(editor, editor.title())
+            except FileNotFoundError:
+                QMessageBox.warning(self, "File not found", "File not found: " + file_name)
+
+        if editor and line_number != -1:
+            cur = QTextCursor(editor.code_view.document().findBlockByNumber(line_number - 1))
+            editor.code_view.moveCursor(QTextCursor.MoveOperation.End)
+            editor.code_view.setTextCursor(cur)
 
 
     def save(self) -> None:

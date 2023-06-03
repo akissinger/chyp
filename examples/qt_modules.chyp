@@ -57,7 +57,7 @@ rewrite yb_mod_lem2 :
 rewrite yang_baxter_mod :
   id * br_ab ; br_ac * id ; id * br_bc
   = sw[2, 1, 0] ; H.yb2 * id * id * id ; id * sw[2, 0, 3, 1] * id ; a * b * c by -yb_mod_lem2
-  = sw[2, 1, 0] ; H.yb1 * id * id * id ; id * sw[2, 0, 3, 1] * id ; a * b * c by -H.yang_baxter
+  = sw[2, 1, 0] ; H.yb1 * id * id * id ; id * sw[2, 0, 3, 1] * id ; a * b * c by -H.yang_baxter_state
   = sw * id ; rL_bc * id ; id * sw ; id * rL_ac ; sw * id ; rL_ab * id by yb_mod_lem1
   = br_bc * id ; id * br_ac ; br_ab * id
 

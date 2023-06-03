@@ -98,24 +98,23 @@ rewrite yb2_simp :
   = r ; n * id ; sw * id ; rR * id by -qtL
 
 # now we can prove the Yang Baxter rule, in "state" form
-rewrite yang_baxter :
+rewrite yang_baxter_state :
   yb1
   = r ; n * id ; rL * id by yb1_simp
   = r ; n * id ; sw * id ; rR * id by n_rL
   = yb2 by -yb2_simp
 
-show yang_baxter
 
 # Now prove that this holds for the map familiar "map" form the yang-baxter equations, by simplifying the left action of yb1:
 
 
 # chaining these proofs together gives us a proof of the map form of the Yang Baxter equation:
-rewrite yang_baxter_map :
+rewrite yang_baxter :
   br * id ; id * br ; br * id
   = sw[1, 2, 0] ; yb1 * id * id * id ; id * id * id * sw * id ; m3 by -yb1_act
   = sw[1, 2, 0] ; yb2 * id * id * id ; id * id * id * sw * id ; m3 by yang_baxter
   = id * br ; br * id ; id * br by yb2_act
 
-show yang_baxter_map
+show yang_baxter
 
 
