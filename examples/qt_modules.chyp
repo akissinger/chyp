@@ -32,15 +32,17 @@ let br_ac = sw ; rL_ac
 # pair of modules, giving the following commutativity laws:
 rewrite rL_ab_comm :
   rL * id * id ; id * sw * id ; a * b
-  = id * sw * id ; a * b ; rL_ab by simp(H.rL_unfold, A.assoc, B.assoc, rL_ab_def)
+  = id * sw * id ; a * b ; rL_ab by simp(H.rL_def, H.m2_def, A.assoc, B.assoc, rL_ab_def)
 
 rewrite rL_bc_comm :
   rL * id * id ; id * sw * id ; b * c
-  = id * sw * id ; b * c ; rL_bc by simp(H.rL_unfold, B.assoc, C.assoc, rL_bc_def)
+  = id * sw * id ; b * c ; rL_bc by simp(H.rL_def, H.m2_def, B.assoc, C.assoc, rL_bc_def)
+
+show H.rL_def 
 
 rewrite rL_ac_comm :
   rL * id * id ; id * sw * id ; a * c
-  = id * sw * id ; a * c ; rL_ac by simp(H.rL_unfold, A.assoc, C.assoc, rL_ac_def)
+  = id * sw * id ; a * c ; rL_ac by simp(H.rL_def, H.m2_def, A.assoc, C.assoc, rL_ac_def)
 
 # From this, it is enough to show that acting on A (X) B (X) C by the Yang-Baxtor state defined in 'quasi_tri' yields the LHS
 # and RHS of the module version of the Yang-Baxter equation:

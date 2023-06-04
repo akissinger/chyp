@@ -25,21 +25,11 @@ rule qtR : r ; id * n = r ; id * r * id ; m * id * id
 
 ###########################################################################
 
-# We'll introduce some extra rules the let us (un)fold rL and rR in one step:
-rewrite rL_unfold :
-  rL
-  = r * id * id ; m2 by rL_def
-  = r * id * id ; id * sw * id ; m * m by m2_def
-
-rewrite rR_unfold :
-  rR
-  = id * id * r ; m2 by rR_def
-  = id * r * id ; id * id * sw ; m * m by m2_def
 
 # and commute with m2
 rewrite rL_comm :
   rL * id * id ; id * sw * id ; m * m
-  = id * sw * id ; m * m ; rL by simp(assoc, rL_unfold)
+  = id * sw * id ; m * m ; rL by simp(assoc, rL_def, m2_def)
 
 
 
@@ -86,15 +76,15 @@ rewrite yb2_act :
 # First simplify the LHS state:
 rewrite yb1_simp :
   yb1
-  = r * r * r ; id * sw * sw * id ; m * m * m by simp(yb1_def, rL_unfold, unitR)
-  = r * r ; id * sw * id ; rL * m by -rL_unfold
+  = r * r * r ; id * sw * sw * id ; m * m * m by simp(yb1_def, rL_def, m2_def, unitR)
+  = r * r ; id * sw * id ; rL * m by simp(rL_def, m2_def)
   = r ; n * id ; rL * id by -qtL
 
 # Next, simplify the RHS state:
 rewrite yb2_simp :
   yb2
-  = r * r * r ; sw[2, 0, 4, 1, 5, 3] ; m * m * m by simp(yb2_def, rL_unfold, unitR)
-  = r * r ; id * sw[1, 2, 0] ; rR * m by -rR_unfold
+  = r * r * r ; sw[2, 0, 4, 1, 5, 3] ; m * m * m by simp(yb2_def, rL_def, m2_def, unitR)
+  = r * r ; id * sw[1, 2, 0] ; rR * m by simp(rR_def, m2_def)
   = r ; n * id ; sw * id ; rR * id by -qtL
 
 # now we can prove the Yang Baxter rule, in "state" form
@@ -112,7 +102,7 @@ rewrite yang_baxter_state :
 rewrite yang_baxter :
   br * id ; id * br ; br * id
   = sw[1, 2, 0] ; yb1 * id * id * id ; id * id * id * sw * id ; m3 by -yb1_act
-  = sw[1, 2, 0] ; yb2 * id * id * id ; id * id * id * sw * id ; m3 by yang_baxter
+  = sw[1, 2, 0] ; yb2 * id * id * id ; id * id * id * sw * id ; m3 by yang_baxter_state
   = id * br ; br * id ; id * br by yb2_act
 
 show yang_baxter

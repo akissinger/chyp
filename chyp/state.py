@@ -254,6 +254,8 @@ class State(lark.Transformer):
                     outp = len(lhs.outputs())
                     if inp == arity and outp == coarity:
                         self.rules[rule_name] = Rule(lhs, graph, rule_name, True)
+                        self.sequence += 1
+                        self.rule_sequence[rule_name] = self.sequence
                     else:
                         self.errors.append((self.file_name, meta.line, "Term '{}' already defined with incompatible type {} -> {}.".format(name, inp, outp)))
 

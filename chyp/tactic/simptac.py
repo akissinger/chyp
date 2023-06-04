@@ -14,7 +14,7 @@
 # limitations under the License.
 
 from __future__ import annotations
-from typing import Callable, Iterator
+from typing import Iterator
 
 
 from ..graph import Graph
@@ -22,30 +22,25 @@ from . import Tactic
 
 
 class SimpTac(Tactic):
-    MAX_DEPTH = 256
-
     def name(self) -> str:
         return 'simp'
 
-    def __repeat(self, rw: Callable[[str], bool]) -> None:
-        got_match = True
-        i = 0
-        while got_match and i < SimpTac.MAX_DEPTH:
-            got_match = False
-            for r in self.args:
-                # print('rewriting: ' + r)
-                while rw(r) and i < SimpTac.MAX_DEPTH:
-                    # print('success')
-                    got_match = True
-                    i += 1
+    def __prepare_context(self):
+        defs = [r for r in self.args if r[-4:] == '_def']
+        for r in self.args:
+            if r[-4:] != '_def':
+                self.add_rule_to_context(r)
+                Tactic.repeat(lambda df: self.rewrite_lhs1(df, r), defs)
 
     def make_rhs(self) -> Iterator[Graph]:
-        self.__repeat(self.rewrite_lhs1)
+        # self.__prepare_context()
+        Tactic.repeat(self.rewrite_lhs1, self.args)
         lhs = self.lhs()
         if lhs: yield lhs
 
     def check(self) -> None:
-        self.__repeat(self.rewrite_lhs1)
-        self.__repeat(self.rewrite_rhs1)
+        # self.__prepare_context()
+        Tactic.repeat(self.rewrite_lhs1, self.args)
+        Tactic.repeat(self.rewrite_rhs1, self.args)
         self.validate_goal()
 
