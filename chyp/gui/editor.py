@@ -19,8 +19,8 @@ from PySide6.QtCore import QByteArray, QFileInfo, QObject, QThread, QTimer, Qt, 
 from PySide6.QtGui import QTextCursor
 from PySide6.QtWidgets import QHBoxLayout, QSplitter, QTreeView, QVBoxLayout, QWidget
 
-from chyp.parser import parse
 
+from .. import parser
 from ..layout import convex_layout
 from ..graph import Graph
 from ..state import RewriteState, State
@@ -28,6 +28,7 @@ from ..state import RewriteState, State
 # from ..matcher import match_rule
 # from ..rewrite import rewrite
 
+from . import mainwindow
 from .errorlist import ErrorListModel
 from .graphview import GraphView
 from .codeview import CodeView
@@ -69,6 +70,7 @@ class Editor(QWidget):
         self.error_view = QTreeView()
         self.error_view.setIndentation(0)
         self.error_view.setModel(ErrorListModel())
+        self.error_view.clicked.connect(self.jump_to_error)
         self.splitter.addWidget(self.error_view)
 
         splitter_state = conf.value("editor_splitter_state")
@@ -135,6 +137,15 @@ class Editor(QWidget):
             cursor.setPosition(p1[1])
             self.code_view.setTextCursor(cursor)
             
+    def jump_to_error(self) -> None:
+        model = self.error_view.model()
+        window = self.window()
+        i = self.error_view.currentIndex().row()
+        if isinstance(model, ErrorListModel) and isinstance(window, mainwindow.MainWindow):
+            if i >= 0 and i < len(model.errors):
+                err = model.errors[i]
+                window.open(err[0], line_number=err[1])
+
     def show_errors(self) -> None:
         conf = QSettings('chyp', 'chyp')
         error_panel_size = conf.value('error_panel_size', 100)
@@ -274,7 +285,7 @@ class Editor(QWidget):
             self.next_rewrite_at_cursor()
 
     def update_state(self) -> None:
-        self.state = parse(self.doc.toPlainText(), self.doc.file_name)
+        self.state = parser.parse(self.doc.toPlainText(), self.doc.file_name)
         self.code_view.set_current_region(None)
         
         model = self.error_view.model()

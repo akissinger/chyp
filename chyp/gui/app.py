@@ -15,12 +15,11 @@
 
 from __future__ import annotations
 import sys
-from PySide6.QtGui import QColor, QPalette
 from PySide6.QtWidgets import QApplication
 
 from .colors import apply_theme
 
-from .mainwindow import MainWindow
+from . import mainwindow
 
 
 cat_macchiato_p = {
@@ -80,7 +79,7 @@ class Chyp(QApplication):
         self.setApplicationName('chyp')
         self.setDesktopFileName("chyp")
         apply_theme()
-        self.main_window = MainWindow()
+        self.main_window = mainwindow.MainWindow()
         self.lastWindowClosed.connect(self.quit)
 
 

@@ -19,7 +19,7 @@ from PySide6.QtCore import QByteArray, QDir, QFileInfo, QSettings, Qt
 from PySide6.QtGui import QActionGroup, QCloseEvent, QKeySequence, QTextCursor
 from PySide6.QtWidgets import QApplication, QFileDialog, QMainWindow, QMenuBar, QMessageBox, QTabWidget, QVBoxLayout, QWidget
 
-from .editor import Editor
+from . import editor
 
 
 class MainWindow(QMainWindow):
@@ -45,8 +45,8 @@ class MainWindow(QMainWindow):
         if geom and isinstance(geom, QByteArray): self.restoreGeometry(geom)
         self.show()
 
-        self.active_editor: Optional[Editor] = None
-        self.add_tab(Editor(), "Untitled")
+        self.active_editor: Optional[editor.Editor] = None
+        self.add_tab(editor.Editor(), "Untitled")
         self.update_file_name()
         self.build_menu()
 
@@ -60,14 +60,14 @@ class MainWindow(QMainWindow):
     def update_file_name(self) -> None:
         for i in range(self.tabs.count()):
             w = self.tabs.widget(i)
-            if isinstance(w, Editor):
+            if isinstance(w, editor.Editor):
                 self.tabs.setTabText(i, w.title())
         if self.active_editor:
             self.setWindowTitle('chyp - ' + self.active_editor.title())
 
     def tab_changed(self, i: int) -> None:
         w = self.tabs.widget(i)
-        if isinstance(w, Editor):
+        if isinstance(w, editor.Editor):
             self.active_editor = w
             self.active_editor.code_view.setFocus()
             self.update_file_name()
@@ -115,22 +115,22 @@ class MainWindow(QMainWindow):
             action = self.file_open_recent.addAction(fi.fileName())
             action.triggered.connect(open_recent(f))
 
-    def add_tab(self, editor: Editor, title: str) -> None:
-        self.tabs.addTab(editor, title)
-        editor.doc.fileNameChanged.connect(self.update_file_name)
-        editor.doc.modificationChanged.connect(self.update_file_name)
-        self.tabs.setCurrentWidget(editor)
-        editor.reset_state()
+    def add_tab(self, ed: editor.Editor, title: str) -> None:
+        self.tabs.addTab(ed, title)
+        ed.doc.fileNameChanged.connect(self.update_file_name)
+        ed.doc.modificationChanged.connect(self.update_file_name)
+        self.tabs.setCurrentWidget(ed)
+        ed.reset_state()
 
-    def close_tab(self, editor: Optional[Editor]=None) -> bool:
-        if editor is None:
-            editor = self.active_editor
+    def close_tab(self, ed: Optional[editor.Editor]=None) -> bool:
+        if ed is None:
+            ed = self.active_editor
 
-        if editor:
-            i = self.tabs.indexOf(editor)
-            if i != -1 and editor.doc.confirm_close():
-                editor.doc.fileNameChanged.disconnect(self.update_file_name)
-                editor.doc.modificationChanged.disconnect(self.update_file_name)
+        if ed:
+            i = self.tabs.indexOf(ed)
+            if i != -1 and ed.doc.confirm_close():
+                ed.doc.fileNameChanged.disconnect(self.update_file_name)
+                ed.doc.modificationChanged.disconnect(self.update_file_name)
                 self.tabs.removeTab(i)
 
                 if self.tabs.count() == 0:
@@ -144,8 +144,8 @@ class MainWindow(QMainWindow):
 
     def new(self) -> None:
         self.remove_empty_editor()
-        editor = Editor()
-        self.add_tab(editor, "Untitled")
+        ed = editor.Editor()
+        self.add_tab(ed, "Untitled")
 
     def open(self, file_name: str='', line_number: int=-1) -> None:
         conf = QSettings('chyp', 'chyp')
@@ -159,31 +159,32 @@ class MainWindow(QMainWindow):
                                                        last_dir,
                                                        'chyp files (*.chyp)')
 
-        editor: Optional[Editor] = None
+        ed: Optional[editor.Editor] = None
 
         # if file is already open, just focus the tab
         for i in range(self.tabs.count()):
             w = self.tabs.widget(i)
-            if isinstance(w, Editor) and w.doc.file_name == file_name:
-                editor = w
+            if isinstance(w, editor.Editor) and w.doc.file_name == file_name:
+                ed = w
                 self.tabs.setCurrentWidget(w)
 
-        if not editor:
+        if not ed:
             try:
-                editor = Editor()
-                editor.doc.open(file_name)
+                ed = editor.Editor()
+                ed.doc.open(file_name)
                 conf.setValue('last_dir', QFileInfo(file_name).absolutePath())
                 self.remove_empty_editor()
                 self.update_recent_files()
-                editor.doc.fileNameChanged.connect(self.update_file_name)
-                self.add_tab(editor, editor.title())
+                ed.doc.fileNameChanged.connect(self.update_file_name)
+                self.add_tab(ed, ed.title())
             except FileNotFoundError:
                 QMessageBox.warning(self, "File not found", "File not found: " + file_name)
 
-        if editor and line_number != -1:
-            cur = QTextCursor(editor.code_view.document().findBlockByNumber(line_number - 1))
-            editor.code_view.moveCursor(QTextCursor.MoveOperation.End)
-            editor.code_view.setTextCursor(cur)
+        if ed and line_number != -1:
+            cur = QTextCursor(ed.code_view.document().findBlockByNumber(line_number - 1))
+            ed.code_view.moveCursor(QTextCursor.MoveOperation.End)
+            ed.code_view.setTextCursor(cur)
+            ed.code_view.setFocus()
 
 
     def save(self) -> None:
@@ -259,7 +260,7 @@ class MainWindow(QMainWindow):
 
         while self.tabs.count() > 0:
             w = self.tabs.widget(0)
-            if isinstance(w, Editor):
+            if isinstance(w, editor.Editor):
                 if not self.close_tab(w):
                     e.ignore()
                     return
