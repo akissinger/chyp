@@ -27,6 +27,12 @@ from .. import state
 RULE_NAME_RE = re.compile('(-)?\\s*([a-zA-Z_][\\.a-zA-Z0-9_]*)')
 
 class Tactic:
+    """The base class for all tactics
+
+    This provides the 'refl' tactic and also the tactic API. All other tactics should extend this
+    class and only interact with the prover state via its public methods.
+    """
+
     __state: state.State
     __local_state: state.RewriteState
 

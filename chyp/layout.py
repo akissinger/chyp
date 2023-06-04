@@ -4,9 +4,9 @@
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
-
+#
 #    http://www.apache.org/licenses/LICENSE-2.0
-
+#
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -14,7 +14,6 @@
 # limitations under the License.
 
 from __future__ import annotations
-import math
 import cvxpy as cp
 from cvxpy.expressions.variable import Variable
 from cvxpy.expressions.constants.constant import Constant
@@ -29,9 +28,8 @@ def convex_layout(g: Graph) -> None:
 
     Vertices and edges are placed in layers according to `layer_decomp`. Their
     y-coordinates are chosen by convex optimation to try to make connections as
-    straight as possible subject to the constraints:
-      1. inputs and outputs must be in order and at least 1.0 apart
-      2. edges must be in order and not overlapping
+    straight as possible subject to the constraints that inputs and outputs must
+    be in order and at least 1.0 apart, and edges must be in order and not overlapping.
     """
     e_layers = layer_decomp(g)
 

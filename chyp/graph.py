@@ -19,9 +19,12 @@ import json
 import copy
 
 class GraphError(Exception):
+    """Exception thrown by Graph's"""
     pass
 
 class VData:
+    """The data assocaited with a single vertex"""
+
     def __init__(self, x: float=0, y: float=0, value: Any="") -> None:
         self.value = value
         self.x = x
@@ -37,6 +40,8 @@ class VData:
         self.out_indices: Set[int] = set()
 
 class EData:
+    """The data assocaited with a single edge"""
+
     def __init__(self,
             s: Optional[List[int]]=None,
             t: Optional[List[int]]=None,
@@ -67,6 +72,18 @@ class EData:
         return 1 if len(self.s) <= 1 and len(self.t) <= 1 else 2
 
 class Graph:
+    """A hypergraph with boundaries
+
+    This is the main data structure used by Chyp. It represents a directed hypergraph (which we call simply a "graph")
+    as two dictionaries for vertices and (hyper)edges, respectively. Each vertex is associated with a `VData`
+    object and edge edge with an `EData` object, which stores information about adjacency, position, label,
+    etc.
+
+    The particular flavor of hypergraphs we use associate to each hyperedge a list of source vertices and a list
+    of target vertices. The hypergraph itself also has a list of input vertices and a list of output vertices,
+    which are used for sequential composition and rewriting.
+    """
+
     def __init__(self) -> None:
         self.vdata: Dict[int, VData] = {}
         self.edata: Dict[int, EData] = {}
@@ -76,6 +93,7 @@ class Graph:
         self.eindex = 0
 
     def copy(self) -> Graph:
+        """Make a copy of the graph"""
         g = Graph()
         g.vdata = copy.deepcopy(self.vdata)
         g.edata = copy.deepcopy(self.edata)
@@ -86,33 +104,67 @@ class Graph:
         return g
 
     def vertices(self) -> Iterator[int]:
+        """Returns an iterator over the vertices in the graph"""
         return iter(self.vdata.keys())
 
     def edges(self) -> Iterator[int]:
+        """Returns an iterator over the edges in the graph"""
         return iter(self.edata.keys())
 
     def num_vertices(self) -> int:
+        """The number of vertices"""
         return len(self.vdata)
 
     def num_edges(self) -> int:
+        """The number of edges"""
         return len(self.edata)
 
     def vertex_data(self, v: int) -> VData:
+        """Returns the :class:`VData` associated to a given vertex
+
+        :param v: A vertex
+        """
+
         return self.vdata[v]
 
     def edge_data(self, e: int) -> EData:
+        """Returns the :class:`EData` associated to a given edge
+
+        :param e: An edge
+        """
+
         return self.edata[e]
 
     def in_edges(self, v: int) -> Set[int]:
+        """Returns a list of edges that have `v` as a target
+
+        :param v: A vertex
+        """
+
         return self.vdata[v].in_edges
 
     def out_edges(self, v: int) -> Set[int]:
+        """Returns a list of edges that have `v` as a source
+
+        :param v: A vertex
+        """
+
         return self.vdata[v].out_edges
 
     def source(self, e: int) -> List[int]:
+        """Returns the list of source vertices associated with an edge
+
+        :param e: An edge
+        """
+
         return self.edata[e].s
 
     def target(self, e: int) -> List[int]:
+        """Returns the list of target vertices associated with an edge
+
+        :param e: An edge
+        """
+
         return self.edata[e].t
 
     def add_vertex(self, x:float=0, y:float=0, value: Any="", name: int=-1) -> int:
