@@ -74,6 +74,9 @@ class Tactic:
     #     else:
     #         return False
 
+    def global_rules(self) -> List[str]:
+        return [name for name, j in self.__state.rule_sequence.items() if j <= self.__local_state.sequence]
+
     def lookup_rule(self, rule_expr: str, local: Optional[bool]=None) -> Tuple[Optional[Rule],bool]:
         """Lookup a rule
 

@@ -29,18 +29,18 @@ rule qtR : r ; id * n = r ; id * r * id ; m * id * id
 # and commute with m2
 rewrite rL_comm :
   rL * id * id ; m2
-  = m2 ; rL by simp(assoc, rL_def, m2_def)
+  = m2 ; rL by simp(assoc)
 
 
 
 # r(L/R) and ri(L/R) are mutually inverse:
 rewrite rL_riL :
   rL ; riL
-  = id * id by simp(rL_def, riL_def, -assoc2, rir, unitL2)
+  = id * id by simp(-assoc2, rir, unitL2)
 
 rewrite riR_rR :
   riR ; rR
-  = id * id by simp(rR_def, riR_def, assoc2, rir, unitR2)
+  = id * id by simp(assoc2, rir, unitR2)
 
 
 # Using this fact, we can state the first quasi-triangularity law this way:
@@ -67,24 +67,24 @@ def yb2 = u * u * u ; id * br ; br * id ; id * br
 # by letting them both act on H (X) H (X) H:
 rewrite yb1_act :
   yb1 * sw[2, 1, 0] ; m3
-  = sw * id ; rL * id ; id * sw ; id * rL ; sw * id ; rL * id by simp(yb1_def, m2_def, m3_def, rL_comm, unitL)
+  = sw * id ; rL * id ; id * sw ; id * rL ; sw * id ; rL * id by simp(rL_comm, unitL)
 
 rewrite yb2_act :
   yb2 * sw[2, 1, 0] ; m3
-  = id * sw ; id * rL ; sw * id ; rL * id ; id * sw ; id * rL by simp(yb2_def, m2_def, m3_def, rL_comm, unitL)
+  = id * sw ; id * rL ; sw * id ; rL * id ; id * sw ; id * rL by simp(rL_comm, unitL)
 
 # First simplify the LHS state:
 rewrite yb1_simp :
   yb1
-  = r * r * r ; id * sw * sw * id ; m * m * m by simp(yb1_def, rL_def, m2_def, unitR)
-  = r * r ; id * sw * id ; rL * m by simp(rL_def, m2_def)
+  = r * r * r ; id * sw * sw * id ; m * m * m by simp(unitR)
+  = r * r ; id * sw * id ; rL * m by simp()
   = r ; n * id ; rL * id by -qtL
 
 # Next, simplify the RHS state:
 rewrite yb2_simp :
   yb2
-  = r * r * r ; sw[2, 0, 4, 1, 5, 3] ; m * m * m by simp(yb2_def, rL_def, m2_def, unitR)
-  = r * r ; id * sw[1, 2, 0] ; rR * m by simp(rR_def, m2_def)
+  = r * r * r ; sw[2, 0, 4, 1, 5, 3] ; m * m * m by simp(unitR)
+  = r * r ; id * sw[1, 2, 0] ; rR * m by simp()
   = r ; n * id ; sw * id ; rR * id by -qtL
 
 # now we can prove the Yang Baxter rule, in "state" form

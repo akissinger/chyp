@@ -32,28 +32,28 @@ let br_ac = sw ; rL_ac
 # pair of modules, giving the following commutativity laws:
 rewrite rL_ab_comm :
   rL * id * id ; id * sw * id ; a * b
-  = id * sw * id ; a * b ; rL_ab by simp(H.rL_def, H.m2_def, A.assoc, B.assoc, rL_ab_def)
+  = id * sw * id ; a * b ; rL_ab by simp(A.assoc, B.assoc)
 
 rewrite rL_bc_comm :
   rL * id * id ; id * sw * id ; b * c
-  = id * sw * id ; b * c ; rL_bc by simp(H.rL_def, H.m2_def, B.assoc, C.assoc, rL_bc_def)
+  = id * sw * id ; b * c ; rL_bc by simp(B.assoc, C.assoc)
 
 show H.rL_def 
 
 rewrite rL_ac_comm :
   rL * id * id ; id * sw * id ; a * c
-  = id * sw * id ; a * c ; rL_ac by simp(H.rL_def, H.m2_def, A.assoc, C.assoc, rL_ac_def)
+  = id * sw * id ; a * c ; rL_ac by simp(A.assoc, C.assoc)
 
 # From this, it is enough to show that acting on A (X) B (X) C by the Yang-Baxtor state defined in 'quasi_tri' yields the LHS
 # and RHS of the module version of the Yang-Baxter equation:
 
 rewrite yb_mod_lem1 :
   H.yb1 * sw[2, 1, 0] ; sw[0, 3, 1, 4, 2, 5]; a * b * c
-  = sw * id ; rL_bc * id ; id * sw ; id * rL_ac ; sw * id ; rL_ab * id by simp(H.yb1_def, rL_ab_comm, rL_bc_comm, rL_ac_comm, A.unit, B.unit, C.unit)
+  = sw * id ; rL_bc * id ; id * sw ; id * rL_ac ; sw * id ; rL_ab * id by simp(rL_ab_comm, rL_bc_comm, rL_ac_comm, A.unit, B.unit, C.unit)
 
 rewrite yb_mod_lem2 :
   H.yb2 * sw[2, 1, 0] ; sw[0, 3, 1, 4, 2, 5]; a * b * c
-  = id * sw ; id * rL_ab ; sw * id ; rL_ac * id ; id * sw ; id * rL_bc by simp(H.yb2_def, rL_ab_comm, rL_bc_comm, rL_ac_comm, A.unit, B.unit, C.unit)
+  = id * sw ; id * rL_ab ; sw * id ; rL_ac * id ; id * sw ; id * rL_bc by simp(rL_ab_comm, rL_bc_comm, rL_ac_comm, A.unit, B.unit, C.unit)
 
 # Putting these together shows us that the br_XX maps indeed satisfy the Yang-Baxter equation
 rewrite yang_baxter_mod :

@@ -14,7 +14,7 @@
 # limitations under the License.
 
 from __future__ import annotations
-from typing import Iterator
+from typing import Iterator, List
 
 
 from ..graph import Graph
@@ -25,22 +25,32 @@ class SimpTac(Tactic):
     def name(self) -> str:
         return 'simp'
 
-    def __prepare_context(self):
-        defs = [r for r in self.args if r[-4:] == '_def']
-        for r in self.args:
-            if r[-4:] != '_def':
-                self.add_rule_to_context(r)
-                Tactic.repeat(lambda df: self.rewrite_lhs1(df, r), defs)
+    def __prepare_rules(self) -> List[str]:
+        flags = [a for a in self.args if a[:1] == '+']
+        rules = [a for a in self.args if a[:1] != '+']
+
+        if '+nodefs' in flags:
+            defs = [r for r in rules if r[-4:] == '_def']
+        else:
+            defs = [r for r in self.global_rules() if r[-4:]=='_def']
+
+        rest = [r for r in rules if r[-4:] != '_def']
+
+        for r in rest:
+            self.add_rule_to_context(r)
+            Tactic.repeat(lambda df: self.rewrite_lhs1(df, r), defs)
+
+        return defs + rest
 
     def make_rhs(self) -> Iterator[Graph]:
-        self.__prepare_context()
-        Tactic.repeat(self.rewrite_lhs1, self.args)
+        rules = self.__prepare_rules()
+        Tactic.repeat(self.rewrite_lhs1, rules)
         lhs = self.lhs()
         if lhs: yield lhs
 
     def check(self) -> None:
-        self.__prepare_context()
-        Tactic.repeat(self.rewrite_lhs1, self.args)
-        Tactic.repeat(self.rewrite_rhs1, self.args)
+        rules = self.__prepare_rules()
+        Tactic.repeat(self.rewrite_lhs1, rules)
+        Tactic.repeat(self.rewrite_rhs1, rules)
         self.validate_goal()
 
