@@ -33,13 +33,13 @@ class SimpTac(Tactic):
                 Tactic.repeat(lambda df: self.rewrite_lhs1(df, r), defs)
 
     def make_rhs(self) -> Iterator[Graph]:
-        # self.__prepare_context()
+        self.__prepare_context()
         Tactic.repeat(self.rewrite_lhs1, self.args)
         lhs = self.lhs()
         if lhs: yield lhs
 
     def check(self) -> None:
-        # self.__prepare_context()
+        self.__prepare_context()
         Tactic.repeat(self.rewrite_lhs1, self.args)
         Tactic.repeat(self.rewrite_rhs1, self.args)
         self.validate_goal()

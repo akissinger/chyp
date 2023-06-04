@@ -28,8 +28,8 @@ rule qtR : r ; id * n = r ; id * r * id ; m * id * id
 
 # and commute with m2
 rewrite rL_comm :
-  rL * id * id ; id * sw * id ; m * m
-  = id * sw * id ; m * m ; rL by simp(assoc, rL_def, m2_def)
+  rL * id * id ; m2
+  = m2 ; rL by simp(assoc, rL_def, m2_def)
 
 
 
@@ -67,11 +67,11 @@ def yb2 = u * u * u ; id * br ; br * id ; id * br
 # by letting them both act on H (X) H (X) H:
 rewrite yb1_act :
   yb1 * sw[2, 1, 0] ; m3
-  = sw * id ; rL * id ; id * sw ; id * rL ; sw * id ; rL * id by simp(yb1_def, m3_def, rL_comm, unitL)
+  = sw * id ; rL * id ; id * sw ; id * rL ; sw * id ; rL * id by simp(yb1_def, m2_def, m3_def, rL_comm, unitL)
 
 rewrite yb2_act :
   yb2 * sw[2, 1, 0] ; m3
-  = id * sw ; id * rL ; sw * id ; rL * id ; id * sw ; id * rL by simp(yb2_def, m3_def, rL_comm, unitL)
+  = id * sw ; id * rL ; sw * id ; rL * id ; id * sw ; id * rL by simp(yb2_def, m2_def, m3_def, rL_comm, unitL)
 
 # First simplify the LHS state:
 rewrite yb1_simp :
