@@ -23,6 +23,12 @@ from . import editor
 
 
 class MainWindow(QMainWindow):
+    """The main window for the Chyp GUI
+
+    This is responsible for the main top-level menus and contains a collection of `Editor` widgets, displayed in tabs. Most
+    of the functionality accessible from the menu is passed on to the currently-visible editor, accessible via `self.active_editor`.
+    """
+
     def __init__(self) -> None:
         super().__init__()
         conf = QSettings('chyp', 'chyp')
@@ -52,6 +58,12 @@ class MainWindow(QMainWindow):
 
 
     def remove_empty_editor(self) -> None:
+        """Remove the active editor, provided it doesn't have a filename or any text
+
+        When Chyp opens, it displays an empty chyp file called "Untitled". If the use opens a file straight away,
+        this method is used to close this empty editor instead of keeping it open as an extra tab.
+        """
+
         if self.active_editor:
             if self.active_editor.title() == 'Untitled' and self.active_editor.doc.toPlainText() == '':
                 self.tabs.removeTab(self.tabs.indexOf(self.active_editor))
