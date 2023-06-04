@@ -211,6 +211,26 @@ always yield unique normal forms. So, we can prove any true equation involving a
 
 However, the beauty of interactive theorem provers is that sets of rules don't actually have to be that nice to benefit from automated tactics like `simp`, as long as they get a bit of help from a human when they get stuck.
 
+One more thing worth mentioning is the simplifier automatically unfolds definitions, i.e. any rule ending in `_def`, both to the term being simplified and in the LHS of all of the rules given. So something like this will also work:
+
+    def m2 = id * sw * id ; m * m
+    rewrite another_monoid_eq :
+      u * u * u * u ; m2
+      = u * u by simp(unitL)
+
+If you don't want this behaviour, you can pass the `+nodefs` flag as an argument to `simp`:
+
+    def m2 = id * sw * id ; m * m
+
+    rewrite another_monoid_eq1 :
+      u * u * u * u ; m2
+      = u * u by simp(+nodefs, unitL) # fails
+
+    rewrite another_monoid_eq2 :
+      u * u * u * u ; m2
+      = u * u by simp(+nodefs, m2_def, unitL) # succeeds again
+
+
 These three tactics are all implemented in the `chyp.tactic` module. [Tactic](https://github.com/akissinger/chyp/blob/master/chyp/tactic/__init__.py) implements `refl`, and the other tactics are implemented as subclasses of `Tactic` that should override the `check` method, which tries to close the current goal, and the `make_rhs` method, which returns an iterator over possible terms to fill in a hole `?`. Thanks to the API exposed by `Tactic`, the two tactics [RuleTac](https://github.com/akissinger/chyp/blob/master/chyp/tactic/ruletac.py) and [SimpTac](https://github.com/akissinger/chyp/blob/master/chyp/tactic/simptac.py) are very simple, and it shouldn't be too hard to implement more.
 
 In theory, if tactics only interact with the current goal via the public methods exposed by `Tactic`, it shouldn't be possible to prove anything that is not true. While this doesn't provide strong guarantees of soundness, like in the case of [LCF](https://en.wikipedia.org/wiki/Logic_for_Computable_Functions)-style theorem provers, it does attempt to provide some degree of assurance that (possibly very complex) tactics won't prove untrue statements.
