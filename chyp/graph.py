@@ -196,7 +196,7 @@ class Graph:
         :param y:     The Y coordinate
         :param hyper: This is a hint to tell the GUI how to draw this (hyper)edge. If set to
                       False, ideally it should be drawn simply as a line connected two vertices
-                      rather than as a box.
+                      rather than as a box. (Currently not implemented.)
         :param name:  An optional name. If this is set to -1, set the name automatically. After
                       setting names manually, be sure to call `update_indices` to make sure
                       future automatic names don't clash.
@@ -213,6 +213,16 @@ class Graph:
         return e
 
     def remove_vertex(self, v: int, strict: bool=False) -> None:
+        """Remove a vertex
+
+        This removes a single vertex. If `strict` is set to True, then the vertex
+        must have no adjacent edges. If it is False, then `v` will be removed from
+        the source/target list of all adjacent edges.
+
+        :param v: A vertex to remove
+        :param strict: If True, require the vertex to have no adjacent edges
+        """
+
         if strict:
             if (len(self.vertex_data(v).in_edges)  > 0 or
                 len(self.vertex_data(v).out_edges) > 0):
@@ -229,15 +239,20 @@ class Graph:
         del self.vdata[v]
 
     def remove_edge(self, e: int) -> None:
+        """Remove an edge
+
+        :param e: An edge to remove
+        """
+
         for v in self.edge_data(e).s:
             self.vertex_data(v).out_edges.remove(e)
         for v in self.edge_data(e).t:
             self.vertex_data(v).in_edges.remove(e)
         del self.edata[e]
 
-    def add_simple_edge(self, s:int, t:int, value: Any="") -> int:
-        e = self.add_edge([s], [t], value, hyper=False)
-        return e
+    # def add_simple_edge(self, s:int, t:int, value: Any="") -> int:
+    #     e = self.add_edge([s], [t], value, hyper=False)
+    #     return e
 
     def update_indices(self) -> None:
         self.vindex = max(self.vdata.keys()) + 1 if self.vdata else 0

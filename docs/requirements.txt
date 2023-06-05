@@ -1,0 +1,4 @@
+sphinx-autodoc-typehints
+PySide6
+lark
+cvxpy
