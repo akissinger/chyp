@@ -173,15 +173,15 @@ class Graph:
         :param x:     The X coordinate to draw the vertex
         :param y:     The Y coordinate
         :param value: The value carried by this vertex. This is the empty string by default.
-        :param name:  An optional name. If this is set to -1, set the name automatically. After
-                      setting names manually, be sure to call `update_indices` to make sure
-                      future automatic names don't clash.
+        :param name:  An optional name. If this is set to -1, set the name automatically.
         """
         if name == -1:
             v = self.vindex
             self.vindex += 1
         else:
             v = name
+            max_index = max(name, self.vindex)
+            self.vindex = max_index + 1
 
         self.vdata[v] = VData(x, y, value)
         return v
@@ -197,15 +197,15 @@ class Graph:
         :param hyper: This is a hint to tell the GUI how to draw this (hyper)edge. If set to
                       False, ideally it should be drawn simply as a line connected two vertices
                       rather than as a box. (Currently not implemented.)
-        :param name:  An optional name. If this is set to -1, set the name automatically. After
-                      setting names manually, be sure to call `update_indices` to make sure
-                      future automatic names don't clash.
+        :param name:  An optional name. If this is set to -1, set the name automatically.
         """
         if name == -1:
             e = self.eindex
             self.eindex += 1
         else:
             e = name
+            max_index = max(name, self.eindex)
+            self.eindex = max_index + 1
 
         self.edata[e] = EData(s, t, value, x, y, fg, bg, hyper)
         for v in s: self.vdata[v].out_edges.add(e)
@@ -253,10 +253,6 @@ class Graph:
     # def add_simple_edge(self, s:int, t:int, value: Any="") -> int:
     #     e = self.add_edge([s], [t], value, hyper=False)
     #     return e
-
-    def update_indices(self) -> None:
-        self.vindex = max(self.vdata.keys()) + 1 if self.vdata else 0
-        self.eindex = max(self.edata.keys()) + 1 if self.edata else 0
 
     def set_inputs(self, inp: List[int]) -> None:
         self._inputs = inp
@@ -425,7 +421,12 @@ class Graph:
         return g
 
     def compose(self, other: Graph) -> None:
-        """Compose with given graph in diagram order"""
+        """Compose with a given graph in diagram order
+
+        Note that composition is done in-place to the current graph.
+
+        :param other: A graph to plug into the outputs of the current graph
+        """
 
         vmap = dict()
 
@@ -465,23 +466,54 @@ class Graph:
                 quotient[p2] = p1
 
     def __rshift__(self, other: Graph) -> Graph:
+        """Returns the composition of the current graph with `other`
+
+        Composition is done in diagram order, and neither of the two graphs is changed.
+
+        :param other: Another graph
+        :returns: The composed graph
+        """
+
         g = self.copy()
         g.compose(other)
         return g
 
     def highlight(self, vertices: Set[int], edges: Set[int]) -> None:
+        """Set the `highlight` flag for a set of vertices and edges
+
+        This tells the GUI to visually highlight a set of vertices/edges, e.g. by drawing them in bold.
+        Any vertices/edges not in the sets provided will be un-highlighted.
+
+        :param vertices: A set of vertices to highlight
+        :param edges: A set of edges to highlight
+        """
+
         for v, vd in self.vdata.items():
             vd.highlight = v in vertices
         for e, ed in self.edata.items():
             ed.highlight = e in edges
 
     def unhighlight(self) -> None:
+        """Clear the `highlight` flag for all vertices/edges
+
+        This is equivalent to calling :func:`highlight` with empty sets of vertices/edges.
+        """
+
         for vd in self.vdata.values():
             vd.highlight = False
         for ed in self.edata.values():
             ed.highlight = False
 
 def gen(value: str, arity: int, coarity: int, fg: str='', bg: str='') -> Graph:
+    """Returns a graph with a single hyperedge and given number of inputs/outputs
+
+    :param value: The label for the hyperedge
+    :param arity: The number of input vertices connected to the source of the edge
+    :param coarity: The number of output vertices connected to the target of the edge
+    :param fg: An optional foregraph color, given as a 6-digit RGB hex code
+    :param bg: An optional background color, given as a 6-digit RGB hex code
+    """
+
     g = Graph()
     inputs = [g.add_vertex(-1.5, i - (arity-1)/2) for i in range(arity)]
     outputs = [g.add_vertex(1.5, i - (coarity-1)/2) for i in range(coarity)]
@@ -491,6 +523,18 @@ def gen(value: str, arity: int, coarity: int, fg: str='', bg: str='') -> Graph:
     return g
         
 def perm(p: List[int]) -> Graph:
+    """Returns a graph corresponding to the given permutation
+
+    This takes a permution, given as a list [x0,..,x(n-1)], which is interpreted as the permutation { x0 -> 0, x1 -> 1, ..., x(n-1) -> n-1 }.
+    It produces a graph consisting just of vertices, where input xj is mapped to the same vertex as output j, representing an identity
+    wire connecting input xj to output j.
+
+    Note this is one of two reasonable conventions for specifying a permutation as a list of numbers. This one has the property, e.g.
+    for graphs aj : 0 -> 1, we have: (a0 * a1 * a2) >> perm([2, 0, 1]) = a2 * a0 * a1.
+
+    :param p: A permutation, given as an n-element list of integers from 0 to n-1.
+    """
+
     g = Graph()
     size = len(p)
     inputs = [g.add_vertex(0, i - (size-1)/2) for i in range(size)]
@@ -500,6 +544,11 @@ def perm(p: List[int]) -> Graph:
     return g
 
 def identity() -> Graph:
+    """Returns a graph corresponding to the identity map
+
+    This graph has a single vertex which is both an input and an output.
+    """
+
     g = Graph()
     v = g.add_vertex(0, 0)
     g.set_inputs([v])
@@ -509,20 +558,20 @@ def identity() -> Graph:
 # def wide_id() -> Graph:
 #     return gen("id", 1, 1)
 
-def id_perm(p: List[int]) -> Graph:
-    g = Graph()
-    size = len(p)
-    inputs = [g.add_vertex(-1.5, i - (size-1)/2) for i in range(size)]
-    outputs = [g.add_vertex(1.5, i - (size-1)/2) for i in range(size)]
+# def id_perm(p: List[int]) -> Graph:
+#     g = Graph()
+#     size = len(p)
+#     inputs = [g.add_vertex(-1.5, i - (size-1)/2) for i in range(size)]
+#     outputs = [g.add_vertex(1.5, i - (size-1)/2) for i in range(size)]
 
-    for i in range(size):
-        y = i - (size-1)/2
-        g.add_edge([inputs[i]], [outputs[p[i]]], "id", 0, y)
+#     for i in range(size):
+#         y = i - (size-1)/2
+#         g.add_edge([inputs[i]], [outputs[p[i]]], "id", 0, y)
 
-    g.set_inputs(inputs)
-    g.set_outputs(outputs)
+#     g.set_inputs(inputs)
+#     g.set_outputs(outputs)
 
-    return g
+#     return g
 
 def load_graph(path: str) -> Graph:
     """Load a .chyp graph file from the given path"""
@@ -552,5 +601,4 @@ def graph_from_json(json_string: str) -> Graph:
 
     g.set_inputs([int(v) for v in j["inputs"]])
     g.set_outputs([int(v) for v in j["outputs"]])
-    g.update_indices()
     return g
