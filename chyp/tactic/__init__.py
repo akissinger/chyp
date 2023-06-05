@@ -48,7 +48,7 @@ class Tactic:
 
 
     @staticmethod
-    def repeat(rw: Callable[[str], bool], rules: List[str], max_iter=255) -> None:
+    def repeat(rw: Callable[[str], bool], rules: List[str], max_iter: int=255) -> None:
         got_match = True
         i = 0
         while got_match and i < max_iter:
