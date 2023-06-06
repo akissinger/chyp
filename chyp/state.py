@@ -307,7 +307,7 @@ class State(lark.Transformer):
 
         if len(rw_parts) == 0:
             self.parts.append((meta.start_pos, meta.end_pos, "rewrite", name))
-            self.rewrites[name] = RewriteState(self.sequence, self, stub=True)
+            self.rewrites[name] = RewriteState(self.sequence, self, lhs=term, stub=True)
         else:
             start = meta.start_pos
             lhs = term
