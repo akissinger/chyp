@@ -254,6 +254,22 @@ class Graph:
     #     e = self.add_edge([s], [t], value, hyper=False)
     #     return e
 
+    def add_inputs(self, inp: List[int]) -> None:
+        i1 = len(self._inputs)
+        i2 = i1 + len(inp)
+        self._inputs += inp
+        for i in range(i1, i2):
+            v = self._inputs[i]
+            self.vdata[v].in_indices.add(i)
+
+    def add_outputs(self, outp: List[int]) -> None:
+        i1 = len(self._outputs)
+        i2 = i1 + len(outp)
+        self._outputs += outp
+        for i in range(i1, i2):
+            v = self._outputs[i]
+            self.vdata[v].out_indices.add(i)
+
     def set_inputs(self, inp: List[int]) -> None:
         self._inputs = inp
         for d in self.vdata.values():
@@ -385,7 +401,7 @@ class Graph:
         self.edge_data(e).highlight = vd.highlight
         return e
     
-    def tensor(self, other: Graph) -> None:
+    def tensor(self, other: Graph, layout: bool=True) -> None:
         """Take the monoidal product with the given graph
 
         Calling g.tensor(h) will turn g into g ⊗ h. Use the infix version "g + h" to simply return
@@ -394,13 +410,16 @@ class Graph:
         vmap = dict()
         # emap = dict()
 
-        max_self = max(max((self.vertex_data(v).y for v in self.vertices()), default = 0),
-                       max((self.edge_data(e).y for e in self.edges()), default=0))
-        min_other = min(min((other.vertex_data(v).y for v in other.vertices()), default = 0),
-                        min((other.edge_data(e).y for e in other.edges()), default=0))
+        if layout:
+            max_self = max(max((self.vertex_data(v).y for v in self.vertices()), default = 0),
+                           max((self.edge_data(e).y for e in self.edges()), default=0))
+            min_other = min(min((other.vertex_data(v).y for v in other.vertices()), default = 0),
+                            min((other.edge_data(e).y for e in other.edges()), default=0))
 
-        for v in self.vertices(): self.vertex_data(v).y -= max_self
-        for e in self.edges(): self.edge_data(e).y -= max_self
+            for v in self.vertices(): self.vertex_data(v).y -= max_self
+            for e in self.edges(): self.edge_data(e).y -= max_self
+        else:
+            min_other = 0
 
         for v in other.vertices():
             vd = other.vertex_data(v)
@@ -412,8 +431,10 @@ class Graph:
                           [vmap[v] for v in ed.t],
                           ed.value, ed.x, ed.y - min_other + 1, ed.fg, ed.bg, ed.hyper)
         
-        self.set_inputs(self.inputs() + [vmap[v] for v in other.inputs()])
-        self.set_outputs(self.outputs() + [vmap[v] for v in other.outputs()])
+        # self.set_inputs(self.inputs() + [vmap[v] for v in other.inputs()])
+        # self.set_outputs(self.outputs() + [vmap[v] for v in other.outputs()])
+        self.add_inputs([vmap[v] for v in other.inputs()])
+        self.add_outputs([vmap[v] for v in other.outputs()])
 
     def __mul__(self, other: Graph) -> Graph:
         g = self.copy()
