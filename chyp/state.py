@@ -323,7 +323,8 @@ class State(lark.Transformer):
 
             last_i = len(rw_parts)-1
             for i, rw_part in enumerate(rw_parts):
-                line_number, end, t_start, t_end, equiv, tactic, tactic_args, rhs = rw_part
+                line_number, rw_end, t_start, t_end, equiv, tactic, tactic_args, rhs = rw_part
+                end = max(rw_end, t_end)
                 all_equiv = all_equiv and equiv
                 self.rewrites[name + ":" + str(i)] = RewriteState(
                         self.sequence,
@@ -399,6 +400,9 @@ class State(lark.Transformer):
     def term_hole(self, meta: Meta, items: List[Any]) -> Tuple[int, int, Optional[Graph]]:
         t = items[0] if len(items) != 0 else None
         return (meta.start_pos, meta.end_pos, t)
+
+    def nested_term(self, items: List[Any]) -> Optional[Graph]:
+        return items[1]
 
 
 def module_filename(name: str, current_file: str) -> str:

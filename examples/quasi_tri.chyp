@@ -17,6 +17,14 @@ def rR = id * id * r ; m2
 def riL = ri * id * id ; m2
 def riR = id * id * ri ; m2
 
+rewrite rL_unf :
+  rL
+  = r * id * id ; id * sw * id ; m * m by simp()
+
+rewrite rR_unf :
+  rR
+  = id * r * id ; id * id * sw ; m * m by simp()
+
 
 # The three properties are:
 rule qt : n ; sw = n ; rL ; riR
@@ -51,7 +59,7 @@ rewrite n_rL :
 
 
 # Now, we'll show that the following "braiding" map:
-let br = sw ; rL
+let br = rL ; sw
 
 # satisfies the famous "Yang-Baxter equation":
 #
@@ -67,31 +75,31 @@ def yb2 = u * u * u ; id * br ; br * id ; id * br
 # by letting them both act on H (X) H (X) H:
 rewrite yb1_act :
   yb1 * sw[2, 1, 0] ; m3
-  = sw * id ; rL * id ; id * sw ; id * rL ; sw * id ; rL * id by simp(rL_comm, unitL)
+  = br * id ; id * br ; br * id by simp(rL_comm, unitL)
 
 rewrite yb2_act :
   yb2 * sw[2, 1, 0] ; m3
-  = id * sw ; id * rL ; sw * id ; rL * id ; id * sw ; id * rL by simp(rL_comm, unitL)
+  = id * br ; br * id ; id * br by simp(rL_comm, unitL)
 
 # First simplify the LHS state:
 rewrite yb1_simp :
   yb1
-  = r * r * r ; id * sw * sw * id ; m * m * m by simp(unitR)
-  = r * r ; id * sw * id ; rL * m by simp()
-  = r ; n * id ; rL * id by -qtL
+  = r * r * r ; sw[1, 3, 0, 5, 2, 4] ; m * m * m by simp(unitR)
+  = r * r ; sw[3, 1, 0, 2] ; rL * m ; sw * id by -rL_unf
+  = r ; sw ; n * id ; rL * id ; sw * id by -qtR
 
 # Next, simplify the RHS state:
 rewrite yb2_simp :
   yb2
-  = r * r * r ; sw[2, 0, 4, 1, 5, 3] ; m * m * m by simp(unitR)
-  = r * r ; id * sw[1, 2, 0] ; rR * m by simp()
-  = r ; n * id ; sw * id ; rR * id by -qtL
+  = r * r * r ; sw[3, 1, 5, 0, 4, 2] ; m * m * m by simp(unitR)
+  = r * r ; sw[1, 3, 0, 2] ; rR * m ; sw * id by -rR_unf
+  = r ; sw ; n * id ; sw * id ; rR * id ; sw * id by -qtR
 
 # now we can prove the Yang Baxter rule, in "state" form
 rewrite yang_baxter_state :
   yb1
-  = r ; n * id ; rL * id by yb1_simp
-  = r ; n * id ; sw * id ; rR * id by n_rL
+  = r ; sw ; n * id ; rL * id ; sw * id by yb1_simp
+  = r ; sw ; n * id ; sw * id ; rR * id ; sw * id by n_rL
   = yb2 by -yb2_simp
 
 

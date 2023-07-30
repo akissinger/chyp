@@ -19,14 +19,21 @@ import module as A(m=m, u=u, a=a)
 import module as B(m=m, u=u, a=b)
 import module as C(m=m, u=u, a=c)
 
+# We can define the tensor product of modules, thanks to the comultiplication
+
+def ab = n * id * id ; id * sw * id ; a * b
+def ba = n * id * id ; id * sw * id ; b * a
+
 # For convenience, we'll define the action of the Hopf algebras R-matrix on
 # all pairs of modules, which induces a braiding map between those two modules
 def rL_ab = r * id * id ; id * sw * id ; a * b
-let br_ab = sw ; rL_ab
+let br_ab = rL_ab ; sw
 def rL_bc = r * id * id ; id * sw * id ; b * c
-let br_bc = sw ; rL_bc
+let br_bc = rL_bc ; sw
 def rL_ac = r * id * id ; id * sw * id ; a * c
-let br_ac = sw ; rL_ac
+let br_ac = rL_ac ; sw
+
+
 
 # Associativity let's us "push" the adjoint action of the R-matrix through any
 # pair of modules, giving the following commutativity laws:
@@ -44,24 +51,24 @@ rewrite rL_ac_comm :
   rL * id * id ; id * sw * id ; a * c
   = id * sw * id ; a * c ; rL_ac by simp(A.assoc, C.assoc)
 
+
+rewrite br_ab_map :
+  ab ; br_ab
+  = n * id * id ; id * sw * id ; a * b ; rL_ab ; sw by ab_def
+  = id * sw ; n * id * id ; rL * id * id ; sw[1, 2, 0] * id ; b * a by -rL_ab_comm
+  = id * sw ; n * id * id ; sw * id * id ; H.rR * id * id ; sw[1, 2, 0] * id ; b * a by H.n_rL
+  = id * sw ; n * r * id * id ; id * id * sw[1, 2, 0] * id ; id * id * b * a ; id * sw * id ; b * a by simp(A.assoc, B.assoc)
+  = id * br_ab ; ba by simp()
+
 # From this, it is enough to show that acting on A (X) B (X) C by the Yang-Baxtor state defined in 'quasi_tri' yields the LHS
 # and RHS of the module version of the Yang-Baxter equation:
 
-rewrite yb_mod_lem1 :
-  H.yb1 * sw[2, 1, 0] ; sw[0, 3, 1, 4, 2, 5]; a * b * c
-  = sw * id ; rL_bc * id ; id * sw ; id * rL_ac ; sw * id ; rL_ab * id by simp(rL_ab_comm, rL_bc_comm, rL_ac_comm, A.unit, B.unit, C.unit)
-
-rewrite yb_mod_lem2 :
-  H.yb2 * sw[2, 1, 0] ; sw[0, 3, 1, 4, 2, 5]; a * b * c
-  = id * sw ; id * rL_ab ; sw * id ; rL_ac * id ; id * sw ; id * rL_bc by simp(rL_ab_comm, rL_bc_comm, rL_ac_comm, A.unit, B.unit, C.unit)
-
-# Putting these together shows us that the br_XX maps indeed satisfy the Yang-Baxter equation
 rewrite yang_baxter_mod :
-  id * br_ab ; br_ac * id ; id * br_bc
-  = sw[2, 1, 0] ; H.yb2 * id * id * id ; id * sw[2, 0, 3, 1] * id ; a * b * c by -yb_mod_lem2
-  = sw[2, 1, 0] ; H.yb1 * id * id * id ; id * sw[2, 0, 3, 1] * id ; a * b * c by -H.yang_baxter_state
-  = sw * id ; rL_bc * id ; id * sw ; id * rL_ac ; sw * id ; rL_ab * id by yb_mod_lem1
-  = br_bc * id ; id * br_ac ; br_ab * id
+  br_ab * id ; id * br_ac ; br_bc * id
+  = u * id * u * id * u * id ; a * b * c ; br_ab * id ; id * br_ac ; br_bc * id by simp(A.unit, B.unit, C.unit)
+  = u * u * u * id * id * id ; id * id * id * id * sw ; rL * id * id * id * id ; sw * id * sw * id ; id * rL * id * id * id ; id * sw[1, 2, 0] * id * id ; rL * id * a * id ; sw[1, 2, 0] * sw ; c * b * id by simp(+nodefs, -rL_ab_comm, -rL_ac_comm, -rL_bc_comm)
+  = sw[1, 2, 0] ; u * u * u * id * id * id ; id * id * id * sw * id ; id * rL * id * id * id ; id * sw * id * id * id ; rL * id * id * id * id ; sw[1, 3, 0, 2] * id * id ; c * rL * id * id ; id * sw[1, 2, 0] * id ; id * b * a by H.yang_baxter
+  = id * rL_bc ; id * sw ; rL_ac * id ; sw * id ; id * rL_ab ; id * sw by simp(+nodefs, rL_ab_comm, rL_ac_comm, rL_bc_comm, A.unit, B.unit, C.unit)
 
-show yang_baxter_mod
+
 

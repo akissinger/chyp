@@ -32,9 +32,11 @@ GRAMMAR = Lark("""
     converse : "-"
 
     LPAREN: "("
+    RPAREN: ")"
     tactic : [ converse ] IDENT | IDENT LPAREN [ TACTIC_ARG ("," TACTIC_ARG)* ] ")"
     ?term  : par_term | seq
-    ?par_term : "(" term ")" | par | perm | id | id0 | term_ref
+    ?par_term : nested_term | par | perm | id | id0 | term_ref
+    nested_term : LPAREN term RPAREN
     par : par_term "*" par_term
     seq : term ";" term
     perm : "sw" [ "[" num ("," num)* "]" ]
