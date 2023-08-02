@@ -38,19 +38,21 @@ class SimpTac(Tactic):
 
         for r in rest:
             self.add_rule_to_context(r)
-            Tactic.repeat(lambda df: self.rewrite_lhs1(df, r), defs)
+            self.repeat(lambda df: self.rewrite_lhs1(df, r), defs)
 
         return defs + rest
 
     def make_rhs(self) -> Iterator[Graph]:
         rules = self.__prepare_rules()
-        Tactic.repeat(self.rewrite_lhs1, rules)
+        bound = -1 if '+nobound' in self.args else 200
+        self.repeat(self.rewrite_lhs1, rules, bound_rhs=bound)
         lhs = self.lhs()
         if lhs: yield lhs
 
     def check(self) -> None:
         rules = self.__prepare_rules()
-        Tactic.repeat(self.rewrite_lhs1, rules)
-        Tactic.repeat(self.rewrite_rhs1, rules)
+        bound = -1 if '+nobound' in self.args else 400
+        self.repeat(self.rewrite_lhs1, rules, bound_lhs=bound)
+        self.repeat(self.rewrite_rhs1, rules, bound_rhs=bound)
         self.validate_goal()
 

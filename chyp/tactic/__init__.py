@@ -47,11 +47,13 @@ class Tactic:
         self.args = args
 
 
-    @staticmethod
-    def repeat(rw: Callable[[str], bool], rules: List[str], max_iter: int=255) -> None:
+    def repeat(self, rw: Callable[[str], bool], rules: List[str], max_iter: int=255, bound_lhs: int=-1, bound_rhs: int=-1) -> None:
         got_match = True
         i = 0
-        while got_match and i < max_iter:
+        while (got_match and
+               (max_iter == -1 or i < max_iter) and
+               (bound_lhs == -1 or self.lhs_size() < bound_lhs) and
+               (bound_rhs == -1 or self.rhs_size() < bound_rhs)):
             got_match = False
             for r in rules:
                 # print('rewriting: ' + r)
@@ -255,6 +257,14 @@ class Tactic:
     def rhs(self, target: str='') -> Optional[Graph]:
         g = self.__rhs(target)
         return g.copy() if g else None
+
+    def lhs_size(self, target: str='') -> int:
+        g = self.__lhs(target)
+        return g.num_edges() + g.num_vertices() if g else 0
+
+    def rhs_size(self, target: str='') -> int:
+        g = self.__rhs(target)
+        return g.num_edges() + g.num_vertices() if g else 0
 
     def highlight_lhs(self, vertices: Set[int], edges: Set[int]) -> None:
         if self.__local_state.lhs:
