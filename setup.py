@@ -29,7 +29,7 @@ setuptools.setup(
     packages=["chyp", "chyp.gui", "chyp.tactic"],
     package_data={'': ['*.svg']},
     data_files=data_files,
-    install_requires=["PySide6>=6.4.3", "lark>=1.1.5", "cvxpy>=1.3.1"],
+    install_requires=["PySide6>=6.4.3", "lark==1.1.5", "cvxpy>=1.3.1"],
     python_requires=">=3.7",
     entry_points={'console_scripts': 'chyp=chyp.gui.app:main'},
 )
