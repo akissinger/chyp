@@ -15,8 +15,12 @@
 
 from __future__ import annotations
 from typing import Iterable, Set, List, Dict, Iterator, Any, Optional, Tuple
+from typing import TypeAlias
 import json
 import copy
+
+
+VType: TypeAlias = str | None # vertex type is a string label
 
 class GraphError(Exception):
     """Exception thrown by Graph's"""
@@ -25,11 +29,16 @@ class GraphError(Exception):
 class VData:
     """The data assocaited with a single vertex"""
 
-    def __init__(self, x: float=0, y: float=0, value: Any="") -> None:
+    def __init__(self, x: float = 0, y: float = 0,
+                 vtype: VType = None, size: int = 1,
+                 value: Any = '') -> None:
         self.value = value
         self.x = x
         self.y = y
         self.highlight = False
+
+        self.vtype = vtype
+        self.size = size
 
         # for quickly finding edges in the nhd of v
         self.in_edges: Set[int] = set()
@@ -167,7 +176,9 @@ class Graph:
 
         return self.edata[e].t
 
-    def add_vertex(self, x:float=0, y:float=0, value: Any="", name: int=-1) -> int:
+    def add_vertex(self, x: float = 0, y: float = 0,
+                   vtype: VType = None, size: int = 1,
+                   value: Any = '', name: int = -1) -> int:
         """Add a vertex to the graph
         
         :param x:     The X coordinate to draw the vertex
@@ -183,7 +194,7 @@ class Graph:
             max_index = max(name, self.vindex)
             self.vindex = max_index + 1
 
-        self.vdata[v] = VData(x, y, value)
+        self.vdata[v] = VData(x, y, vtype, size, value)
         return v
 
     def add_edge(self, s:List[int], t:List[int], value:Any="", x:float=0, y:float=0, fg:str='', bg:str='', hyper:bool=True, name:int=-1) -> int:
