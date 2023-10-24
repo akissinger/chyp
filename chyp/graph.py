@@ -15,8 +15,12 @@
 
 from __future__ import annotations
 from typing import Iterable, Set, List, Dict, Iterator, Any, Optional, Tuple
+from typing import TypeAlias
 import json
 import copy
+
+
+VType: TypeAlias = str | None # vertex type is a string label
 
 class GraphError(Exception):
     """Exception thrown by Graph's"""
@@ -25,11 +29,16 @@ class GraphError(Exception):
 class VData:
     """The data assocaited with a single vertex"""
 
-    def __init__(self, x: float=0, y: float=0, value: Any="") -> None:
+    def __init__(self, x: float = 0, y: float = 0,
+                 vtype: VType = None, size: int = 1,
+                 value: Any = '') -> None:
         self.value = value
         self.x = x
         self.y = y
         self.highlight = False
+
+        self.vtype = vtype
+        self.size = size
 
         # for quickly finding edges in the nhd of v
         self.in_edges: Set[int] = set()
@@ -119,6 +128,20 @@ class Graph:
         """The number of edges"""
         return len(self.edata)
 
+    def domain(self) -> list[VType]:
+        """Returns the domain of the graph."""
+        domain = [self.vertex_data(vertex).vtype for vertex in self.inputs()]
+        if all(d is None for d in domain):
+            return len(domain)
+        return domain
+
+    def codomain(self) -> list[VType]:
+        """Returns the codomain of the graph."""
+        codomain = [self.vertex_data(vertex).vtype for vertex in self.outputs()]
+        if all(d is None for d in codomain):
+            return len(codomain)
+        return codomain
+
     def vertex_data(self, v: int) -> VData:
         """Returns the :class:`VData` associated to a given vertex
 
@@ -167,7 +190,9 @@ class Graph:
 
         return self.edata[e].t
 
-    def add_vertex(self, x:float=0, y:float=0, value: Any="", name: int=-1) -> int:
+    def add_vertex(self, x: float = 0, y: float = 0,
+                   vtype: VType = None, size: int = 1,
+                   value: Any = '', name: int = -1) -> int:
         """Add a vertex to the graph
         
         :param x:     The X coordinate to draw the vertex
@@ -183,7 +208,7 @@ class Graph:
             max_index = max(name, self.vindex)
             self.vindex = max_index + 1
 
-        self.vdata[v] = VData(x, y, value)
+        self.vdata[v] = VData(x, y, vtype, size, value)
         return v
 
     def add_edge(self, s:List[int], t:List[int], value:Any="", x:float=0, y:float=0, fg:str='', bg:str='', hyper:bool=True, name:int=-1) -> int:
@@ -348,7 +373,9 @@ class Graph:
         new_vs: Tuple[List[int], List[int]] = ([], [])
         vd = self.vertex_data(v)
         def fresh(j: int) -> int:
-            v1 = self.add_vertex(vd.x, vd.y, vd.value)
+            v1 = self.add_vertex(vd.x, vd.y,
+                                 vd.vtype, vd.size,
+                                 vd.value)
             new_vs[j].append(v1)
             return v1
 
@@ -386,7 +413,9 @@ class Graph:
         used to break directed cycles, essentially by introducing a cap and cup.
         """
         vd = self.vertex_data(v)
-        w = self.add_vertex(vd.x + 3, vd.y, vd.value)
+        w = self.add_vertex(vd.x + 3, vd.y,
+                            vd.vtype, vd.size,
+                            vd.value)
         wd = self.vertex_data(w)
         wd.highlight = vd.highlight
         self.set_outputs([x if x != v else w for x in self.outputs()])
@@ -423,7 +452,9 @@ class Graph:
 
         for v in other.vertices():
             vd = other.vertex_data(v)
-            vmap[v] = self.add_vertex(vd.x, vd.y - min_other + 1, vd.value)
+            vmap[v] = self.add_vertex(vd.x, vd.y - min_other + 1,
+                                      vd.vtype, vd.size,
+                                      vd.value)
 
         for e in other.edges():
             ed = other.edge_data(e)
@@ -448,6 +479,14 @@ class Graph:
 
         :param other: A graph to plug into the outputs of the current graph
         """
+        codomain = self.codomain()
+        domain = other.domain()
+        if (not (isinstance(codomain, int) and isinstance(domain, int))
+           and (len(codomain) != len(domain)
+                or any(c != d for c, d in zip(domain, codomain)))):
+            raise GraphError(
+                f'Codomain {codomain} does not match domain {domain}'
+            )
 
         vmap = dict()
 
@@ -461,7 +500,9 @@ class Graph:
 
         for v in other.vertices():
             vd = other.vertex_data(v)
-            vmap[v] = self.add_vertex(vd.x - min_other, vd.y, vd.value)
+            vmap[v] = self.add_vertex(vd.x - min_other, vd.y,
+                                      vd.vtype, vd.size,
+                                      vd.value)
 
         for e in other.edges():
             ed = other.edge_data(e)
@@ -525,7 +566,9 @@ class Graph:
         for ed in self.edata.values():
             ed.highlight = False
 
-def gen(value: str, arity: int, coarity: int, fg: str='', bg: str='') -> Graph:
+def gen(value: str,
+        domain: list[VType] | int, codomain: list[VType] | int,
+        fg: str='', bg: str='') -> Graph:
     """Returns a graph with a single hyperedge and given number of inputs/outputs
 
     :param value: The label for the hyperedge
@@ -536,14 +579,26 @@ def gen(value: str, arity: int, coarity: int, fg: str='', bg: str='') -> Graph:
     """
 
     g = Graph()
-    inputs = [g.add_vertex(-1.5, i - (arity-1)/2) for i in range(arity)]
-    outputs = [g.add_vertex(1.5, i - (coarity-1)/2) for i in range(coarity)]
+    if type(domain) is not type(codomain):
+        raise ValueError(
+            f'Conflicting input/output types {type(domain)}'
+            + f'and {type(codomain)}')
+    if isinstance(domain, int) and isinstance(codomain, int):
+        inputs = [g.add_vertex(-1.5, i - (domain-1)/2)
+                  for i in range(domain)]
+        outputs = [g.add_vertex(1.5, i - (codomain-1)/2)
+                   for i in range(codomain)]
+    else:
+        inputs = [g.add_vertex(-1.5, i - (i-1)/2, vtype)
+                  for i, vtype in enumerate(domain)]
+        outputs = [g.add_vertex(1.5, i - (i-1)/2, vtype)
+                   for i, vtype in enumerate(codomain)]
     g.add_edge(inputs, outputs, value, fg=fg, bg=bg)
     g.set_inputs(inputs)
     g.set_outputs(outputs)
     return g
         
-def perm(p: List[int]) -> Graph:
+def perm(p: List[int], domain: list[VType] | None = None) -> Graph:
     """Returns a graph corresponding to the given permutation
 
     This takes a permution, given as a list [x0,..,x(n-1)], which is interpreted as the permutation { x0 -> 0, x1 -> 1, ..., x(n-1) -> n-1 }.
@@ -558,20 +613,27 @@ def perm(p: List[int]) -> Graph:
 
     g = Graph()
     size = len(p)
-    inputs = [g.add_vertex(0, i - (size-1)/2) for i in range(size)]
+    if domain is None:
+        inputs = [g.add_vertex(0, i - (size-1)/2) for i in range(size)]
+    else:
+        if len(domain) != size:
+            raise ValueError(
+                f'Domain {domain} does not match length of permutation.')
+        inputs = [g.add_vertex(0, i - (size-1)/2, d)
+                  for i, d in enumerate(domain)]
     outputs = [inputs[p[i]] for i in range(size)]
     g.set_inputs(inputs)
     g.set_outputs(outputs)
     return g
 
-def identity() -> Graph:
+def identity(vtype: VType = None) -> Graph:
     """Returns a graph corresponding to the identity map
 
     This graph has a single vertex which is both an input and an output.
     """
 
     g = Graph()
-    v = g.add_vertex(0, 0)
+    v = g.add_vertex(0, 0, vtype)
     g.set_inputs([v])
     g.set_outputs([v])
     return g
