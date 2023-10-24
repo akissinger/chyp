@@ -22,7 +22,7 @@ from . import state
 GRAMMAR = Lark("""
     start : statement*
     ?statement : import_statement | gen | let | def_statement | rule | rewrite | show
-    gen : "gen" var ":" num "->" num [ gen_color ]
+    gen : "gen" var ":" type_term "->" type_term [ gen_color ]
     def_statement : "def" var "=" term [ gen_color ]
     gen_color : "\\\"" color "\\\"" | "\\\"" color "\\\"" "\\\"" color "\\\""
     let : "let" var "=" term
@@ -30,6 +30,8 @@ GRAMMAR = Lark("""
     rewrite : "rewrite" [converse] var ":" term rewrite_part*
     rewrite_part : (eq | le) term_hole [ "by" tactic ]
     converse : "-"
+
+    type_term : IDENT ("*" IDENT)* | num
 
     LPAREN: "("
     RPAREN: ")"
@@ -39,7 +41,8 @@ GRAMMAR = Lark("""
     nested_term : LPAREN term RPAREN
     par : par_term "*" par_term
     seq : term ";" term
-    perm : "sw" [ "[" num ("," num)* "]" ]
+    perm : "sw" [ "[" perm_indices "]" ] [ "[" type_term "]" ]
+    perm_indices : num ("," num)+
     id : "id"
     id0 : "id0"
     show : "show" rule_ref

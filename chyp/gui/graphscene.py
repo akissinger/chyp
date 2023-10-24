@@ -21,7 +21,8 @@ from PySide6.QtCore import Qt, QPointF
 from PySide6.QtGui import QBrush, QColor, QFont, QPainter, QPainterPath, QPen, QTransform, QUndoStack
 from PySide6.QtWidgets import (QGraphicsEllipseItem, QGraphicsItem,
                                QGraphicsPathItem, QGraphicsRectItem, QGraphicsScene,
-                               QGraphicsSceneMouseEvent, QStyleOptionGraphicsItem, QWidget)
+                               QGraphicsSceneMouseEvent, QGraphicsTextItem,
+                               QStyleOptionGraphicsItem, QWidget)
 
 from ..graph import Graph
 
@@ -83,6 +84,13 @@ class VItem(QGraphicsEllipseItem):
         self.setPos(vd.x * SCALE, vd.y * SCALE)
         self.setBrush(QBrush(QColor(0,0,0)))
 
+        # Add text item to indicate vertex type
+        self.vtype = vd.vtype
+        self.textItem = QGraphicsTextItem(self.vtype)
+        self.textItem.setDefaultTextColor(QColor(0, 0, 0))
+        text_position = self.pos() + QPointF(0, -0.5 * SCALE)
+        self.textItem.setPos(text_position)
+
     def refresh(self) -> None:
         if self.eitem and self.i != -1:
             x_shift = 0.7 * SCALE
@@ -92,6 +100,10 @@ class VItem(QGraphicsEllipseItem):
                 y_shift = ((self.i / (self.eitem.num_t - 1)) - 0.5) * SCALE
             p = self.eitem.pos()
             self.setPos(p.x() + x_shift, p.y() + y_shift)
+
+        # Update text position
+        text_position = self.pos() + QPointF(0, -0.5 * SCALE)
+        self.textItem.setPos(text_position)
 
 class TItem(QGraphicsPathItem):
     def __init__(self, vitem: VItem, eitem: EItem, i: int, src: bool) -> None:
@@ -168,6 +180,7 @@ class GraphScene(QGraphicsScene):
         for v in itertools.chain(self.g.inputs(), self.g.outputs()):
             vi[v] = VItem(self.g, v)
             self.addItem(vi[v])
+            self.addItem(vi[v].textItem)
 
         for e in self.g.edges():
             ed = self.g.edge_data(e)
@@ -175,6 +188,7 @@ class GraphScene(QGraphicsScene):
                 if not v in vi:
                     vi[v] = VItem(self.g, v, ei[e], i)
                     self.addItem(vi[v])
+                    self.addItem(vi[v].textItem)
 
         for e in self.g.edges():
             ed = self.g.edge_data(e)

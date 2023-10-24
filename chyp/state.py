@@ -118,6 +118,12 @@ class State(lark.Transformer):
     def num(self, items: List[Any]) -> int:
         return int(items[0])
 
+    def type_term(self, items: List[Any]) -> list[str] | int:
+        if (len(items) == 1
+           and isinstance(items[0], int)):
+            return items[0]
+        return [str(item) for item in items]
+
     def id(self, _: List[Any]) -> Graph:
         return identity()
 
@@ -134,13 +140,16 @@ class State(lark.Transformer):
     def perm(self, meta: Meta, items: List[Any]) -> Optional[Graph]:
         try:
             if items[0] is None:
-                return perm([1,0])
+                return perm([1, 0], items[1])
             else:
-                return perm([int(i) for i in items])
+                return perm([int(i) for i in items[0]], items[1])
         except GraphError as e:
             self.errors.append((self.file_name, meta.line, str(e)))
         return None
-    
+
+    def perm_indices(self, items: list[int]) -> list[int]:
+        return items
+
     @v_args(meta=True)
     def term_ref(self, meta: Meta, items: List[Any]) -> Optional[Graph]:
         s = str(items[0])
@@ -192,17 +201,18 @@ class State(lark.Transformer):
     @v_args(meta=True)
     def gen(self, meta: Meta, items: List[Any]) -> None:
         name = items[0]
-        arity = items[1]
-        coarity = items[2]
+        domain = items[1]
+        codomain = items[2]
         (fg,bg) = items[3] if items[3] else ('','')
         if not name in self.graphs:
-            self.graphs[name] = gen(name, arity, coarity, fg, bg)
+            self.graphs[name] = gen(name, domain, codomain, fg, bg)
         else:
             g = self.graphs[name]
-            inp = len(g.inputs())
-            outp = len(g.outputs())
-            if inp != arity or outp != coarity:
-                self.errors.append((self.file_name, meta.line, "Term '{}' already defined with incompatible type {} -> {}.".format(name, inp, outp)))
+            existing_domain = g.domain()
+            existing_codomain = g.codomain()
+            if existing_domain != domain or existing_codomain != codomain:
+                self.errors.append((self.file_name, meta.line, "Term '{}' already defined with incompatible type {} -> {}.".format(name, existing_domain, existing_codomain)))
+                self.errors.append((self.file_name, meta.line, "(Trying to add) {} -> {}.".format(domain, codomain)))
         self.parts.append((meta.start_pos, meta.end_pos, 'gen', name))
         
     @v_args(meta=True)
