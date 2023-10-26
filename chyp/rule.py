@@ -27,8 +27,12 @@ class Rule:
     rhs: Graph
 
     def __init__(self, lhs: Graph, rhs: Graph, name: str='', equiv: bool=True):
-        if len(lhs.inputs()) != len(rhs.inputs()) or len(lhs.outputs()) != len(rhs.outputs()):
-            raise RuleError("Inputs and outputs must match on LHS and RHS of rule")
+        if lhs.domain() != rhs.domain():
+            raise RuleError("Inputs must match on LHS and RHS of rule "
+                            + f'({rhs.domain()} != {lhs.domain()})')
+        if lhs.codomain() != rhs.codomain():
+            raise RuleError("Outputs must match on LHS and RHS of rule "
+                            + f'({rhs.codomain()} != {lhs.codomain()})')
         self.lhs = lhs
         self.rhs = rhs
         self.name = name

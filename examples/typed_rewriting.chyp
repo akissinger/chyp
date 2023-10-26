@@ -1,0 +1,8 @@
+gen f: A * B -> C * D
+gen g: A -> C
+gen h: B -> D
+
+rule typedRule: f = g * h
+
+rewrite typedRewrite: f * g
+= g * h * g by typedRule

@@ -65,11 +65,13 @@ class Match:
             match_log("vertex already mapped to {}".format(self.vmap[v]))
             return self.vmap[v] == cod_v
 
-        v_val = self.dom.vertex_data(v).value
-        cod_v_val = self.cod.vertex_data(cod_v).value
+        # Ensure vertices are mapped to vertices of the same vtype
+        domain_vertex_type = self.dom.vertex_data(v).vtype
+        codomain_vertex_type = self.cod.vertex_data(cod_v).vtype
 
-        if v_val != cod_v_val:
-            match_log("vertex failed: values {} != {}".format(v_val, cod_v_val))
+        if domain_vertex_type != codomain_vertex_type:
+            match_log(f'vertex failed: values {domain_vertex_type} != '
+                      + f'{codomain_vertex_type}')
             return False
 
         if self.cod.is_boundary(cod_v) and not self.dom.is_boundary(v):
@@ -129,6 +131,19 @@ class Match:
         if len(s) != len(cod_s) or len(t) != len(cod_t):
             match_log("edge failed: source or target len doesn't match image")
             return False
+
+        # Input and output vtypes of the edge must match
+        preimg_edge_domain = self.dom.edge_domain(e)
+        image_edge_domain = self.cod.edge_domain(cod_e)
+        if preimg_edge_domain != image_edge_domain:
+            match_log(f'Edge input type {preimg_edge_domain} does not '
+                      + f'match image type {image_edge_domain}.')
+
+        preimg_edge_codomain = self.dom.edge_codomain(e)
+        image_edge_codomain = self.cod.edge_codomain(cod_e)
+        if preimg_edge_codomain != image_edge_codomain:
+            match_log(f'Edge output type {preimg_edge_codomain} does not '
+                      + f'match image type {image_edge_codomain}.')
 
         # then, each vertex that is already mapped needs to be consistent
         for v1, cod_v1 in zip(s + t, cod_s + cod_t):

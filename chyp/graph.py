@@ -130,14 +130,18 @@ class Graph:
 
     def domain(self) -> list[VType]:
         """Returns the domain of the graph."""
-        domain = [self.vertex_data(vertex).vtype for vertex in self.inputs()]
+        domain = [self.vertex_data(vertex).vtype
+                  for vertex in self.inputs()]
+        # None is used as vtype in untyped graphs
         if all(d is None for d in domain):
             return len(domain)
         return domain
 
     def codomain(self) -> list[VType]:
         """Returns the codomain of the graph."""
-        codomain = [self.vertex_data(vertex).vtype for vertex in self.outputs()]
+        codomain = [self.vertex_data(vertex).vtype
+                    for vertex in self.outputs()]
+        # None is used as vtype in untyped graphs
         if all(d is None for d in codomain):
             return len(codomain)
         return codomain
@@ -157,6 +161,24 @@ class Graph:
         """
 
         return self.edata[e]
+
+    def edge_domain(self, e: int) -> List[VType] | int:
+        """Returns the input type of an edge."""
+        domain = [self.vertex_data(vertex).vtype
+                  for vertex in self.source(e)]
+        # None is used as vtype in untyped graphs
+        if all(d is None for d in domain):
+            return len(domain)
+        return domain
+
+    def edge_codomain(self, e: int) -> List[VType] | int:
+        """Returns the output type of an edge."""
+        codomain = [self.vertex_data(vertex).vtype
+                    for vertex in self.target(e)]
+        # None is used as vtype in untyped graphs
+        if all(d is None for d in codomain):
+            return len(codomain)
+        return codomain
 
     def in_edges(self, v: int) -> Set[int]:
         """Returns a list of edges that have `v` as a target
