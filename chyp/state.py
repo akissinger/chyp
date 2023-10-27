@@ -122,7 +122,8 @@ class State(lark.Transformer):
         if (len(items) == 1
            and isinstance(items[0], int)):
             return items[0]
-        return [str(item) for item in items]
+        return [str(item) for item in items
+                if item != 'None']
 
     def id(self, _: List[Any]) -> Graph:
         return identity()
