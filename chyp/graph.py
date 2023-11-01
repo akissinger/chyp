@@ -1,4 +1,4 @@
-#     chyp - An interactive theorem prover for string diagrams 
+#     chyp - An interactive theorem prover for string diagrams
 #     Copyright (C) 2022 - Aleks Kissinger
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,95 +14,138 @@
 # limitations under the License.
 
 from __future__ import annotations
-from typing import Iterable, Set, List, Dict, Iterator, Any, Optional, Tuple
+from typing import Iterable, Iterator, Any
 from typing import TypeAlias
 import json
 import copy
 
 
-VType: TypeAlias = str | None # vertex type is a string label
+VType: TypeAlias = str | None  # vertex type is a string label
+
 
 class GraphError(Exception):
-    """Exception thrown by Graph's"""
-    pass
+    """An error occurred in the graph logic."""
+
 
 class VData:
-    """The data assocaited with a single vertex"""
+    """Data associated with a single vertex.
 
-    def __init__(self, x: float = 0, y: float = 0,
+    Attributes:
+        vtype: The vertex type.
+        size: The size of the vertex.
+
+        x: x-coordinate at which to draw the vertex.
+        y: y-coordinate at which to draw the vertex.
+    """
+
+    def __init__(self,
                  vtype: VType = None, size: int = 1,
-                 value: Any = '') -> None:
-        self.value = value
-        self.x = x
-        self.y = y
-        self.highlight = False
+                 x: float = 0.0, y: float = 0.0,
+                 value: Any = None) -> None:
+        """Initialize a VData instance."""
 
+        # Graph logic attributes
         self.vtype = vtype
         self.size = size
 
-        # for quickly finding edges in the nhd of v
-        self.in_edges: Set[int] = set()
-        self.out_edges: Set[int] = set()
-
-        # if v is in the list of inputs/outputs, save its index here
-        self.in_indices: Set[int] = set()
-        self.out_indices: Set[int] = set()
-
-class EData:
-    """The data assocaited with a single edge"""
-
-    def __init__(self,
-            s: Optional[List[int]]=None,
-            t: Optional[List[int]]=None,
-            value: Any="",
-            x: float=0,
-            y: float=0,
-            fg: str='',
-            bg: str='',
-            hyper: bool=True) -> None:
-        self.value = value
-        self.highlight = False
+        # Drawing attributes
         self.x = x
         self.y = y
+        self.highlight = False
+        self.value = value
+
+        # Integer identifiers of input and output hyperedges of this vertex -
+        # useful for finding neighbouring hyperedges.
+        self.in_edges: set[int] = set()
+        self.out_edges: set[int] = set()
+
+        # Indices (if any) where this vertex occurs in the input and output
+        # lists of the hypergraph.
+        self.in_indices: set[int] = set()
+        self.out_indices: set[int] = set()
+
+
+class EData:
+    """Data associated with a single edge.
+
+    Attributes:
+        sources: The source vertex list of the hyperedge.
+        targets: The target vertex list of the hyperedge.
+
+        x: x-coordinate at which to draw the hyperedge.
+        y: y-coordinate at which to draw the hyperedge.
+        fg: Hex code for the text and outline color of the hyperedge.
+        bg: Hex code for the box fill color of the hyperedge.
+        hyper: Whether to draw this hyperedge as a box or as line connecting
+               two vertices (currently not implemented).
+    """
+
+    def __init__(self,
+                 s: list[int] | None = None, t: list[int] | None = None,
+                 value: Any = None,
+                 x: float = 0.0, y: float = 0.0,
+                 fg: str = '', bg: str = '',
+                 hyper: bool = True) -> None:
+        """Initialize an EData instance."""
+
+        # Graph logic attributes
         self.s = [] if s is None else s
         self.t = [] if t is None else t
+
+        # Drawing attributes
+        self.x = x
+        self.y = y
         self.fg = fg
         self.bg = bg
+        self.highlight = False
         self.hyper = hyper
+        self.value = value
 
     def __repr__(self) -> str:
-        return "Edge: %s (%d, %d)" % (self.value, self.x, self.y)
+        return f'Edge: {self.value} ({self.x}, {self.y})'
 
     def box_size(self) -> int:
-        """Returns the number of 'units' of width the box should have to display nicely.
+        """Return how many width 'units' this box needs to display nicely.
 
-        The simple rule is if both inputs and outputs are <= 1, draw as a small (size 1) box, otherwise
-        draw as a larger (size 2) box."""
+        This uses a simple rule:
+            - If the number of inputs and outputs are both <= 1, draw as a
+            small (1 width unit) box.
+            - Otherwise draw as a larger (size 2) box.
+        """
         return 1 if len(self.s) <= 1 and len(self.t) <= 1 else 2
 
+
 class Graph:
-    """A hypergraph with boundaries
+    """A hypergraph with boundaries.
 
-    This is the main data structure used by Chyp. It represents a directed hypergraph (which we call simply a "graph")
-    as two dictionaries for vertices and (hyper)edges, respectively. Each vertex is associated with a `VData`
-    object and edge edge with an `EData` object, which stores information about adjacency, position, label,
-    etc.
+    This is the main data structure used by Chyp. It represents a directed
+    hypergraph (which we call simply a "graph") as two dictionaries for
+    vertices and (hyper)edges, respectively. Each vertex is associated with a
+    `VData` object and edge edge with an `EData` object, which stores
+    information about adjacency, position, label, etc.
 
-    The particular flavor of hypergraphs we use associate to each hyperedge a list of source vertices and a list
-    of target vertices. The hypergraph itself also has a list of input vertices and a list of output vertices,
+    The particular flavor of hypergraphs we use associate to each hyperedge a
+    list of source vertices and a list of target vertices. The hypergraph
+    itself also has a list of input vertices and a list of output vertices,
     which are used for sequential composition and rewriting.
+
+    Attributes:
+        vdata: Mapping from integer identifiers of each vertex to its data.
+        edata: Mapping from integer identifiers of each hyperedge to its data.
+        vindex:
+        eindex:
     """
 
     def __init__(self) -> None:
-        self.vdata: Dict[int, VData] = {}
-        self.edata: Dict[int, EData] = {}
-        self._inputs: List[int] = []
-        self._outputs: List[int] = []
+        self.vdata: dict[int, VData] = {}
+        self.edata: dict[int, EData] = {}
+        self._inputs: list[int] = []
+        self._outputs: list[int] = []
         self.vindex = 0
         self.eindex = 0
 
     def copy(self) -> Graph:
-        """Make a copy of the graph"""
+        """Return a copy of the graph."""
         g = Graph()
         g.vdata = copy.deepcopy(self.vdata)
         g.edata = copy.deepcopy(self.edata)
@@ -113,23 +156,27 @@ class Graph:
         return g
 
     def vertices(self) -> Iterator[int]:
-        """Returns an iterator over the vertices in the graph"""
+        """Return an iterator over the vertices in the graph."""
         return iter(self.vdata.keys())
 
     def edges(self) -> Iterator[int]:
-        """Returns an iterator over the edges in the graph"""
+        """Return an iterator over the edges in the graph."""
         return iter(self.edata.keys())
 
     def num_vertices(self) -> int:
-        """The number of vertices"""
+        """Return the number of vertices in the graph."""
         return len(self.vdata)
 
     def num_edges(self) -> int:
-        """The number of edges"""
+        """Return the number of edges in the graph."""
         return len(self.edata)
 
-    def domain(self) -> list[VType]:
-        """Returns the domain of the graph."""
+    def domain(self) -> list[VType] | int:
+        """Return the domain of the graph.
+
+        This is either an integer (in the case of an un-typed hypergraph)
+        or a list of `VType`s.
+        """
         domain = [self.vertex_data(vertex).vtype
                   for vertex in self.inputs()]
         # None is used as vtype in untyped graphs
@@ -137,8 +184,12 @@ class Graph:
             return len(domain)
         return domain
 
-    def codomain(self) -> list[VType]:
-        """Returns the codomain of the graph."""
+    def codomain(self) -> list[VType] | int:
+        """Return the codomain of the graph.
+
+        This is either an integer (in the case of an un-typed hypergraph)
+        or a list of `VType`s.
+        """
         codomain = [self.vertex_data(vertex).vtype
                     for vertex in self.outputs()]
         # None is used as vtype in untyped graphs
@@ -147,23 +198,23 @@ class Graph:
         return codomain
 
     def vertex_data(self, v: int) -> VData:
-        """Returns the :class:`VData` associated to a given vertex
+        """Return the :class:`VData` associated with vertex id `v`.
 
-        :param v: A vertex
+        Args:
+            v: Integer identifier of the vertex.
         """
-
         return self.vdata[v]
 
     def edge_data(self, e: int) -> EData:
-        """Returns the :class:`EData` associated to a given edge
+        """Return the :class:`EData` associated with edge id `e`.
 
-        :param e: An edge
+        Args:
+            e: Integer identifier of the edge.
         """
-
         return self.edata[e]
 
-    def edge_domain(self, e: int) -> List[VType] | int:
-        """Returns the input type of an edge."""
+    def edge_domain(self, e: int) -> list[VType] | int:
+        """Return the domain of edge with id `e`."""
         domain = [self.vertex_data(vertex).vtype
                   for vertex in self.source(e)]
         # None is used as vtype in untyped graphs
@@ -171,8 +222,8 @@ class Graph:
             return len(domain)
         return domain
 
-    def edge_codomain(self, e: int) -> List[VType] | int:
-        """Returns the output type of an edge."""
+    def edge_codomain(self, e: int) -> list[VType] | int:
+        """Return the codomain of edge with id `e`."""
         codomain = [self.vertex_data(vertex).vtype
                     for vertex in self.target(e)]
         # None is used as vtype in untyped graphs
@@ -180,47 +231,56 @@ class Graph:
             return len(codomain)
         return codomain
 
-    def in_edges(self, v: int) -> Set[int]:
-        """Returns a list of edges that have `v` as a target
+    def in_edges(self, v: int) -> set[int]:
+        """Return the set of edge ids for which vertex id `v` is a target.
 
-        :param v: A vertex
+        Args:
+            v: Integer identifier of the vertex.
         """
-
         return self.vdata[v].in_edges
 
-    def out_edges(self, v: int) -> Set[int]:
-        """Returns a list of edges that have `v` as a source
+    def out_edges(self, v: int) -> set[int]:
+        """Return the set of edge ids for which vertex id `v` is a source.
 
-        :param v: A vertex
+        Args:
+            v: Integer identifier of the vertex.
         """
-
         return self.vdata[v].out_edges
 
-    def source(self, e: int) -> List[int]:
-        """Returns the list of source vertices associated with an edge
+    def source(self, e: int) -> list[int]:
+        """Return the list of source vertex ids of edge with id `e`.
 
-        :param e: An edge
+        Args:
+            e: Integer identifier of the edge.
         """
-
         return self.edata[e].s
 
-    def target(self, e: int) -> List[int]:
-        """Returns the list of target vertices associated with an edge
+    def target(self, e: int) -> list[int]:
+        """Return the list of target vertex ids of edge with id `e`.
 
-        :param e: An edge
+        Args:
+            e: Integer identifier of the edge.
         """
-
         return self.edata[e].t
 
-    def add_vertex(self, x: float = 0, y: float = 0,
+    def add_vertex(self,
+                   x: float = 0.0, y: float = 0.0,
                    vtype: VType = None, size: int = 1,
                    value: Any = '', name: int = -1) -> int:
-        """Add a vertex to the graph
-        
-        :param x:     The X coordinate to draw the vertex
-        :param y:     The Y coordinate
-        :param value: The value carried by this vertex. This is the empty string by default.
-        :param name:  An optional name. If this is set to -1, set the name automatically.
+        """Add a new vertex to the graph.
+
+        Args:
+            vtype: The vertex type.
+            size: The size of the vertex.
+
+            x: x-coordinate at which to draw the vertex.
+            y: y-coordinate at which to draw the vertex.
+
+            value: The value carried by this vertex (currently unused).
+            name: The integer identifier to use for this vertex. If this is
+                  set to -1, the identifier is set automatically.
+                  (Note: no checks are currently made to ensure the identifier
+                  is not already in use).
         """
         if name == -1:
             v = self.vindex
@@ -230,21 +290,32 @@ class Graph:
             max_index = max(name, self.vindex)
             self.vindex = max_index + 1
 
-        self.vdata[v] = VData(x, y, vtype, size, value)
+        self.vdata[v] = VData(vtype, size, x, y, value)
         return v
 
-    def add_edge(self, s:List[int], t:List[int], value:Any="", x:float=0, y:float=0, fg:str='', bg:str='', hyper:bool=True, name:int=-1) -> int:
-        """Add an edge to the graph
-        
-        :param s:     A list of source vertices
-        :param t:     A list of target vertices
-        :param value: The value carried by this edge (typically a string)
-        :param x:     The X coordinate to draw the box representing this hyperedge
-        :param y:     The Y coordinate
-        :param hyper: This is a hint to tell the GUI how to draw this (hyper)edge. If set to
-                      False, ideally it should be drawn simply as a line connected two vertices
-                      rather than as a box. (Currently not implemented.)
-        :param name:  An optional name. If this is set to -1, set the name automatically.
+    def add_edge(self,
+                 s: list[int], t: list[int], value: Any = '',
+                 x: float = 0.0, y: float = 0.0,
+                 fg: str = '', bg: str = '',
+                 hyper: bool = True, name: int = -1) -> int:
+        """Add a new hyperedge to the graph.
+
+        Args:
+        s: A list of source vertex ids.
+        t: A list of target vertex ids.
+        value: The value carried by this edge (currently unused).
+
+        x: x-coordinate at which to draw the hyperedge.
+        y: y-coordinate at which to draw the hyperedge.
+        fg: Hex code for the text and outline color of the hyperedge.
+        bg: Hex code for the box fill color of the hyperedge.
+        hyper: Whether to draw this hyperedge as a box or as line connecting
+               two vertices (currently not implemented).
+
+        name:  The integer identifier to use for this vertex. If this is
+               set to -1, the identifier is set automatically.
+               (Note: no checks are currently made to ensure the identifier
+               is not already in use).
         """
         if name == -1:
             e = self.eindex
@@ -255,42 +326,52 @@ class Graph:
             self.eindex = max_index + 1
 
         self.edata[e] = EData(s, t, value, x, y, fg, bg, hyper)
-        for v in s: self.vdata[v].out_edges.add(e)
-        for v in t: self.vdata[v].in_edges.add(e)
+        for v in s:
+            self.vdata[v].out_edges.add(e)
+        for v in t:
+            self.vdata[v].in_edges.add(e)
         return e
 
-    def remove_vertex(self, v: int, strict: bool=False) -> None:
-        """Remove a vertex
+    def remove_vertex(self, v: int, strict: bool = False) -> None:
+        """Remove a vertex from the graph.
 
-        This removes a single vertex. If `strict` is set to True, then the vertex
-        must have no adjacent edges. If it is False, then `v` will be removed from
-        the source/target list of all adjacent edges.
+        This removes a single vertex.
+        If `strict` is set to True, then the
+        vertex must have no adjacent edges nor be a boundary vertex.
+        If `strict` is False, then `v` will be removed from the
+        source/target list of all adjacent edges and removed from the
+        boundaries, if applicable.
 
-        :param v: A vertex to remove
-        :param strict: If True, require the vertex to have no adjacent edges
+        Args:
+            v: Integer identifier of the vertex to remove.
+            strict: If True, require the vertex to have no adjacent edges
+                    and not be a boundary vertex.
         """
-
         if strict:
-            if (len(self.vertex_data(v).in_edges)  > 0 or
-                len(self.vertex_data(v).out_edges) > 0):
-                raise Exception("Attempting to remove vertex with adjacent edges")
+            if (len(self.vertex_data(v).in_edges) > 0 or
+               len(self.vertex_data(v).out_edges) > 0):
+                raise ValueError('Attempting to remove vertex with adjacent'
+                                 + 'edges while strict == True.')
             if (v in self.inputs() or v in self.outputs()):
-                raise Exception("Attempting to remove boundary vertex")
+                raise ValueError('Attempting to remove boundary vertex while'
+                                 + 'strict == True.')
         else:
             for e in self.vertex_data(v).in_edges:
-                self.edge_data(e).t = [v1 for v1 in self.edge_data(e).t if v1 != v]
+                self.edge_data(e).t = [v1 for v1 in self.edge_data(e).t
+                                       if v1 != v]
             for e in self.vertex_data(v).out_edges:
-                self.edge_data(e).s = [v1 for v1 in self.edge_data(e).s if v1 != v]
+                self.edge_data(e).s = [v1 for v1 in self.edge_data(e).s
+                                       if v1 != v]
             self.set_inputs([v1 for v1 in self.inputs() if v1 != v])
             self.set_outputs([v1 for v1 in self.outputs() if v1 != v])
         del self.vdata[v]
 
     def remove_edge(self, e: int) -> None:
-        """Remove an edge
+        """Remove an edge from the graph.
 
-        :param e: An edge to remove
+        Args:
+            e: Integer identifier of the edge to remove.
         """
-
         for v in self.edge_data(e).s:
             self.vertex_data(v).out_edges.remove(e)
         for v in self.edge_data(e).t:
@@ -301,55 +382,101 @@ class Graph:
     #     e = self.add_edge([s], [t], value, hyper=False)
     #     return e
 
-    def add_inputs(self, inp: List[int]) -> None:
+    def add_inputs(self, inp: list[int]) -> None:
+        """Append `inp` to the inputs of the graph.
+
+        Args:
+            inp: The list of vertex integer identifiers
+                 of the appended inputs.
+        """
         i1 = len(self._inputs)
         i2 = i1 + len(inp)
         self._inputs += inp
+        # Register the input indices with the vertex data instances.
         for i in range(i1, i2):
             v = self._inputs[i]
             self.vdata[v].in_indices.add(i)
 
-    def add_outputs(self, outp: List[int]) -> None:
+    def add_outputs(self, outp: list[int]) -> None:
+        """Append `outp` to the outputs of the graph.
+
+        Args:
+            outp: The list of vertex integer identifiers
+                  of the appended outputs.
+        """
         i1 = len(self._outputs)
         i2 = i1 + len(outp)
         self._outputs += outp
+        # Register the output indices with the vertex data instances.
         for i in range(i1, i2):
             v = self._outputs[i]
             self.vdata[v].out_indices.add(i)
 
-    def set_inputs(self, inp: List[int]) -> None:
+    def set_inputs(self, inp: list[int]) -> None:
+        """Set the inputs of the graph to `inp`.
+
+        Args:
+            inp: The list of vertex integer identifiers of the new inputs.
+        """
         self._inputs = inp
         for d in self.vdata.values():
             d.in_indices.clear()
-
-        for i,v in enumerate(self._inputs):
+        # Register the input indices with the vertex data instances.
+        for i, v in enumerate(self._inputs):
             self.vdata[v].in_indices.add(i)
 
-    def set_outputs(self, outp: List[int]) -> None:
+    def set_outputs(self, outp: list[int]) -> None:
+        """Set the outputs of the graph to `outp`.
+
+        Args:
+            outp: The list of vertex integer identifiers of the new outputs.
+        """
         self._outputs = outp
         for d in self.vdata.values():
             d.out_indices.clear()
-
-        for i,v in enumerate(self._outputs):
+        # Register the output indices with the vertex data instances.
+        for i, v in enumerate(self._outputs):
             self.vdata[v].out_indices.add(i)
 
-    def inputs(self) -> List[int]:
+    def inputs(self) -> list[int]:
+        """Return the list of vertex ids of the graph inputs."""
         return self._inputs
 
-    def outputs(self) -> List[int]:
+    def outputs(self) -> list[int]:
+        """Return the list of vertex ids of the graph outputs."""
         return self._outputs
 
     def is_input(self, v: int) -> bool:
+        """Return whether vertex id `v` is in the graph inputs.
+
+        Args:
+            v: Integer identifier of the vertex to check.
+        """
         return len(self.vdata[v].in_indices) > 0
 
     def is_output(self, v: int) -> bool:
+        """Return whether vertex id `v` is in the graph outputs.
+
+        Args:
+            v: Integer identifier of the vertex to check.
+        """
         return len(self.vdata[v].out_indices) > 0
 
     def is_boundary(self, v: int) -> bool:
+        """Return whether vertex id `v` lies on the graph boundary.
+
+        Args:
+            v: Integer identifier of the vertex to check.
+        """
         return self.is_input(v) or self.is_output(v)
 
-    def successors(self, vs: Iterable[int]) -> Set[int]:
-        succ: Set[int] = set()
+    def successors(self, vs: Iterable[int]) -> set[int]:
+        """Return vertices that lie on a directed path from any of `vs`.
+
+        Args:
+            v: Integer identifiers of the vertices to find successors of.
+        """
+        succ: set[int] = set()
         current = list(vs)
         while len(current) > 0:
             v = current.pop()
@@ -358,51 +485,81 @@ class Graph:
                     if v1 not in succ:
                         succ.add(v1)
                         current.append(v1)
-
         return succ
 
     def merge_vertices(self, v: int, w: int) -> None:
-        """Identify the two vertices given
+        """Merge vertex `w` into vertex `v`.
 
-        Form the quotient of the graph by identifying v with w. Afterwards, the
-        quotiented vertex will be named v.
+        Form the quotient of the graph by identifying v with w.
+        Afterwards, the quotiented vertex will be have integer identifier `v`.
+
+        Args:
+            v: Integer identifier of the vertex into which to merge `w`.
+            w: Integer identifier of the vertex to merge into `v`.
         """
-
         vd = self.vertex_data(v)
-        
         # print("merging %s <- %s" % (v, w))
+
+        # Where vertex `w` occurs as an edge target, replace it with `v`
         for e in self.in_edges(w):
             ed = self.edge_data(e)
             ed.t = [v if x == w else x for x in ed.t]
             vd.in_edges.add(e)
 
+        # Where vertex `w` occurs as an edge source, replace it with `v`
         for e in self.out_edges(w):
             ed = self.edge_data(e)
             ed.s = [v if x == w else x for x in ed.s]
             vd.out_edges.add(e)
 
+        # Wherever `w` occurs on the graph boundary, replace it with `v`
         self.set_inputs([v if x == w else x for x in self.inputs()])
         self.set_outputs([v if x == w else x for x in self.outputs()])
+
+        # Remove references to `w` from the graph
         self.remove_vertex(w)
 
-    def explode_vertex(self, v: int) -> Tuple[List[int], List[int]]:
-        """Split a vertex into one copy for each input, in-tentacle, output, and out-tentacle
+    def explode_vertex(self, v: int) -> tuple[list[int], list[int]]:
+        """Split a vertex into copies for each input, output, and tentacle.
 
-        This is used for computing pushout complements of rules that aren't left-linear. Returns
-        a pair of lists containing the new input-like and output-like vertices, respectively.
+        This is used for computing pushout complements of rules that aren't
+        left-linear.
+        (See arXiv:2012.01847 Section 3.3 for definition of left-linear).
+
+        Args:
+            v: Integer identifier of vertex to be exploded.
+
+        Returns:
+            A pair of lists containing the new input-like and output-like
+            vertices, respectively.
         """
-
-        new_vs: Tuple[List[int], List[int]] = ([], [])
+        new_vs: tuple[list[int], list[int]] = ([], [])
         vd = self.vertex_data(v)
+
         def fresh(j: int) -> int:
+            """Creates a new vertex with the same data as `v`.
+
+            The integer identifier of the new vertex is recorded in either
+            the list of new input-like vertices or the list of new output-like
+            vertices, depending on the value of `j`.
+
+            Args:
+                j: If 0, the new vertex is added to the list of new input-like
+                   vertices. If 1, the new vertex is added to the list of
+                   new output-like vertices.
+            """
             v1 = self.add_vertex(vd.x, vd.y,
                                  vd.vtype, vd.size,
                                  vd.value)
             new_vs[j].append(v1)
             return v1
 
+        # Replace any occurences of the original vertex in the graph inputs
+        # with a new input-like vertex.
         self.set_inputs([v1 if v1 != v else fresh(0) for v1 in self.inputs()])
-
+        # Where the original vertex is the target of a hyperedge, replace its
+        # occurence in the hyperedge's target list with a new input-like
+        # vertex and register this with the new vertex's data instance.
         for e in vd.in_edges:
             ed = self.edge_data(e)
             for i in range(len(ed.t)):
@@ -410,8 +567,13 @@ class Graph:
                     ed.t[i] = fresh(0)
                     self.vertex_data(ed.t[i]).in_edges.add(e)
 
-        self.set_outputs([v1 if v1 != v else fresh(1) for v1 in self.outputs()])
-
+        # Replace any occurences of the original vertex in the graph outputs
+        # with a new output-like vertex.
+        self.set_outputs([v1 if v1 != v else fresh(1)
+                          for v1 in self.outputs()])
+        # Where the original vertex is the source of a hyperedge, replace its
+        # occurence in the hyperedge's target list with a new output-like
+        # vertex and register this with the new vertex's data instance.
         for e in vd.out_edges:
             ed = self.edge_data(e)
             for i in range(len(ed.s)):
@@ -419,187 +581,289 @@ class Graph:
                     ed.s[i] = fresh(1)
                     self.vertex_data(ed.s[i]).out_edges.add(e)
 
-
+        # Register the fact that `v` no longer occurs in as a source or target
+        # of any hyperedge.
         vd.in_edges = set()
         vd.out_edges = set()
+        # Remove `v` from the hypergraph, using strict == True to catch any
+        # errors (no errors should be raised with current code).
         self.remove_vertex(v, strict=True)
 
         return new_vs
 
     def insert_id_after(self, v: int, reverse: bool = False) -> int:
-        """Insert a new identity hyperedge after the given vertex
+        """Insert a new identity hyperedge after the given vertex.
 
-        Insert a dummy identity box with source at the given vertex and redirect
-        any out-edges or outputs to the target of the new hyperedge. If `reverse`
-        is True, then flip the source and target of the identity wire. This can be
-        used to break directed cycles, essentially by introducing a cap and cup.
+        A new vertex is also created, which replaces the orignal vertex as the
+        source of any edges in graph as well as any occurences of the original
+        vertex in the graph outputs.
+
+        Args:
+            reverse: If `False`, the original vertex becomes the source of the
+                     new identity hyperedge while the new vertex becomes the
+                     target.
+                     If `True`, the source and target of the new identity are
+                     flipped. This can be used to break directed cycles, by
+                     effectively introducing a cap and cup.
         """
         vd = self.vertex_data(v)
+
+        # Create a new vertex with the same vtype and size
         w = self.add_vertex(vd.x + 3, vd.y,
                             vd.vtype, vd.size,
                             vd.value)
         wd = self.vertex_data(w)
+        # The new vertex is highlighted whenever the orignal vertex is.
         wd.highlight = vd.highlight
+
+        # Replace any occurences of the original vertex in the graph outputs
+        # with the new vertex.
         self.set_outputs([x if x != v else w for x in self.outputs()])
+        # Where the original vertex is the source of a hyperedge, replace it
+        # with the new vertex and register this change with the data instance
+        # of each vertex.
         for e in vd.out_edges:
             ed = self.edge_data(e)
             ed.s = [x if x != v else w for x in ed.s]
             wd.out_edges.add(e)
         vd.out_edges.clear()
 
+        # Assign the orignal and new vertex as source or target of the new
+        # identity edge, based on the `reverse` argument.
         s, t = ([v], [w]) if not reverse else ([w], [v])
-        e = self.add_edge(s, t, "id", vd.x + 1.5, vd.y)
+
+        # Create the new identity edge.
+        e = self.add_edge(s, t, 'id', vd.x + 1.5, vd.y)
+        # The new edge is highlighted whenever the original vertex is.
         self.edge_data(e).highlight = vd.highlight
         return e
-    
-    def tensor(self, other: Graph, layout: bool=True) -> None:
-        """Take the monoidal product with the given graph
 
-        Calling g.tensor(h) will turn g into g ⊗ h. Use the infix version "g + h" to simply return
-        the tensor product without changing g.
+    def tensor(self, other: Graph, layout: bool = True) -> None:
+        """Take the monoidal product of this graph in-place with another.
+
+        Calling g.tensor(h) will turn g into g ⊗ h, performing the operation
+        in-place. Use the infix version `g @ h` to simply return the tensor
+        product without changing g.
+
+        Args:
+            other: The graph with which to take the monoidal product.
+            layout: If `True`, compute new y-coordinates of the vertices and
+                    edges of the resulting graph so that the two graphs in the
+                    tensor product are adjacent with no overlap in the
+                    y-direction.
         """
+        # Mapping used to match which new vertex added to this graph each
+        # vertex of the other graph corresponds to.
+        # Used when computing connectivity of edges copied over from the
+        # other graph.
         vmap = dict()
         # emap = dict()
 
         if layout:
-            max_self = max(max((self.vertex_data(v).y for v in self.vertices()), default = 0),
-                           max((self.edge_data(e).y for e in self.edges()), default=0))
-            min_other = min(min((other.vertex_data(v).y for v in other.vertices()), default = 0),
-                            min((other.edge_data(e).y for e in other.edges()), default=0))
-
-            for v in self.vertices(): self.vertex_data(v).y -= max_self
-            for e in self.edges(): self.edge_data(e).y -= max_self
+            # Compute the max y-coordinate of the edges and vertices in this
+            # graph.
+            max_self = max(
+                max((self.vertex_data(v).y for v in self.vertices()),
+                    default=0),
+                max((self.edge_data(e).y for e in self.edges()), default=0)
+            )
+            # Compute the min y-coordinate of the edges and vertices in the
+            # other graph.
+            min_other = min(
+                min((other.vertex_data(v).y for v in other.vertices()),
+                    default=0),
+                min((other.edge_data(e).y for e in other.edges()), default=0)
+            )
+            # Shift all vertices and edges of this graph below the y-axis.
+            for v in self.vertices():
+                self.vertex_data(v).y -= max_self
+            for e in self.edges():
+                self.edge_data(e).y -= max_self
         else:
             min_other = 0
 
+        # Copy the vertices and edges of the other graph to this one, with all
+        # vertices and edges shifted above the y-axis if layout == True.
         for v in other.vertices():
             vd = other.vertex_data(v)
             vmap[v] = self.add_vertex(vd.x, vd.y - min_other + 1,
                                       vd.vtype, vd.size,
                                       vd.value)
-
         for e in other.edges():
             ed = other.edge_data(e)
             self.add_edge([vmap[v] for v in ed.s],
                           [vmap[v] for v in ed.t],
-                          ed.value, ed.x, ed.y - min_other + 1, ed.fg, ed.bg, ed.hyper)
-        
+                          ed.value, ed.x, ed.y - min_other + 1,
+                          ed.fg, ed.bg, ed.hyper)
+
         # self.set_inputs(self.inputs() + [vmap[v] for v in other.inputs()])
         # self.set_outputs(self.outputs() + [vmap[v] for v in other.outputs()])
+
+        # Add the inputs and outputs of the other graph to this one.
         self.add_inputs([vmap[v] for v in other.inputs()])
         self.add_outputs([vmap[v] for v in other.outputs()])
 
     def __mul__(self, other: Graph) -> Graph:
+        """Return the tensor product of this graph with another.
+
+        This does not modify either of the original graphs.
+        """
         g = self.copy()
         g.tensor(other)
         return g
 
     def compose(self, other: Graph) -> None:
-        """Compose with a given graph in diagram order
+        """Sequentially compose this graph in-place with another.
 
-        Note that composition is done in-place to the current graph.
+        Calling g.compose(h) will turn g into g ; h, performing the operation
+        in-place. Use the infix version `g >> h` to simply return the
+        sequential composition without changing g.
 
-        :param other: A graph to plug into the outputs of the current graph
+        Args:
+            other: The graph with which to take the sequential composition.
         """
         codomain = self.codomain()
         domain = other.domain()
-        if (not (isinstance(codomain, int) and isinstance(domain, int))
-           and (len(codomain) != len(domain)
-                or any(c != d for c, d in zip(domain, codomain)))):
+
+        # Check that codomain of this graph matches the domain of the other:
+        # this is required for valid sequential composition.
+        if not isinstance(domain, type(codomain)):
+            raise TypeError(f'Incompatible domain ({type(domain)}) '
+                            + f'or codomain ({type(codomain)} types.')
+        if (isinstance(domain, int) and codomain != domain):
+            raise GraphError(
+                f'Arity {domain} does not match coarity {codomain}')
+        # Type-checker flags when check codomain is list is not in line below
+        elif (isinstance(domain, list) and isinstance(codomain, list)
+              and (len(codomain) != len(domain)
+              or any(c != d for c, d in zip(domain, codomain)))):
             raise GraphError(
                 f'Codomain {codomain} does not match domain {domain}'
             )
 
         vmap = dict()
 
-        max_self = max(max((self.vertex_data(v).x for v in self.vertices()), default = 0),
-                       max((self.edge_data(e).x for e in self.edges()), default=0))
-        min_other = min(min((other.vertex_data(v).x for v in other.vertices()), default = 0),
-                        min((other.edge_data(e).x for e in other.edges()), default=0))
+        # Compute the max x-coordinate of the edges and vertices
+        # in this graph.
+        max_self = max(
+            max((self.vertex_data(v).x for v in self.vertices()), default=0),
+            max((self.edge_data(e).x for e in self.edges()), default=0)
+        )
+        # Compute the min x-coordinate of the edges and vertices
+        # in the other graph.
+        min_other = min(
+            min((other.vertex_data(v).x for v in other.vertices()),
+                default=0),
+            min((other.edge_data(e).x for e in other.edges()), default=0)
+        )
 
-        for v in self.vertices(): self.vertex_data(v).x -= max_self
-        for e in self.edges(): self.edge_data(e).x -= max_self
+        # Shift all vertices and edges of this graph below the x-axis.
+        for v in self.vertices():
+            self.vertex_data(v).x -= max_self
+        for e in self.edges():
+            self.edge_data(e).x -= max_self
 
+        # Copy the vertices and edges of the other graph to this one, with all
+        # vertices and edges shifted above the x-axis.
         for v in other.vertices():
             vd = other.vertex_data(v)
             vmap[v] = self.add_vertex(vd.x - min_other, vd.y,
                                       vd.vtype, vd.size,
                                       vd.value)
-
         for e in other.edges():
             ed = other.edge_data(e)
             self.add_edge([vmap[v] for v in ed.s],
                           [vmap[v] for v in ed.t],
-                          ed.value, ed.x - min_other, ed.y, ed.fg, ed.bg, ed.hyper)
-        
+                          ed.value, ed.x - min_other, ed.y,
+                          ed.fg, ed.bg, ed.hyper)
+
+        # 'Plug' the two graphs together. In other words, merge the input
+        # vertices of other into the corresponding output vertices of `self`.
         plug1 = self.outputs()
         plug2 = [vmap[v] for v in other.inputs()]
-        quotient: Dict[int,int] = dict()
         if len(plug1) != len(plug2):
-            raise GraphError("Attempting to plug a graph with %d outputs into one with %d inputs" % (len(plug1), len(plug2)))
+            raise GraphError(f'Attempting to plug a graph with {len(plug1)} '
+                             + f'outputs into one with {len(plug2)} inputs')
 
+        # The outputs of the composed graph are the outputs of `other`
+        # The outputs can only be set once we have assigned a copy of
+        # the outputs of `self` to `plug1` above.
         self.set_outputs([vmap[v] for v in other.outputs()])
 
-        for i in range(len(plug1)):
-            p1 = plug1[i]
-            p2 = plug2[i]
-            while p1 in quotient: p1 = quotient[p1]
-            while p2 in quotient: p2 = quotient[p2]
+        # `quotient` will keep track of which vertices
+        # have been merged into which.
+        quotient: dict[int, int] = dict()
+        # Go through pairs of vertices from each plug
+        for p1, p2 in zip(plug1, plug2):
+            # While vertex currently assigned to p1 has already been merged
+            # into another vertex, repeatedly replace it with the vertex the
+            # it was merged into until p1 is a vertex that has not already
+            # been merged. Vice versa for p2.
+            while p1 in quotient:
+                p1 = quotient[p1]
+            while p2 in quotient:
+                p2 = quotient[p2]
+            # If the resulting p1 and p2 are not the same vertex, merge them.
             if p1 != p2:
                 self.merge_vertices(p1, p2)
+                # Register than p2 has been merged into p1
                 quotient[p2] = p1
 
     def __rshift__(self, other: Graph) -> Graph:
-        """Returns the composition of the current graph with `other`
+        """Return the composition of the current graph with `other`.
 
-        Composition is done in diagram order, and neither of the two graphs is changed.
+        Composition is done in diagram order (`other` comes after `self`),
+        and neither of the two graphs are modified.
 
-        :param other: Another graph
-        :returns: The composed graph
+        Args:
+            other: Graph with which to compose `self`.
         """
-
         g = self.copy()
         g.compose(other)
         return g
 
-    def highlight(self, vertices: Set[int], edges: Set[int]) -> None:
-        """Set the `highlight` flag for a set of vertices and edges
+    def highlight(self, vertices: set[int], edges: set[int]) -> None:
+        """Set the `highlight` flag for a set of vertices and edges.
 
-        This tells the GUI to visually highlight a set of vertices/edges, e.g. by drawing them in bold.
+        This tells the GUI to visually highlight a set of vertices/edges,
+        e.g. by drawing them in bold.
         Any vertices/edges not in the sets provided will be un-highlighted.
 
-        :param vertices: A set of vertices to highlight
-        :param edges: A set of edges to highlight
+        Args:
+            vertices: A set of vertices to highlight.
+            edges: A set of edges to highlight.
         """
-
         for v, vd in self.vdata.items():
             vd.highlight = v in vertices
         for e, ed in self.edata.items():
             ed.highlight = e in edges
 
     def unhighlight(self) -> None:
-        """Clear the `highlight` flag for all vertices/edges
+        """Clear the `highlight` flag for all vertices/edges.
 
-        This is equivalent to calling :func:`highlight` with empty sets of vertices/edges.
+        This is equivalent to calling :func:`highlight` with empty sets
+        of vertices/edges.
         """
-
         for vd in self.vdata.values():
             vd.highlight = False
         for ed in self.edata.values():
             ed.highlight = False
 
+
 def gen(value: str,
         domain: list[VType] | int, codomain: list[VType] | int,
-        fg: str='', bg: str='') -> Graph:
-    """Returns a graph with a single hyperedge and given number of inputs/outputs
+        fg: str = '', bg: str = '') -> Graph:
+    """Return a graph with one hyperedge and given domain and codomain.
 
-    :param value: The label for the hyperedge
-    :param arity: The number of input vertices connected to the source of the edge
-    :param coarity: The number of output vertices connected to the target of the edge
-    :param fg: An optional foregraph color, given as a 6-digit RGB hex code
-    :param bg: An optional background color, given as a 6-digit RGB hex code
+    Args:
+        value: The label for the hyperedge.
+        domain: The input type of the hyperedge. Either a list of input
+                vtypes (for typed hypergraphs), or an integer arity (untyped).
+        domain: The output type of the hyperedge. Either a list of input
+                vtypes (for typed hypergraphs) or an integer coarity (untyped).
+        fg: An optional foregraph color, given as a 6-digit RGB hex code.
+        bg: An optional background color, given as a 6-digit RGB hex code.
     """
-
     g = Graph()
     if type(domain) is not type(codomain):
         raise ValueError(
@@ -610,29 +874,39 @@ def gen(value: str,
                   for i in range(domain)]
         outputs = [g.add_vertex(1.5, i - (codomain-1)/2)
                    for i in range(codomain)]
-    else:
+    elif isinstance(domain, list) and isinstance(codomain, list):
         inputs = [g.add_vertex(-1.5, i - (i-1)/2, vtype)
                   for i, vtype in enumerate(domain)]
         outputs = [g.add_vertex(1.5, i - (i-1)/2, vtype)
                    for i, vtype in enumerate(codomain)]
+    else:
+        raise TypeError(f'Invalid domain ({type(domain)}) or '
+                        + f'codomain {type(codomain)} types.')
     g.add_edge(inputs, outputs, value, fg=fg, bg=bg)
     g.set_inputs(inputs)
     g.set_outputs(outputs)
     return g
-        
-def perm(p: List[int], domain: list[VType] | None = None) -> Graph:
-    """Returns a graph corresponding to the given permutation
 
-    This takes a permution, given as a list [x0,..,x(n-1)], which is interpreted as the permutation { x0 -> 0, x1 -> 1, ..., x(n-1) -> n-1 }.
-    It produces a graph consisting just of vertices, where input xj is mapped to the same vertex as output j, representing an identity
-    wire connecting input xj to output j.
 
-    Note this is one of two reasonable conventions for specifying a permutation as a list of numbers. This one has the property, e.g.
-    for graphs aj : 0 -> 1, we have: (a0 * a1 * a2) >> perm([2, 0, 1]) = a2 * a0 * a1.
+def perm(p: list[int], domain: list[VType] | None = None) -> Graph:
+    """Return a graph corresponding to the given permutation.
 
-    :param p: A permutation, given as an n-element list of integers from 0 to n-1.
+    This takes a permution, given as a list [x0,..,x(n-1)], which is
+    interpreted as the permutation { x0 -> 0, x1 -> 1, ..., x(n-1) -> n-1 }.
+    It produces a graph consisting just of vertices, where input xj is mapped
+    to the same vertex as output j, representing an identity wire connecting
+    input xj to output j.
+
+    Note this is one of two reasonable conventions for specifying a
+    permutation as a list of numbers.
+    This one has the property, e.g. for graphs aj : 0 -> 1, we have:
+        (a0 * a1 * a2) >> perm([2, 0, 1]) = a2 * a0 * a1.
+
+    Args:
+        p: A permutation given as an n-element list of integers from 0 to n-1.
+        domain: The domain type of the permutation. Used for permutations in
+                typed hypergraphs.
     """
-
     g = Graph()
     size = len(p)
     if domain is None:
@@ -641,19 +915,22 @@ def perm(p: List[int], domain: list[VType] | None = None) -> Graph:
         if len(domain) != size:
             raise ValueError(
                 f'Domain {domain} does not match length of permutation.')
-        inputs = [g.add_vertex(0, i - (size-1)/2, d)
-                  for i, d in enumerate(domain)]
+        inputs = [g.add_vertex(0, i - (size-1)/2, vtype)
+                  for i, vtype in enumerate(domain)]
     outputs = [inputs[p[i]] for i in range(size)]
     g.set_inputs(inputs)
     g.set_outputs(outputs)
     return g
 
+
 def identity(vtype: VType = None) -> Graph:
-    """Returns a graph corresponding to the identity map
+    """Returns a graph corresponding to the identity map.
 
     This graph has a single vertex which is both an input and an output.
-    """
 
+    Args:
+        vtype: The input and output vertex type. Used in typed hypergraphs.
+    """
     g = Graph()
     v = g.add_vertex(0, 0, vtype)
     g.set_inputs([v])
@@ -678,24 +955,26 @@ def identity(vtype: VType = None) -> Graph:
 
 #     return g
 
+
 def load_graph(path: str) -> Graph:
-    """Load a .chyp graph file from the given path"""
+    """Load a .chyp graph file from the given path."""
 
     with open(path) as f:
         g = graph_from_json(f.read())
     return g
 
+
 def graph_from_json(json_string: str) -> Graph:
-    """Load a graph from the given JSON string"""
+    """Load a graph from the given JSON string."""
 
     j = json.loads(json_string)
     g = Graph()
-    for v,vd in j["vertices"].items():
+    for v, vd in j["vertices"].items():
         g.add_vertex(x=float(vd["x"] if "x" in vd else 0.0),
                      y=float(vd["y"] if "y" in vd else 0.0),
                      value=vd["value"] if "value" in vd else "",
                      name=int(v))
-    for e,ed in j["edges"].items():
+    for e, ed in j["edges"].items():
         g.add_edge(s=[int(v) for v in ed["s"]],
                    t=[int(v) for v in ed["t"]],
                    value=ed["value"] if "value" in ed else "",
