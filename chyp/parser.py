@@ -15,7 +15,7 @@
 
 import os.path
 from typing import Dict, Optional, Tuple
-from lark import Lark, UnexpectedInput, Tree
+from lark import Lark, UnexpectedInput, ParseTree
 
 from . import state
 
@@ -84,7 +84,7 @@ GRAMMAR = Lark("""
 
 
 # cache parse trees for imported files and only re-parse if the file changes
-parse_cache: Dict[str, Tuple[float, Tree]] = dict()
+parse_cache: Dict[str, Tuple[float, ParseTree]] = dict()
 
 def parse(code: str='', file_name: str='', namespace: str='', parent: Optional[state.State] = None) -> state.State:
     global parse_cache
