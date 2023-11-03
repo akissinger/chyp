@@ -1,0 +1,9 @@
+gen f: u^7 * u^42 -> 2
+gen g: u^7 -> 1
+gen h: u^42 -> 1
+gen h2: None -> u^7 * u^42
+
+rule sizedRule: f = g * h
+
+rewrite sizedRewrite: h2 * id[u^7] ; f * g
+= h2 * id[u^7] ; g * h * g by sizedRule

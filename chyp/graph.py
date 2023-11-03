@@ -20,7 +20,8 @@ import json
 import copy
 
 
-VType: TypeAlias = str | None  # vertex type is a string label
+# Non-default vertex types are identified by a string label
+VType: TypeAlias = str | None
 
 
 class GraphError(Exception):
@@ -171,30 +172,26 @@ class Graph:
         """Return the number of edges in the graph."""
         return len(self.edata)
 
-    def domain(self) -> list[VType] | int:
+    def domain(self) -> list[tuple[VType, int]]:
         """Return the domain of the graph.
 
-        This is either an integer (in the case of an un-typed hypergraph)
-        or a list of `VType`s.
+        This consists of a list of pairs (vertex type, register size)
+        corresponding to each input vertex.
         """
-        domain = [self.vertex_data(vertex).vtype
+        domain = [(self.vertex_data(vertex).vtype,
+                   self.vertex_data(vertex).size)
                   for vertex in self.inputs()]
-        # None is used as vtype in untyped graphs
-        if all(d is None for d in domain):
-            return len(domain)
         return domain
 
-    def codomain(self) -> list[VType] | int:
-        """Return the codomain of the graph.
+    def codomain(self) -> list[tuple[VType, int]]:
+        """Return the domain of the graph.
 
-        This is either an integer (in the case of an un-typed hypergraph)
-        or a list of `VType`s.
+        This consists of a list of pairs (vertex type, register size)
+        corresponding to each output vertex.
         """
-        codomain = [self.vertex_data(vertex).vtype
+        codomain = [(self.vertex_data(vertex).vtype,
+                     self.vertex_data(vertex).size)
                     for vertex in self.outputs()]
-        # None is used as vtype in untyped graphs
-        if all(d is None for d in codomain):
-            return len(codomain)
         return codomain
 
     def vertex_data(self, v: int) -> VData:
@@ -213,22 +210,34 @@ class Graph:
         """
         return self.edata[e]
 
-    def edge_domain(self, e: int) -> list[VType] | int:
-        """Return the domain of edge with id `e`."""
-        domain = [self.vertex_data(vertex).vtype
-                  for vertex in self.source(e)]
-        # None is used as vtype in untyped graphs
-        if all(d is None for d in domain):
-            return len(domain)
+    def edge_domain(self, edge_id: int) -> list[tuple[VType, int]]:
+        """Return the domain of edge with id `edge_id`.
+
+        This consists of a list of pairs (vertex type, register size)
+        corresponding to each input vertex of the edge.
+
+        Args:
+            edge_id: Integer identifier of the edge
+                     whose domain will be returned.
+        """
+        domain = [(self.vertex_data(vertex).vtype,
+                   self.vertex_data(vertex).size)
+                  for vertex in self.source(edge_id)]
         return domain
 
-    def edge_codomain(self, e: int) -> list[VType] | int:
-        """Return the codomain of edge with id `e`."""
-        codomain = [self.vertex_data(vertex).vtype
-                    for vertex in self.target(e)]
-        # None is used as vtype in untyped graphs
-        if all(d is None for d in codomain):
-            return len(codomain)
+    def edge_codomain(self, edge_id: int) -> list[tuple[VType, int]]:
+        """Return the codomain of edge with id `edge_id`.
+
+        This consists of a list of pairs (vertex type, register size)
+        corresponding to each output vertex of the edge.
+
+        Args:
+            edge_id: Integer identifier of the edge
+                     whose codomain will be returned.
+        """
+        codomain = [(self.vertex_data(vertex).vtype,
+                     self.vertex_data(vertex).size)
+                    for vertex in self.target(edge_id)]
         return codomain
 
     def in_edges(self, v: int) -> set[int]:
@@ -727,16 +736,8 @@ class Graph:
 
         # Check that codomain of this graph matches the domain of the other:
         # this is required for valid sequential composition.
-        if not isinstance(domain, type(codomain)):
-            raise TypeError(f'Incompatible domain ({type(domain)}) '
-                            + f'or codomain ({type(codomain)} types.')
-        if (isinstance(domain, int) and codomain != domain):
-            raise GraphError(
-                f'Arity {domain} does not match coarity {codomain}')
-        # Type-checker flags when check codomain is list is not in line below
-        elif (isinstance(domain, list) and isinstance(codomain, list)
-              and (len(codomain) != len(domain)
-              or any(c != d for c, d in zip(domain, codomain)))):
+        if (len(codomain) != len(domain)
+           or any(c != d for c, d in zip(codomain, domain))):
             raise GraphError(
                 f'Codomain {codomain} does not match domain {domain}'
             )
@@ -851,44 +852,33 @@ class Graph:
 
 
 def gen(value: str,
-        domain: list[VType] | int, codomain: list[VType] | int,
+        domain: list[tuple[VType, int]], codomain: list[tuple[VType, int]],
         fg: str = '', bg: str = '') -> Graph:
     """Return a graph with one hyperedge and given domain and codomain.
 
     Args:
         value: The label for the hyperedge.
-        domain: The input type of the hyperedge. Either a list of input
-                vtypes (for typed hypergraphs), or an integer arity (untyped).
-        domain: The output type of the hyperedge. Either a list of input
-                vtypes (for typed hypergraphs) or an integer coarity (untyped).
+        domain: A list of pairs (vertex type, register size) corresponding to
+                each input vertex.
+        domain: A list of pairs (vertex type, register size) corresponding to
+                each output vertex.
         fg: An optional foregraph color, given as a 6-digit RGB hex code.
         bg: An optional background color, given as a 6-digit RGB hex code.
     """
     g = Graph()
-    if type(domain) is not type(codomain):
-        raise ValueError(
-            f'Conflicting input/output types {type(domain)}'
-            + f'and {type(codomain)}')
-    if isinstance(domain, int) and isinstance(codomain, int):
-        inputs = [g.add_vertex(-1.5, i - (domain-1)/2)
-                  for i in range(domain)]
-        outputs = [g.add_vertex(1.5, i - (codomain-1)/2)
-                   for i in range(codomain)]
-    elif isinstance(domain, list) and isinstance(codomain, list):
-        inputs = [g.add_vertex(-1.5, i - (i-1)/2, vtype)
-                  for i, vtype in enumerate(domain)]
-        outputs = [g.add_vertex(1.5, i - (i-1)/2, vtype)
-                   for i, vtype in enumerate(codomain)]
-    else:
-        raise TypeError(f'Invalid domain ({type(domain)}) or '
-                        + f'codomain {type(codomain)} types.')
+    inputs = [g.add_vertex(-1.5, i - (i-1)/2, vtype, size)
+              for i, (vtype, size)
+              in enumerate(domain)]
+    outputs = [g.add_vertex(1.5, i - (i-1)/2, vtype, size)
+               for i, (vtype, size)
+               in enumerate(codomain)]
     g.add_edge(inputs, outputs, value, fg=fg, bg=bg)
     g.set_inputs(inputs)
     g.set_outputs(outputs)
     return g
 
 
-def perm(p: list[int], domain: list[VType] | None = None) -> Graph:
+def perm(p: list[int], domain: list[tuple[VType, int]] | None = None) -> Graph:
     """Return a graph corresponding to the given permutation.
 
     This takes a permution, given as a list [x0,..,x(n-1)], which is
@@ -904,26 +894,30 @@ def perm(p: list[int], domain: list[VType] | None = None) -> Graph:
 
     Args:
         p: A permutation given as an n-element list of integers from 0 to n-1.
-        domain: The domain type of the permutation. Used for permutations in
-                typed hypergraphs.
+        domain: The domain type of the permutation. This consists of a list of
+                pairs (vertex type, register size) corresponding to each input
+                vertex of the edge.
+                If `None`, the domain is assumed to be the  appropriate number
+                of default type vertices all with register size 1.
     """
     g = Graph()
-    size = len(p)
+    num_wires = len(p)
     if domain is None:
-        inputs = [g.add_vertex(0, i - (size-1)/2) for i in range(size)]
+        inputs = [g.add_vertex(0, i - (num_wires-1)/2)
+                  for i in range(num_wires)]
     else:
-        if len(domain) != size:
+        if len(domain) != num_wires:
             raise ValueError(
                 f'Domain {domain} does not match length of permutation.')
-        inputs = [g.add_vertex(0, i - (size-1)/2, vtype)
-                  for i, vtype in enumerate(domain)]
-    outputs = [inputs[p[i]] for i in range(size)]
+        inputs = [g.add_vertex(0, i - (num_wires-1)/2, vtype, size)
+                  for i, (vtype, size) in enumerate(domain)]
+    outputs = [inputs[p[i]] for i in range(num_wires)]
     g.set_inputs(inputs)
     g.set_outputs(outputs)
     return g
 
 
-def identity(vtype: VType = None) -> Graph:
+def identity(vtype: VType = None, size: int = 1) -> Graph:
     """Returns a graph corresponding to the identity map.
 
     This graph has a single vertex which is both an input and an output.
@@ -932,7 +926,7 @@ def identity(vtype: VType = None) -> Graph:
         vtype: The input and output vertex type. Used in typed hypergraphs.
     """
     g = Graph()
-    v = g.add_vertex(0, 0, vtype)
+    v = g.add_vertex(0, 0, vtype, size)
     g.set_inputs([v])
     g.set_outputs([v])
     return g

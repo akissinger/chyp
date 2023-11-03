@@ -65,13 +65,18 @@ class Match:
             match_log("vertex already mapped to {}".format(self.vmap[v]))
             return self.vmap[v] == cod_v
 
-        # Ensure vertices are mapped to vertices of the same vtype
+        # Ensure vertices are mapped to vertices of the same vtype and size
         domain_vertex_type = self.dom.vertex_data(v).vtype
         codomain_vertex_type = self.cod.vertex_data(cod_v).vtype
-
         if domain_vertex_type != codomain_vertex_type:
-            match_log(f'vertex failed: values {domain_vertex_type} != '
-                      + f'{codomain_vertex_type}')
+            match_log(f'vertex failed: vtypes {domain_vertex_type} != '
+                      + f'{codomain_vertex_type} do not match.')
+            return False
+        domain_vertex_size = self.dom.vertex_data(v).size
+        codomain_vertex_size = self.cod.vertex_data(cod_v).size
+        if domain_vertex_size != codomain_vertex_size:
+            match_log(f'vertex failed: sizes {domain_vertex_size} != '
+                      + f'{codomain_vertex_size} do not match.')
             return False
 
         if self.cod.is_boundary(cod_v) and not self.dom.is_boundary(v):

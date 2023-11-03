@@ -31,7 +31,8 @@ GRAMMAR = Lark("""
     rewrite_part : (eq | le) term_hole [ "by" tactic ]
     converse : "-"
 
-    type_term : IDENT ("*" IDENT)* | num
+    type_term : type_element ("*" type_element)* | num
+    type_element: IDENT ["^" num]
 
     LPAREN: "("
     RPAREN: ")"
@@ -43,7 +44,7 @@ GRAMMAR = Lark("""
     seq : term ";" term
     perm : "sw" [ "[" perm_indices "]" ] [ "[" type_term "]" ]
     perm_indices : num ("," num)+
-    id : "id"
+    id : "id" [ "[" type_element "]" ]
     id0 : "id0"
     show : "show" rule_ref
 

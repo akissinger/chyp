@@ -114,18 +114,38 @@ class State(lark.Transformer):
 
     def module_name(self, items: List[Any]) -> str:
         return str(items[0])
-    
+
     def num(self, items: List[Any]) -> int:
         return int(items[0])
 
-    def type_term(self, items: List[Any]) -> list[str] | int:
-        if (len(items) == 1
-           and isinstance(items[0], int)):
-            return items[0]
-        return [str(item) for item in items
-                if item != 'None']
+    def type_element(self, items: list[Any]
+                     ) -> tuple[str | None, int] | None:
+        # The default type is denoted by keyword 'u'
+        if items[0] == 'u':
+            vtype = None
+        # The monoidal unit is denoted by keyword 'None'
+        elif items[0] == 'None':
+            return None
+        else:
+            vtype = str(items[0])
+        size = 1 if items[1] is None else items[1]
+        return vtype, size
 
-    def id(self, _: List[Any]) -> Graph:
+    def type_term(self, items: list[tuple[str | None, int] | None]
+                  ) -> (list[tuple[None, int]]
+                        | list[tuple[str | None, int] | None]):
+        # An integer n is parsed as n parallel default type wires of
+        # register size 1.
+        if isinstance(items[0], int):
+            return items[0] * [(None, int(1))]
+        # Assuming strict monoidal category: ignore remove monoidal units
+        items = [i for i in items if i is not None]
+        return items
+
+    def id(self, items: list[Any]) -> Graph:
+        if items[0] is not None:
+            vtype, size = items[0]
+            return identity(vtype, size)
         return identity()
 
     def id0(self, _: List[Any]) -> Graph:
@@ -174,13 +194,13 @@ class State(lark.Transformer):
         else:
             self.errors.append((self.file_name, meta.line, 'Undefined rule: ' + s))
             return None
-    
+
     def par(self, items: List[Any]) -> Optional[Graph]:
         if items[0] and items[1]:
             return items[0] * items[1]
         else:
             return None
-    
+
     @v_args(meta=True)
     def seq(self, meta: Meta, items: List[Any]) -> Optional[Graph]:
         if items[0] and items[1]:
@@ -204,8 +224,8 @@ class State(lark.Transformer):
         name = items[0]
         domain = items[1]
         codomain = items[2]
-        (fg,bg) = items[3] if items[3] else ('','')
-        if not name in self.graphs:
+        (fg, bg) = items[3] if items[3] else ('', '')
+        if name not in self.graphs:
             self.graphs[name] = gen(name, domain, codomain, fg, bg)
         else:
             g = self.graphs[name]
@@ -215,11 +235,11 @@ class State(lark.Transformer):
                 self.errors.append((self.file_name, meta.line, "Term '{}' already defined with incompatible type {} -> {}.".format(name, existing_domain, existing_codomain)))
                 self.errors.append((self.file_name, meta.line, "(Trying to add) {} -> {}.".format(domain, codomain)))
         self.parts.append((meta.start_pos, meta.end_pos, 'gen', name))
-        
+
     @v_args(meta=True)
     def let(self, meta: Meta, items: List[Any]) -> None:
         name, graph = items
-        if not name in self.graphs:
+        if name not in self.graphs:
             if graph:
                 self.graphs[name] = graph
         else:
@@ -245,33 +265,39 @@ class State(lark.Transformer):
     def def_statement(self, meta: Meta, items: List[Any]) -> None:
         name = items[0]
         graph = items[1]
-        (fg,bg) = items[2] if items[2] else ('','')
+        (fg, bg) = items[2] if items[2] else ('', '')
 
         rule_name = name + '_def'
-        if not rule_name in self.rules:
+        if rule_name not in self.rules:
             if graph:
-                arity = len(graph.inputs())
-                coarity = len(graph.outputs())
+                domain = graph.domain()
+                codomain = graph.codomain()
 
-                if not name in self.graphs:
-                    lhs = gen(name, arity, coarity, fg, bg)
+                if name not in self.graphs:
+                    lhs = gen(name, domain, codomain, fg, bg)
                     self.graphs[name] = lhs
                     self.rules[rule_name] = Rule(lhs, graph, rule_name, True)
                     self.sequence += 1
                     self.rule_sequence[rule_name] = self.sequence
                 else:
                     lhs = self.graphs[name]
-                    inp = len(lhs.inputs())
-                    outp = len(lhs.outputs())
-                    if inp == arity and outp == coarity:
-                        self.rules[rule_name] = Rule(lhs, graph, rule_name, True)
+                    lhs_domain = lhs.domain()
+                    lhs_codomain = lhs.codomain()
+                    if lhs_domain == domain and lhs_codomain == codomain:
+                        self.rules[rule_name] = Rule(lhs, graph,
+                                                     rule_name, True)
                         self.sequence += 1
                         self.rule_sequence[rule_name] = self.sequence
                     else:
-                        self.errors.append((self.file_name, meta.line, "Term '{}' already defined with incompatible type {} -> {}.".format(name, inp, outp)))
+                        self.errors.append(
+                            (self.file_name, meta.line,
+                             f'Term "{name}" already defined with '
+                             + f'incompatible type {domain} -> {codomain}.')
+                        )
 
         else:
-            self.errors.append((self.file_name, meta.line, "Rule '{}' already defined.".format(rule_name)))
+            self.errors.append((self.file_name, meta.line,
+                                f'Rule "{rule_name}" already defined.'))
         self.parts.append((meta.start_pos, meta.end_pos, 'rule', rule_name))
 
     def gen_color(self, items: List[Any]) -> Tuple[str,str]:

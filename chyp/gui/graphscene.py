@@ -82,11 +82,12 @@ class VItem(QGraphicsEllipseItem):
         self.i = i
         vd = g.vertex_data(v)
         self.setPos(vd.x * SCALE, vd.y * SCALE)
-        self.setBrush(QBrush(QColor(0,0,0)))
+        self.setBrush(QBrush(QColor(0, 0, 0)))
 
         # Add text item to indicate vertex type
-        self.vtype = vd.vtype
-        self.textItem = QGraphicsTextItem(self.vtype)
+        size = f'^{vd.size}' if vd.size > 1 else ''
+        vtype = vd.vtype if vd.vtype is not None else ''
+        self.textItem = QGraphicsTextItem(f'{vtype}{size}')
         self.textItem.setDefaultTextColor(QColor(0, 0, 0))
         text_position = self.pos() + QPointF(0, -0.5 * SCALE)
         self.textItem.setPos(text_position)
@@ -116,6 +117,7 @@ class TItem(QGraphicsPathItem):
             pen = QPen()
             pen.setWidth(3)
             self.setPen(pen)
+        self.size = g.vertex_data(vitem.v).size
         self.i = i
         self.src = src
         self.refresh()
@@ -151,8 +153,15 @@ class TItem(QGraphicsPathItem):
         path.cubicTo(p1x + dx * 0.4, p1y,
                      p2x - dx * 0.4, p2y,
                      p2x, p2y)
+        if self.size > 1:
+            dash_start = QPointF(self.vitem.pos().x() - 0.1 * SCALE,
+                                 self.vitem.pos().y() - 0.1 * SCALE)
+            dash_end = QPointF(self.vitem.pos().x() + 0.1 * SCALE,
+                               self.vitem.pos().y() + 0.1 * SCALE)
+            path.moveTo(dash_start)
+            path.lineTo(dash_end)
         self.setPath(path)
-        self.update(-2000,-2000,4000,4000)
+        self.update(-2000, -2000, 4000, 4000)
 
 class GraphScene(QGraphicsScene):
     def __init__(self) -> None:
