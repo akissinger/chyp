@@ -30,9 +30,13 @@ SCALE = 50.0
 
 BOX_WIDTH = 1.1
 
+
 class EItem(QGraphicsRectItem):
     def __init__(self, g: Graph, e: int) -> None:
-        super().__init__(-0.5 * BOX_WIDTH * SCALE, -0.8 * SCALE, BOX_WIDTH * SCALE, 1.6 * SCALE)
+        super().__init__(-0.5 * BOX_WIDTH * SCALE,  # corner x-coordinate
+                         -0.8 * SCALE,  # corner y-coordinate
+                         BOX_WIDTH * SCALE,  # width
+                         1.6 * SCALE)  # height
         self.g = g
         self.e = e
         ed = g.edge_data(e)
@@ -42,25 +46,39 @@ class EItem(QGraphicsRectItem):
         self.num_s = len(ed.s)
         self.num_t = len(ed.t)
         self.is_id = isinstance(ed.value, str) and str(ed.value) == 'id'
+        self.is_redistributer = (isinstance(ed.value, str)
+                                 and ed.value == '_redistributer')
 
         self.setPos(ed.x * SCALE, ed.y * SCALE)
 
         if self.is_id:
             self.setRect(-0.2 * SCALE, -0.2 * SCALE, 0.4 * SCALE, 0.4 * SCALE)
-            self.setPen(QPen(QColor(200,200,200)))
-            self.setBrush(QBrush(QColor(200,200,200)))
+            self.setPen(QPen(QColor(200, 200, 200)))
+            self.setBrush(QBrush(QColor(200, 200, 200)))
             self.setVisible(False)
         else:
             if self.num_s <= 1 and self.num_t <= 1:
-                self.setRect(-0.5 * BOX_WIDTH * SCALE, -0.4 * SCALE, BOX_WIDTH * SCALE, 0.8 * SCALE)
+                self.setRect(
+                    -0.5 * BOX_WIDTH * SCALE,
+                    -0.4 * SCALE,
+                    BOX_WIDTH * SCALE,
+                    0.8 * SCALE
+                )
+            if self.is_redistributer:
+                self.setRect(
+                    0,  # corner x-coordinate
+                    self.rect().y(),  # corner y-coordinate
+                    0,  # width
+                    self.rect().height()  # height
+                )
 
             if self.bg != '':
                 self.setBrush(QBrush(QColor(self.bg)))
             else:
-                self.setBrush(QBrush(QColor(200,200,255)))
+                self.setBrush(QBrush(QColor(200, 200, 255)))
 
-            pen = QPen(QColor(0,0,0))
-            if ed.highlight:
+            pen = QPen(QColor(0, 0, 0))
+            if ed.highlight or self.is_redistributer:
                 pen.setWidth(3)
             self.setPen(pen)
 
@@ -85,8 +103,8 @@ class VItem(QGraphicsEllipseItem):
         self.setBrush(QBrush(QColor(0, 0, 0)))
 
         # Add text item to indicate vertex type
-        size = f'^{vd.size}' if vd.size > 1 else ''
-        vtype = vd.vtype if vd.vtype is not None else ''
+        size = f'{vd.size}' if vd.size > 1 else ''
+        vtype = f'{vd.vtype}^' if vd.vtype is not None else ''
         self.textItem = QGraphicsTextItem(f'{vtype}{size}')
         self.textItem.setDefaultTextColor(QColor(0, 0, 0))
         text_position = self.pos() + QPointF(0, -0.5 * SCALE)
@@ -125,7 +143,9 @@ class TItem(QGraphicsPathItem):
     def refresh(self) -> None:
         path = QPainterPath()
 
-        x_shift = (0 if self.eitem.is_id else 0.5 * BOX_WIDTH) * SCALE
+        x_shift = (0 if self.eitem.is_id or self.eitem.is_redistributer
+                   else 0.5 * BOX_WIDTH
+                   ) * SCALE
 
         if self.src:
             if self.eitem.num_s == 1:

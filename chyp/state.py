@@ -23,7 +23,7 @@ from lark import v_args
 from lark.tree import Meta
 
 from . import parser
-from .graph import Graph, GraphError, gen, perm, identity
+from .graph import Graph, GraphError, gen, perm, identity, redistributer
 from .rule import Rule, RuleError
 from .tactic import Tactic
 from .tactic.simptac import SimpTac
@@ -169,6 +169,35 @@ class State(lark.Transformer):
         return None
 
     def perm_indices(self, items: list[int]) -> list[int]:
+        return items
+
+    @v_args(meta=True)
+    def redistribution(self, meta: Meta,
+                       items: list[Any]) -> Graph | None:
+        try:
+            vtype = items[0]  # currently allows invalid syntax
+            if vtype is not None:
+                vtype = vtype[0][0]
+            if items[1] is None and items[2] is None:
+                return identity(vtype)
+            elif items[1] is None:
+                size_list = items[2]
+                domain = [(vtype, sum(size_list))]
+                codomain = [(vtype, size) for size in size_list]
+            elif items[2] is None:
+                size_list = items[1]
+                domain = [(vtype, size) for size in size_list]
+                codomain = [(vtype, sum(size_list))]
+            else:
+                domain = [(vtype, size) for size in items[1]]
+                codomain = [(vtype, size) for size in items[2]]
+            return redistributer(domain, codomain)
+        except GraphError as e:
+            self.errors.append((self.file_name, meta.line, str(e)))
+            return None
+
+    def size_list(self, items: list[int]) -> list[int]:
+        print(items)
         return items
 
     @v_args(meta=True)

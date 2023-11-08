@@ -25,7 +25,7 @@ VType: TypeAlias = str | None
 
 
 class GraphError(Exception):
-    """An error occurred in the graph logic."""
+    """An error occurred in the graph backend."""
 
 
 class VData:
@@ -860,7 +860,7 @@ def gen(value: str,
         value: The label for the hyperedge.
         domain: A list of pairs (vertex type, register size) corresponding to
                 each input vertex.
-        domain: A list of pairs (vertex type, register size) corresponding to
+        codomain: A list of pairs (vertex type, register size) corresponding to
                 each output vertex.
         fg: An optional foregraph color, given as a 6-digit RGB hex code.
         bg: An optional background color, given as a 6-digit RGB hex code.
@@ -918,7 +918,7 @@ def perm(p: list[int], domain: list[tuple[VType, int]] | None = None) -> Graph:
 
 
 def identity(vtype: VType = None, size: int = 1) -> Graph:
-    """Returns a graph corresponding to the identity map.
+    """Return a graph corresponding to the identity map.
 
     This graph has a single vertex which is both an input and an output.
 
@@ -930,6 +930,57 @@ def identity(vtype: VType = None, size: int = 1) -> Graph:
     g.set_inputs([v])
     g.set_outputs([v])
     return g
+
+
+def redistributer(domain: list[tuple[VType, int]],
+                  codomain: list[tuple[VType, int]]) -> Graph:
+    """Return a graph corresponding to a vertex size redistribution.
+
+    A specific case of this family of graphs are 'dividers', which split a
+    vertex of some type and size into multiple size 1 vertices of the same
+    type. Conversely, 'gatherers' bundle multiple vertices of the same type
+    into a single vertex of the same type and size the sum of the individual
+    input vertex sizes.
+
+    More generally, a conversion can be done between different lists of sizes,
+    for some vertex type.
+
+    Args:
+        domain: A list of pairs (vertex type, register size) corresponding to
+                each input vertex.
+        codomain: A list of pairs (vertex type, register size) corresponding to
+                each output vertex.
+    """
+    graph = Graph()
+
+    vtypes = set(vtype for vtype, _ in domain)
+    vtypes.update(vtype for vtype, _ in codomain)
+    if len(vtypes) > 1:
+        raise GraphError('Size conversion cannot mix vertex types.')
+
+    # Raise error if size conservation is violated
+    domain_size = sum(size for _, size in domain)
+    codomain_size = sum(size for _, size in codomain)
+    if domain_size != codomain_size:
+        raise GraphError(f'Sum of domain sizes ({domain_size}) does not equal'
+                         + f'sum of codomain sizes ({codomain_size}).')
+
+    domain_vertices = [
+        graph.add_vertex(vtype=vtype, size=size)
+        for vtype, size in domain
+    ]
+    codomain_vertices = [
+        graph.add_vertex(vtype=vtype, size=size)
+        for vtype, size in codomain
+    ]
+
+    graph.add_edge(domain_vertices, codomain_vertices,
+                   value='_redistributer')
+
+    graph.set_inputs(domain_vertices)
+    graph.set_outputs(codomain_vertices)
+
+    return graph
 
 # def wide_id() -> Graph:
 #     return gen("id", 1, 1)

@@ -38,7 +38,8 @@ GRAMMAR = Lark("""
     RPAREN: ")"
     tactic : [ converse ] IDENT | IDENT LPAREN [ TACTIC_ARG ("," TACTIC_ARG)* ] ")"
     ?term  : par_term | seq
-    ?par_term : nested_term | par | perm | id | id0 | term_ref
+    ?par_term : nested_term | par | perm | id | id0
+              | redistribution | term_ref
     nested_term : LPAREN term RPAREN
     par : par_term "*" par_term
     seq : term ";" term
@@ -46,6 +47,8 @@ GRAMMAR = Lark("""
     perm_indices : num ("," num)+
     id : "id" [ "[" type_element "]" ]
     id0 : "id0"
+    redistribution : "redistribute" ["[" type_element "]"]("[" size_list "to" size_list "]")
+    size_list: num ("," num)*
     show : "show" rule_ref
 
     import_statement : "import" module_name [ "as" var ] [ "(" import_let ("," import_let)* ")" ]
