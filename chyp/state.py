@@ -197,7 +197,6 @@ class State(lark.Transformer):
             return None
 
     def size_list(self, items: list[int]) -> list[int]:
-        print(items)
         return items
 
     @v_args(meta=True)
