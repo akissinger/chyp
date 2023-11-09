@@ -103,9 +103,10 @@ class VItem(QGraphicsEllipseItem):
         self.setBrush(QBrush(QColor(0, 0, 0)))
 
         # Add text item to indicate vertex type
-        size = f'{vd.size}' if vd.size > 1 else ''
-        vtype = f'{vd.vtype}^' if vd.vtype is not None else ''
-        self.textItem = QGraphicsTextItem(f'{vtype}{size}')
+        infix = '^' if vd.vtype is not None and vd.size > 1 else ''
+        size = vd.size if vd.size > 1 else ''
+        vtype = vd.vtype if vd.vtype is not None else ''
+        self.textItem = QGraphicsTextItem(f'{vtype}{infix}{size}')
         self.textItem.setDefaultTextColor(QColor(0, 0, 0))
         text_position = self.pos() + QPointF(0, -0.5 * SCALE)
         self.textItem.setPos(text_position)
