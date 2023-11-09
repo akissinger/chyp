@@ -23,7 +23,7 @@ from lark import v_args
 from lark.tree import Meta
 
 from . import parser
-from .graph import Graph, GraphError, gen, perm, identity, redistributer
+from .graph import Graph, GraphError, Generator, perm, identity, Redistributer
 from .rule import Rule, RuleError
 from .tactic import Tactic
 from .tactic.simptac import SimpTac
@@ -191,7 +191,7 @@ class State(lark.Transformer):
             else:
                 domain = [(vtype, size) for size in items[1]]
                 codomain = [(vtype, size) for size in items[2]]
-            return redistributer(domain, codomain)
+            return Redistributer(domain, codomain)
         except GraphError as e:
             self.errors.append((self.file_name, meta.line, str(e)))
             return None
@@ -254,7 +254,7 @@ class State(lark.Transformer):
         codomain = items[2]
         (fg, bg) = items[3] if items[3] else ('', '')
         if name not in self.graphs:
-            self.graphs[name] = gen(name, domain, codomain, fg, bg)
+            self.graphs[name] = Generator(name, domain, codomain, fg, bg)
         else:
             g = self.graphs[name]
             existing_domain = g.domain()
@@ -300,9 +300,9 @@ class State(lark.Transformer):
             if graph:
                 domain = graph.domain()
                 codomain = graph.codomain()
-
+                lhs: Graph
                 if name not in self.graphs:
-                    lhs = gen(name, domain, codomain, fg, bg)
+                    lhs = Generator(name, domain, codomain, fg, bg)
                     self.graphs[name] = lhs
                     self.rules[rule_name] = Rule(lhs, graph, rule_name, True)
                     self.sequence += 1

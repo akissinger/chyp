@@ -851,31 +851,77 @@ class Graph:
             ed.highlight = False
 
 
-def gen(value: str,
-        domain: list[tuple[VType, int]], codomain: list[tuple[VType, int]],
-        fg: str = '', bg: str = '') -> Graph:
-    """Return a graph with one hyperedge and given domain and codomain.
+class Generator(Graph):
+    """An atomic graph from which composite graphs can be created.
 
-    Args:
-        value: The label for the hyperedge.
-        domain: A list of pairs (vertex type, register size) corresponding to
-                each input vertex.
-        codomain: A list of pairs (vertex type, register size) corresponding to
-                each output vertex.
-        fg: An optional foregraph color, given as a 6-digit RGB hex code.
-        bg: An optional background color, given as a 6-digit RGB hex code.
+    The graph has one hyperedge, and the domain and codomain of the graph
+    are the same as those of the hyperedge.
     """
-    g = Graph()
-    inputs = [g.add_vertex(-1.5, i - (i-1)/2, vtype, size)
-              for i, (vtype, size)
-              in enumerate(domain)]
-    outputs = [g.add_vertex(1.5, i - (i-1)/2, vtype, size)
-               for i, (vtype, size)
-               in enumerate(codomain)]
-    g.add_edge(inputs, outputs, value, fg=fg, bg=bg)
-    g.set_inputs(inputs)
-    g.set_outputs(outputs)
-    return g
+
+    def __init__(self,
+                 value: str,
+                 domain: list[tuple[VType, int]],
+                 codomain: list[tuple[VType, int]],
+                 fg: str = '', bg: str = '') -> None:
+        """Initialize a :class:`Generator` instance.
+
+        Args:
+            value: The label for the hyperedge.
+            domain: A list of pairs (vertex type, register size) corresponding
+                    to each input vertex.
+            codomain: A list of pairs (vertex type, register size)
+                      corresponding to each output vertex.
+            fg: An optional foregraph color, given as a 6-digit RGB hex code.
+            bg: An optional background color, given as a 6-digit RGB hex code.
+        """
+        super().__init__()
+        domain_vertices = [self.add_vertex(-1.5, i - (i-1)/2, vtype, size)
+                           for i, (vtype, size) in enumerate(domain)]
+        codomain_vertices = [self.add_vertex(1.5, i - (i-1)/2, vtype, size)
+                             for i, (vtype, size) in enumerate(codomain)]
+        self.add_edge(domain_vertices, codomain_vertices, value, fg=fg, bg=bg)
+        self.set_inputs(domain_vertices)
+        self.set_outputs(codomain_vertices)
+
+
+class Redistributer(Generator):
+    """An atomic graph corresponding to a vertex size redistribution.
+
+    A specific case of this family of graphs are 'dividers', which split a
+    vertex of some type and size into multiple size 1 vertices of the same
+    type. Conversely, 'gatherers' bundle multiple vertices of the same type
+    into a single vertex of the same type and size the sum of the individual
+    input vertex sizes.
+
+    More generally, a conversion can be done between different lists of sizes,
+    for some vertex type.
+    """
+
+    def __init__(self,
+                 domain: list[tuple[VType, int]],
+                 codomain: list[tuple[VType, int]]) -> None:
+        """Initialize a :class:`Redistributer` instance.
+
+        Args:
+            domain: A list of pairs (vertex type, register size) corresponding
+                    to each input vertex.
+            codomain: A list of pairs (vertex type, register size)
+                      corresponding to each output vertex.
+        """
+        vtypes = set(vtype for vtype, _ in domain)
+        vtypes.update(vtype for vtype, _ in codomain)
+        if len(vtypes) > 1:
+            raise GraphError('Size conversion cannot mix vertex types.')
+
+        # Raise error if size conservation is violated
+        domain_size = sum(size for _, size in domain)
+        codomain_size = sum(size for _, size in codomain)
+        if domain_size != codomain_size:
+            raise GraphError(
+                f'Sum of domain sizes ({domain_size}) does not '
+                + f'equal sum of codomain sizes ({codomain_size}).')
+
+        super().__init__('_redistributer', domain, codomain)
 
 
 def perm(p: list[int], domain: list[tuple[VType, int]] | None = None) -> Graph:
@@ -931,56 +977,6 @@ def identity(vtype: VType = None, size: int = 1) -> Graph:
     g.set_outputs([v])
     return g
 
-
-def redistributer(domain: list[tuple[VType, int]],
-                  codomain: list[tuple[VType, int]]) -> Graph:
-    """Return a graph corresponding to a vertex size redistribution.
-
-    A specific case of this family of graphs are 'dividers', which split a
-    vertex of some type and size into multiple size 1 vertices of the same
-    type. Conversely, 'gatherers' bundle multiple vertices of the same type
-    into a single vertex of the same type and size the sum of the individual
-    input vertex sizes.
-
-    More generally, a conversion can be done between different lists of sizes,
-    for some vertex type.
-
-    Args:
-        domain: A list of pairs (vertex type, register size) corresponding to
-                each input vertex.
-        codomain: A list of pairs (vertex type, register size) corresponding to
-                each output vertex.
-    """
-    graph = Graph()
-
-    vtypes = set(vtype for vtype, _ in domain)
-    vtypes.update(vtype for vtype, _ in codomain)
-    if len(vtypes) > 1:
-        raise GraphError('Size conversion cannot mix vertex types.')
-
-    # Raise error if size conservation is violated
-    domain_size = sum(size for _, size in domain)
-    codomain_size = sum(size for _, size in codomain)
-    if domain_size != codomain_size:
-        raise GraphError(f'Sum of domain sizes ({domain_size}) does not equal'
-                         + f'sum of codomain sizes ({codomain_size}).')
-
-    domain_vertices = [
-        graph.add_vertex(vtype=vtype, size=size)
-        for vtype, size in domain
-    ]
-    codomain_vertices = [
-        graph.add_vertex(vtype=vtype, size=size)
-        for vtype, size in codomain
-    ]
-
-    graph.add_edge(domain_vertices, codomain_vertices,
-                   value='_redistributer')
-
-    graph.set_inputs(domain_vertices)
-    graph.set_outputs(codomain_vertices)
-
-    return graph
 
 # def wide_id() -> Graph:
 #     return gen("id", 1, 1)
