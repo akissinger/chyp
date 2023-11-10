@@ -1010,8 +1010,7 @@ def identity(vtype: VType = None, size: int = 1,
 
 
 def redistributer(domain: list[tuple[VType, int]],
-                  codomain: list[tuple[VType, int]],
-                  infer_types: bool = False) -> Graph:
+                  codomain: list[tuple[VType, int]]) -> Graph:
     """Return a graph corresponding to a vertex size redistribution.
 
     A specific case of this family of graphs are 'dividers', which split a
@@ -1041,7 +1040,7 @@ def redistributer(domain: list[tuple[VType, int]],
         raise GraphError(f'Sum of domain sizes ({domain_size}) does not equal'
                          + f'sum of codomain sizes ({codomain_size}).')
 
-    return gen('_redistributer', domain, codomain, infer_types=infer_types)
+    return gen('_redistributer', domain, codomain)
 
 # def wide_id() -> Graph:
 #     return gen("id", 1, 1)

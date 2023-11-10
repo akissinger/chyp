@@ -187,9 +187,11 @@ class State(lark.Transformer):
     def redistribution(self, meta: Meta,
                        items: list[Any]) -> Graph | None:
         try:
-            infer_types = items[0] is None
-            if items[0] == 'None' or items[0] is None:
-                vtype = items[0]
+            # A redistributer on the monoidal unit is the empty diagram.
+            if items[0] == 'None':
+                return Graph()
+            if items[0] == 'u' or items[0] is None:
+                vtype = None
             else:
                 vtype = items[0]
             # # If keyword provided as domain size list, make a divider.
@@ -204,7 +206,7 @@ class State(lark.Transformer):
             #     codomain = [(vtype, sum(size_list))]
             domain = [(vtype, size) for size in items[1]]
             codomain = [(vtype, size) for size in items[2]]
-            return redistributer(domain, codomain, infer_types=infer_types)
+            return redistributer(domain, codomain)
         except GraphError as e:
             self.errors.append((self.file_name, meta.line, str(e)))
             return None
