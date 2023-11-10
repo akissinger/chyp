@@ -177,7 +177,7 @@ class State(lark.Transformer):
         try:
             vtype = items[0]  # currently allows invalid syntax
             if vtype is not None:
-                vtype = vtype[0][0]
+                vtype = vtype[0]
             if items[1] is None and items[2] is None:
                 return identity(vtype)
             elif items[1] is None:
