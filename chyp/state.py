@@ -143,10 +143,10 @@ class State(lark.Transformer):
         return items
 
     def id(self, items: list[Any]) -> Graph:
-        if items[0] is not None:
-            vtype, size = items[0]
-            return identity(vtype, size)
-        return identity()
+        if items[0] is None:
+            return identity(infer_type=True, infer_size=True)
+        vtype, size = items[0]
+        return identity(vtype=vtype, size=size)
 
     def id0(self, _: List[Any]) -> Graph:
         return Graph()
@@ -158,12 +158,24 @@ class State(lark.Transformer):
         return False
 
     @v_args(meta=True)
-    def perm(self, meta: Meta, items: List[Any]) -> Optional[Graph]:
+    def perm(self, meta: Meta, items: List[Any]) -> Graph | None:
         try:
-            if items[0] is None:
-                return perm([1, 0], items[1])
+            # If no explicit permutation is provided, the permutation
+            # is assumed to be a swap on two vertices.
+            if items[1] is None:
+                permutation_indices = [1, 0]
             else:
-                return perm([int(i) for i in items[0]], items[1])
+                permutation_indices = [int(i) for i in items[1]]
+            # If no type argument is provided, the domain types and
+            # sizes are set to the default type and size 1, and can
+            # be inferred at composition time.
+            infer_type = infer_size = items[0] is None
+            if items[0] is None:
+                domain = len(permutation_indices) * [(None, 1)]
+            else:
+                domain = items[0]
+            return perm(permutation_indices, domain=domain,
+                        infer_type=infer_type, infer_size=infer_size)
         except GraphError as e:
             self.errors.append((self.file_name, meta.line, str(e)))
         return None
@@ -175,23 +187,24 @@ class State(lark.Transformer):
     def redistribution(self, meta: Meta,
                        items: list[Any]) -> Graph | None:
         try:
-            vtype = items[0]  # currently allows invalid syntax
-            if vtype is not None:
-                vtype = vtype[0]
-            if items[1] is None and items[2] is None:
-                return identity(vtype)
-            elif items[1] is None:
-                size_list = items[2]
-                domain = [(vtype, sum(size_list))]
-                codomain = [(vtype, size) for size in size_list]
-            elif items[2] is None:
-                size_list = items[1]
-                domain = [(vtype, size) for size in size_list]
-                codomain = [(vtype, sum(size_list))]
+            infer_types = items[0] is None
+            if items[0] == 'None' or items[0] is None:
+                vtype = items[0]
             else:
-                domain = [(vtype, size) for size in items[1]]
-                codomain = [(vtype, size) for size in items[2]]
-            return redistributer(domain, codomain)
+                vtype = items[0]
+            # # If keyword provided as domain size list, make a divider.
+            # if items[1] is None:
+            #     size_list = items[2]
+            #     domain = [(vtype, sum(size_list))]
+            #     codomain = [(vtype, size) for size in size_list]
+            # # If keyword provided as codomain size list, make a gatherer.
+            # elif items[2] is None:
+            #     size_list = items[1]
+            #     domain = [(vtype, size) for size in size_list]
+            #     codomain = [(vtype, sum(size_list))]
+            domain = [(vtype, size) for size in items[1]]
+            codomain = [(vtype, size) for size in items[2]]
+            return redistributer(domain, codomain, infer_types=infer_types)
         except GraphError as e:
             self.errors.append((self.file_name, meta.line, str(e)))
             return None

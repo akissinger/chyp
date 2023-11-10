@@ -721,6 +721,7 @@ class Graph:
             vd = other.vertex_data(v)
             vmap[v] = self.add_vertex(
                 vtype=vd.vtype, size=vd.size,
+                infer_type=vd.infer_type, infer_size=vd.infer_size,
                 x=vd.x, y=vd.y - min_other + 1, value=vd.value
             )
         for e in other.edges():
@@ -756,16 +757,31 @@ class Graph:
         Args:
             other: The graph with which to take the sequential composition.
         """
-        codomain = self.codomain()
-        domain = other.domain()
+        self_outputs = self.outputs()
+        other_inputs = other.inputs()
 
         # Check that codomain of this graph matches the domain of the other:
         # this is required for valid sequential composition.
-        if (len(codomain) != len(domain)
-           or any(c != d for c, d in zip(codomain, domain))):
+        if len(self_outputs) != len(other_inputs):
             raise GraphError(
-                f'Codomain {codomain} does not match domain {domain}'
+                f'Codomain {self.codomain()} does not '
+                + f'match domain {other.domain()}'
             )
+        for output_id, input_id in zip(self_outputs, other_inputs):
+            output_data = self.vertex_data(output_id)
+            input_data = other.vertex_data(input_id)
+            if output_data.vtype != input_data.vtype:
+                if not (output_data.infer_type or input_data.infer_type):
+                    raise GraphError(
+                        f'Codomain {self.codomain()} does not '
+                        + f'match domain {other.domain()}'
+                    )
+            if output_data.size != input_data.size:
+                if not (output_data.infer_size or input_data.infer_size):
+                    raise GraphError(
+                        f'Codomain {self.codomain()} does not '
+                        + f'match domain {other.domain()}'
+                    )
 
         vmap = dict()
 
@@ -795,6 +811,7 @@ class Graph:
             vd = other.vertex_data(v)
             vmap[v] = self.add_vertex(
                 vtype=vd.vtype, size=vd.size,
+                infer_type=vd.infer_type, infer_size=vd.infer_size,
                 x=vd.x - min_other, y=vd.y, value=vd.value
             )
         for e in other.edges():
@@ -832,8 +849,35 @@ class Graph:
                 p2 = quotient[p2]
             # If the resulting p1 and p2 are not the same vertex, merge them.
             if p1 != p2:
+                data_1 = self.vertex_data(p1)
+                data_2 = self.vertex_data(p2)
+                # If both vertices have flexible types that are not equal,
+                # raise an error due to ambiguity.
+                if (data_1.infer_type and data_2.infer_type
+                   and data_1.vtype != data_2.vtype):
+                    raise GraphError(
+                        'Ambiguous vertex type during composition.')
+                # Otherwise, if one vertex has a flexible type, ensure
+                # the vertex types match.
+                elif data_1.infer_type:
+                    data_1.vtype = data_2.vtype
+                elif data_2.infer_type:
+                    data_2.vtype = data_1.vtype
+                # If both vertices have flexible sizes that are not equal,
+                # raise an error due to ambiguity.
+                if (data_1.infer_size and data_2.infer_size
+                   and data_1.size != data_2.size):
+                    raise GraphError(
+                        'Ambiguous vertex size during composition.')
+                # Otherwise, if one vertex has a flexible size, ensure
+                # the vertex sizes match.
+                elif data_1.infer_size:
+                    data_1.size = data_2.size
+                elif data_2.infer_size:
+                    data_2.size = data_1.size
+
                 self.merge_vertices(p1, p2)
-                # Register than p2 has been merged into p1
+                # Register than p2 has been merged into p1.
                 quotient[p2] = p1
 
     def __rshift__(self, other: Graph) -> Graph:
@@ -879,6 +923,7 @@ class Graph:
 
 def gen(value: str,
         domain: list[tuple[VType, int]], codomain: list[tuple[VType, int]],
+        infer_types: bool = False, infer_sizes: bool = False,
         fg: str = '', bg: str = '') -> Graph:
     """Return a graph with one hyperedge and given domain and codomain.
 
@@ -893,10 +938,12 @@ def gen(value: str,
     """
     g = Graph()
     inputs = [g.add_vertex(vtype=vtype, size=size,
+                           infer_type=infer_types, infer_size=infer_sizes,
                            x=-1.5, y=i - (i-1)/2)
               for i, (vtype, size)
               in enumerate(domain)]
     outputs = [g.add_vertex(vtype=vtype, size=size,
+                            infer_type=infer_types, infer_size=infer_sizes,
                             x=1.5, y=i - (i-1)/2)
                for i, (vtype, size)
                in enumerate(codomain)]
@@ -906,7 +953,8 @@ def gen(value: str,
     return g
 
 
-def perm(p: list[int], domain: list[tuple[VType, int]] | None = None) -> Graph:
+def perm(p: list[int], domain: list[tuple[VType, int]],
+         infer_type: bool = False, infer_size: bool = False) -> Graph:
     """Return a graph corresponding to the given permutation.
 
     This takes a permution, given as a list [x0,..,x(n-1)], which is
@@ -930,24 +978,21 @@ def perm(p: list[int], domain: list[tuple[VType, int]] | None = None) -> Graph:
     """
     g = Graph()
     num_wires = len(p)
-    if domain is None:
-        inputs = [g.add_vertex(infer_type=True, infer_size=True,
-                               x=0, y=i - (num_wires-1)/2)
-                  for i in range(num_wires)]
-    else:
-        if len(domain) != num_wires:
-            raise ValueError(
-                f'Domain {domain} does not match length of permutation.')
-        inputs = [g.add_vertex(vtype=vtype, size=size,
-                               x=0, y=i - (num_wires-1)/2)
-                  for i, (vtype, size) in enumerate(domain)]
+    if len(domain) != num_wires:
+        raise GraphError(
+            f'Domain {domain} does not match length of permutation.')
+    inputs = [g.add_vertex(vtype=vtype, size=size,
+                           infer_type=infer_type, infer_size=infer_size,
+                           x=0, y=i - (num_wires-1)/2)
+              for i, (vtype, size) in enumerate(domain)]
     outputs = [inputs[p[i]] for i in range(num_wires)]
     g.set_inputs(inputs)
     g.set_outputs(outputs)
     return g
 
 
-def identity(vtype: VType = None, size: int = 1) -> Graph:
+def identity(vtype: VType = None, size: int = 1,
+             infer_type: bool = False, infer_size: bool = False) -> Graph:
     """Return a graph corresponding to the identity map.
 
     This graph has a single vertex which is both an input and an output.
@@ -957,6 +1002,7 @@ def identity(vtype: VType = None, size: int = 1) -> Graph:
     """
     g = Graph()
     v = g.add_vertex(vtype=vtype, size=size,
+                     infer_type=infer_type, infer_size=infer_size,
                      x=0, y=0)
     g.set_inputs([v])
     g.set_outputs([v])
@@ -964,7 +1010,8 @@ def identity(vtype: VType = None, size: int = 1) -> Graph:
 
 
 def redistributer(domain: list[tuple[VType, int]],
-                  codomain: list[tuple[VType, int]]) -> Graph:
+                  codomain: list[tuple[VType, int]],
+                  infer_types: bool = False) -> Graph:
     """Return a graph corresponding to a vertex size redistribution.
 
     A specific case of this family of graphs are 'dividers', which split a
@@ -994,7 +1041,7 @@ def redistributer(domain: list[tuple[VType, int]],
         raise GraphError(f'Sum of domain sizes ({domain_size}) does not equal'
                          + f'sum of codomain sizes ({codomain_size}).')
 
-    return gen('_redistributer', domain, codomain)
+    return gen('_redistributer', domain, codomain, infer_types=infer_types)
 
 # def wide_id() -> Graph:
 #     return gen("id", 1, 1)

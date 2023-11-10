@@ -43,11 +43,11 @@ GRAMMAR = Lark("""
     nested_term : LPAREN term RPAREN
     par : par_term "*" par_term
     seq : term ";" term
-    perm : "sw" [ "[" perm_indices "]" ] [ "[" type_term "]" ]
+    perm : "sw" [ "[" type_term "]" ] [ "[" perm_indices "]" ]
     perm_indices : num ("," num)+
     id : "id" [ "[" type_element "]" ]
     id0 : "id0"
-    redistribution : "redistribute" ["[" type_element "]"]("[" size_list "to" size_list "]")
+    redistribution : "redistribute" ["[" IDENT "]"]("[" size_list "to" size_list "]")
     size_list: num ("," num)*
     show : "show" rule_ref
 
