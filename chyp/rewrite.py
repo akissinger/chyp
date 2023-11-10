@@ -78,9 +78,9 @@ def dpo(r: Rule, m: Match) -> Iterable[Match]:
     for v in r.rhs.vertices():
         if not r.rhs.is_boundary(v):
             vd = r.rhs.vertex_data(v)
-            v1 = h.add_vertex(vd.x, vd.y,
-                              vd.vtype, vd.size,
-                              vd.value)
+            v1 = h.add_vertex(
+                vtype=vd.vtype, size=vd.size,
+                x=vd.x, y=vd.y, value=vd.value)
             m1.vmap[v] = v1
             m1.vimg.add(v1)
 

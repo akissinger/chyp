@@ -33,7 +33,14 @@ class VData:
 
     Attributes:
         vtype: The vertex type.
-        size: The size of the vertex.
+        size: The register size (number of bundled parallel wires)
+              of the vertex.
+        infer_type: Whether to infer the vertex type during composition.
+                    Used for special generators (identities, permutations,
+                    redistributers).
+        infer_size: Whether to infer the vertex size during composition.
+                    Used for special generators (identities, permutations,
+                    redistributers).
 
         x: x-coordinate at which to draw the vertex.
         y: y-coordinate at which to draw the vertex.
@@ -41,6 +48,7 @@ class VData:
 
     def __init__(self,
                  vtype: VType = None, size: int = 1,
+                 infer_type: bool = False, infer_size: bool = False,
                  x: float = 0.0, y: float = 0.0,
                  value: Any = None) -> None:
         """Initialize a VData instance."""
@@ -48,6 +56,8 @@ class VData:
         # Graph logic attributes
         self.vtype = vtype
         self.size = size
+        self.infer_type = infer_type
+        self.infer_size = infer_size
 
         # Drawing attributes
         self.x = x
@@ -273,14 +283,22 @@ class Graph:
         return self.edata[e].t
 
     def add_vertex(self,
-                   x: float = 0.0, y: float = 0.0,
                    vtype: VType = None, size: int = 1,
+                   infer_type: bool = False, infer_size: bool = False,
+                   x: float = 0.0, y: float = 0.0,
                    value: Any = '', name: int = -1) -> int:
         """Add a new vertex to the graph.
 
         Args:
             vtype: The vertex type.
-            size: The size of the vertex.
+            size: The register size (number of bundled parallel wires)
+                  of the vertex.
+            infer_type: Whether to infer the vertex type during composition.
+                        Used for special generators (identities, permutations,
+                        redistributers).
+            infer_size: Whether to infer the vertex size during composition.
+                        Used for special generators (identities, permutations,
+                        redistributers).
 
             x: x-coordinate at which to draw the vertex.
             y: y-coordinate at which to draw the vertex.
@@ -299,7 +317,11 @@ class Graph:
             max_index = max(name, self.vindex)
             self.vindex = max_index + 1
 
-        self.vdata[v] = VData(vtype, size, x, y, value)
+        self.vdata[v] = VData(
+            vtype=vtype, size=size,
+            infer_type=infer_type, infer_size=infer_size,
+            x=x, y=y, value=value
+        )
         return v
 
     def add_edge(self,
@@ -557,9 +579,10 @@ class Graph:
                    vertices. If 1, the new vertex is added to the list of
                    new output-like vertices.
             """
-            v1 = self.add_vertex(vd.x, vd.y,
-                                 vd.vtype, vd.size,
-                                 vd.value)
+            v1 = self.add_vertex(
+                vtype=vd.vtype, size=vd.size,
+                x=vd.x, y=vd.y, value=vd.value
+            )
             new_vs[j].append(v1)
             return v1
 
@@ -618,9 +641,10 @@ class Graph:
         vd = self.vertex_data(v)
 
         # Create a new vertex with the same vtype and size
-        w = self.add_vertex(vd.x + 3, vd.y,
-                            vd.vtype, vd.size,
-                            vd.value)
+        w = self.add_vertex(
+            vtype=vd.vtype, size=vd.size,
+            x=vd.x + 3, y=vd.y, value=vd.value
+        )
         wd = self.vertex_data(w)
         # The new vertex is highlighted whenever the orignal vertex is.
         wd.highlight = vd.highlight
@@ -695,9 +719,10 @@ class Graph:
         # vertices and edges shifted above the y-axis if layout == True.
         for v in other.vertices():
             vd = other.vertex_data(v)
-            vmap[v] = self.add_vertex(vd.x, vd.y - min_other + 1,
-                                      vd.vtype, vd.size,
-                                      vd.value)
+            vmap[v] = self.add_vertex(
+                vtype=vd.vtype, size=vd.size,
+                x=vd.x, y=vd.y - min_other + 1, value=vd.value
+            )
         for e in other.edges():
             ed = other.edge_data(e)
             self.add_edge([vmap[v] for v in ed.s],
@@ -768,9 +793,10 @@ class Graph:
         # vertices and edges shifted above the x-axis.
         for v in other.vertices():
             vd = other.vertex_data(v)
-            vmap[v] = self.add_vertex(vd.x - min_other, vd.y,
-                                      vd.vtype, vd.size,
-                                      vd.value)
+            vmap[v] = self.add_vertex(
+                vtype=vd.vtype, size=vd.size,
+                x=vd.x - min_other, y=vd.y, value=vd.value
+            )
         for e in other.edges():
             ed = other.edge_data(e)
             self.add_edge([vmap[v] for v in ed.s],
@@ -866,10 +892,12 @@ def gen(value: str,
         bg: An optional background color, given as a 6-digit RGB hex code.
     """
     g = Graph()
-    inputs = [g.add_vertex(-1.5, i - (i-1)/2, vtype, size)
+    inputs = [g.add_vertex(vtype=vtype, size=size,
+                           x=-1.5, y=i - (i-1)/2)
               for i, (vtype, size)
               in enumerate(domain)]
-    outputs = [g.add_vertex(1.5, i - (i-1)/2, vtype, size)
+    outputs = [g.add_vertex(vtype=vtype, size=size,
+                            x=1.5, y=i - (i-1)/2)
                for i, (vtype, size)
                in enumerate(codomain)]
     g.add_edge(inputs, outputs, value, fg=fg, bg=bg)
@@ -903,13 +931,15 @@ def perm(p: list[int], domain: list[tuple[VType, int]] | None = None) -> Graph:
     g = Graph()
     num_wires = len(p)
     if domain is None:
-        inputs = [g.add_vertex(0, i - (num_wires-1)/2)
+        inputs = [g.add_vertex(infer_type=True, infer_size=True,
+                               x=0, y=i - (num_wires-1)/2)
                   for i in range(num_wires)]
     else:
         if len(domain) != num_wires:
             raise ValueError(
                 f'Domain {domain} does not match length of permutation.')
-        inputs = [g.add_vertex(0, i - (num_wires-1)/2, vtype, size)
+        inputs = [g.add_vertex(vtype=vtype, size=size,
+                               x=0, y=i - (num_wires-1)/2)
                   for i, (vtype, size) in enumerate(domain)]
     outputs = [inputs[p[i]] for i in range(num_wires)]
     g.set_inputs(inputs)
@@ -926,7 +956,8 @@ def identity(vtype: VType = None, size: int = 1) -> Graph:
         vtype: The input and output vertex type. Used in typed hypergraphs.
     """
     g = Graph()
-    v = g.add_vertex(0, 0, vtype, size)
+    v = g.add_vertex(vtype=vtype, size=size,
+                     x=0, y=0)
     g.set_inputs([v])
     g.set_outputs([v])
     return g
