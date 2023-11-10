@@ -982,8 +982,6 @@ def redistributer(domain: list[tuple[VType, int]],
         codomain: A list of pairs (vertex type, register size) corresponding to
                 each output vertex.
     """
-    graph = Graph()
-
     vtypes = set(vtype for vtype, _ in domain)
     vtypes.update(vtype for vtype, _ in codomain)
     if len(vtypes) > 1:
@@ -996,22 +994,7 @@ def redistributer(domain: list[tuple[VType, int]],
         raise GraphError(f'Sum of domain sizes ({domain_size}) does not equal'
                          + f'sum of codomain sizes ({codomain_size}).')
 
-    domain_vertices = [
-        graph.add_vertex(vtype=vtype, size=size)
-        for vtype, size in domain
-    ]
-    codomain_vertices = [
-        graph.add_vertex(vtype=vtype, size=size)
-        for vtype, size in codomain
-    ]
-
-    graph.add_edge(domain_vertices, codomain_vertices,
-                   value='_redistributer')
-
-    graph.set_inputs(domain_vertices)
-    graph.set_outputs(codomain_vertices)
-
-    return graph
+    return gen('_redistributer', domain, codomain)
 
 # def wide_id() -> Graph:
 #     return gen("id", 1, 1)
