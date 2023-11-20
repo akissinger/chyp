@@ -200,7 +200,7 @@ class Tactic:
 
         for m_g in match_rule(rule, target_graph):
             for m_h in dpo(rule, m_g):
-                self.__set_lhs(target, m_h.cod.copy())
+                self.__set_lhs(target, m_h.codomain.copy())
                 yield (m_g, m_h)
 
     def rewrite_rhs(self, rule_expr: str, target: str='') -> Iterator[Tuple[Match,Match]]:
@@ -227,7 +227,7 @@ class Tactic:
 
         for m_g in match_rule(rule, target_graph):
             for m_h in dpo(rule, m_g):
-                self.__set_rhs(target, m_h.cod.copy())
+                self.__set_rhs(target, m_h.codomain.copy())
                 yield (m_g, m_h)
 
     def rewrite_lhs1(self, rule_expr: str, target: str='') -> bool:

@@ -34,11 +34,11 @@ def dpo(r: Rule, m: Match) -> Iterable[Match]:
     out_map: Dict[int, int] = dict()
 
     # compute the pushout complement
-    ctx = m.cod.copy()
+    ctx = m.codomain.copy()
     for e in r.lhs.edges():
-        ctx.remove_edge(m.emap[e])
+        ctx.remove_edge(m.edge_map[e])
     for v in r.lhs.vertices():
-        v1 = m.vmap[v]
+        v1 = m.vertex_map[v]
         if r.lhs.is_boundary(v):
             in_c = len(r.lhs.vertex_data(v).in_indices)
             out_c = len(r.lhs.vertex_data(v).out_indices)
@@ -63,16 +63,16 @@ def dpo(r: Rule, m: Match) -> Iterable[Match]:
 
     # first map the inputs, using the matching of the lhs
     for vl,vr in zip(r.lhs.inputs(), r.rhs.inputs()):
-        m1.vmap[vr] = in_map[vl] if vl in in_map else m.vmap[vl]
+        m1.vertex_map[vr] = in_map[vl] if vl in in_map else m.vertex_map[vl]
 
     # next map the outputs. if the same vertex is an input and an output in r.rhs, then
     # merge them in h.
     for vl,vr in zip(r.lhs.outputs(), r.rhs.outputs()):
-        vr1 = out_map[vl] if vl in out_map else m.vmap[vl]
-        if vr in m1.vmap:
-            h.merge_vertices(m1.vmap[vr], vr1)
+        vr1 = out_map[vl] if vl in out_map else m.vertex_map[vl]
+        if vr in m1.vertex_map:
+            h.merge_vertices(m1.vertex_map[vr], vr1)
         else:
-            m1.vmap[vr] = vr1
+            m1.vertex_map[vr] = vr1
 
     # then map the interior to new, fresh vertices
     for v in r.rhs.vertices():
@@ -81,17 +81,17 @@ def dpo(r: Rule, m: Match) -> Iterable[Match]:
             v1 = h.add_vertex(
                 vtype=vd.vtype, size=vd.size,
                 x=vd.x, y=vd.y, value=vd.value)
-            m1.vmap[v] = v1
-            m1.vimg.add(v1)
+            m1.vertex_map[v] = v1
+            m1.vertex_image.add(v1)
 
     # now add the edges from rhs to h and connect them using vmap1
     for e in r.rhs.edges():
         ed = r.rhs.edge_data(e)
-        e1 = h.add_edge([m1.vmap[v] for v in ed.s],
-                        [m1.vmap[v] for v in ed.t],
+        e1 = h.add_edge([m1.vertex_map[v] for v in ed.s],
+                        [m1.vertex_map[v] for v in ed.t],
                         ed.value, ed.x, ed.y, ed.fg, ed.bg, ed.hyper)
-        m1.emap[e] = e1
-        m1.eimg.add(e1)
+        m1.edge_map[e] = e1
+        m1.edge_image.add(e1)
 
     return [m1]
 
@@ -103,7 +103,7 @@ def rewrite(r: Rule, m: Match) -> Graph:
 
     try:
         result = next(iter(dpo(r, m)))
-        return result.cod
+        return result.codomain
     except StopIteration:
         raise RuntimeError("Rewrite has no valid context")
 

@@ -27,7 +27,7 @@ class RuleTac(Tactic):
     def make_rhs(self) -> Iterator[Graph]:
         if len(self.args) == 0: raise StopIteration()
         for _, m_rhs in self.rewrite_lhs(self.args[0]):
-            yield m_rhs.cod
+            yield m_rhs.codomain
 
     def check(self) -> None:
         if len(self.args) == 0:
@@ -39,9 +39,9 @@ class RuleTac(Tactic):
             iso = self.validate_goal()
             if iso:
                 # ...and highlight the part that was rewritten
-                rhs_verts = set(iso.vmap[v] for v in m_rhs.vimg)
-                rhs_edges = set(iso.emap[e] for e in m_rhs.eimg)
-                self.highlight_lhs(m_lhs.vimg, m_lhs.eimg)
+                rhs_verts = set(iso.vertex_map[v] for v in m_rhs.vertex_image)
+                rhs_edges = set(iso.edge_map[e] for e in m_rhs.edge_image)
+                self.highlight_lhs(m_lhs.vertex_image, m_lhs.edge_image)
                 self.highlight_rhs(rhs_verts, rhs_edges)
                 return
 
