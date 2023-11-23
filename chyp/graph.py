@@ -861,8 +861,10 @@ class Graph:
                 # the vertex types match.
                 elif data_1.infer_type:
                     data_1.vtype = data_2.vtype
+                    data_1.infer_type = False
                 elif data_2.infer_type:
                     data_2.vtype = data_1.vtype
+                    data_2.infer_type = False
                 # If both vertices have flexible sizes that are not equal,
                 # raise an error due to ambiguity.
                 if (data_1.infer_size and data_2.infer_size
@@ -873,8 +875,10 @@ class Graph:
                 # the vertex sizes match.
                 elif data_1.infer_size:
                     data_1.size = data_2.size
+                    data_1.infer_size = False
                 elif data_2.infer_size:
                     data_2.size = data_1.size
+                    data_2.infer_size = False
 
                 self.merge_vertices(p1, p2)
                 # Register than p2 has been merged into p1.
