@@ -14,7 +14,7 @@
 # limitations under the License.
 
 from __future__ import annotations
-from typing import Callable, Dict, Optional, Tuple
+from typing import Callable, Tuple
 from PySide6.QtCore import QByteArray, QFileInfo, QObject, QThread, QTimer, Qt, QSettings
 from PySide6.QtGui import QTextCursor
 from PySide6.QtWidgets import QHBoxLayout, QSplitter, QTreeView, QVBoxLayout, QWidget
@@ -35,6 +35,7 @@ from .codeview import CodeView
 from .document import ChypDocument
 from .highlighter import STATUS_GOOD, STATUS_BAD
 
+
 class Editor(QWidget):
     def __init__(self) -> None:
         super().__init__()
@@ -42,7 +43,7 @@ class Editor(QWidget):
 
         self.setLayout(QVBoxLayout())
         self.layout().setSpacing(0)
-        self.layout().setContentsMargins(0,0,0,0)
+        self.layout().setContentsMargins(0, 0, 0, 0)
 
         # save splitter position
         self.splitter = QSplitter(Qt.Orientation.Vertical)
@@ -74,21 +75,22 @@ class Editor(QWidget):
         self.splitter.addWidget(self.error_view)
 
         splitter_state = conf.value("editor_splitter_state")
-        if splitter_state and isinstance(splitter_state, QByteArray): self.splitter.restoreState(splitter_state)
+        if splitter_state and isinstance(splitter_state, QByteArray):
+            self.splitter.restoreState(splitter_state)
 
         self.code_view.cursorPositionChanged.connect(self.show_at_cursor)
         self.code_view.textChanged.connect(self.invalidate_text)
         self.parsed = True
 
         # keep a cache of graphs that have already been laid out
-        self.graph_cache : Dict[int, Tuple[Graph, Optional[Graph]]] = dict()
+        self.graph_cache: dict[int, Tuple[Graph, Graph | None]] = dict()
 
-        # keep a revision count, so we don't trigger parsing until the user stops typing for a bit
+        # keep a revision count, so we don't trigger parsing
+        # until the user stops typing for a bit
         self.revision = 0
 
         # index of the part of the parsed document we're currently looking at
         self.current_part = -1
-
 
     def title(self) -> str:
         if self.doc.file_name:
@@ -123,25 +125,27 @@ class Editor(QWidget):
         QTimer.singleShot(200, update(self.revision))
         # self.update_state(sync=False)
 
-    def next_part(self, step:int=1) -> None:
-        if not self.parsed: return
+    def next_part(self, step: int = 1) -> None:
+        if not self.parsed:
+            return
 
         cursor = self.code_view.textCursor()
         pos = cursor.position()
-        p = self.state.part_with_index_at(pos)
-        i = p[0] if p else 0
+        index_and_part = self.state.part_with_index_at(pos)
+        i = index_and_part[0] if index_and_part else 0
         i += step
 
         if i >= 0 and i < len(self.state.parts):
-            p1 = self.state.parts[i]
-            cursor.setPosition(p1[1])
+            part = self.state.parts[i]
+            cursor.setPosition(part.end)
             self.code_view.setTextCursor(cursor)
-            
+
     def jump_to_error(self) -> None:
         model = self.error_view.model()
         window = self.window()
         i = self.error_view.currentIndex().row()
-        if isinstance(model, ErrorListModel) and isinstance(window, mainwindow.MainWindow):
+        if (isinstance(model, ErrorListModel)
+           and isinstance(window, mainwindow.MainWindow)):
             if i >= 0 and i < len(model.errors):
                 err = model.errors[i]
                 window.open(err[0], line_number=err[1])
@@ -153,7 +157,7 @@ class Editor(QWidget):
             error_panel_size = int(error_panel_size)
         if not isinstance(error_panel_size, int) or error_panel_size == 0:
             error_panel_size = 100
-        
+
         sizes = self.splitter.sizes()
         if sizes[2] == 0:
             sizes[2] = error_panel_size
@@ -168,46 +172,55 @@ class Editor(QWidget):
         self.splitter.setSizes(sizes)
 
     def show_at_cursor(self) -> None:
-        if not self.parsed: return
-        pos = self.code_view.textCursor().position()
-        p = self.state.part_with_index_at(pos)
-        if not p: return
+        """Perform action for part at cursor."""
+        if not self.parsed:
+            return
+        cursor_position = self.code_view.textCursor().position()
+        index_and_part = self.state.part_with_index_at(cursor_position)
+        if index_and_part is None:
+            return
+        index, part = index_and_part
 
-        i, part = p
-        # print(part)
+        # If current part hasn't changed, no further processing needed.
+        if index == self.current_part:
+            return
+        else:
+            self.current_part = index
 
-        if i == self.current_part: return
-        else: self.current_part = i
-
-        self.code_view.set_current_region((part[0], part[1]))
-        if part[2] in ('let','gen') and part[3] in self.state.graphs:
-            if i not in self.graph_cache:
-                g = self.state.graphs[part[3]].copy()
-                convex_layout(g)
-                self.graph_cache[i] = (g, None)
+        # Highlight the current region.
+        self.code_view.set_current_region((part.start, part.end))
+        if (part.part_type in ('let', 'gen')
+           and part.identifier in self.state.graphs):
+            if index not in self.graph_cache:
+                graph = self.state.graphs[part.identifier].copy()
+                convex_layout(graph)
+                self.graph_cache[index] = (graph, None)
             else:
-                g, _ = self.graph_cache[i]
+                graph, _ = self.graph_cache[index]
             self.rhs_view.setVisible(False)
-            self.lhs_view.set_graph(g)
-        elif part[2] == 'rule' and part[3] in self.state.rules:
-            if i not in self.graph_cache:
-                lhs = self.state.rules[part[3]].lhs.copy()
-                rhs = self.state.rules[part[3]].rhs.copy()
+            self.lhs_view.set_graph(graph)
+        elif part.part_type == 'rule' and part.identifier in self.state.rules:
+            if index not in self.graph_cache:
+                lhs = self.state.rules[part.identifier].lhs.copy()
+                rhs = self.state.rules[part.identifier].rhs.copy()
                 convex_layout(lhs)
                 convex_layout(rhs)
-                self.graph_cache[i] = (lhs, rhs)
+                self.graph_cache[index] = (lhs, rhs)
             else:
-                lhs, rhs0 = self.graph_cache[i]
-                if not rhs0: raise ValueError("Rule in graph_cache should have RHS")
+                lhs, rhs0 = self.graph_cache[index]
+                if not rhs0:
+                    raise ValueError("Rule in graph_cache should have RHS")
                 rhs = rhs0
             self.rhs_view.setVisible(True)
             self.lhs_view.set_graph(lhs)
             self.rhs_view.set_graph(rhs)
-        elif part[2] == 'rewrite' and part[3] in self.state.rewrites:
-            rw = self.state.rewrites[part[3]]
-            if not rw.stub:
-                if rw.status == RewriteState.UNCHECKED:
-                    rw.status = RewriteState.CHECKING
+        elif (part.part_type == 'rewrite'
+              and part.identifier in self.state.rewrites):
+            rewrite = self.state.rewrites[part.identifier]
+            if not rewrite.stub:
+                if rewrite.status == RewriteState.UNCHECKED:
+                    rewrite.status = RewriteState.CHECKING
+
                     def check_finished(i: int) -> Callable:
                         def f() -> None:
                             self.graph_cache.pop(i, None)
@@ -215,41 +228,47 @@ class Editor(QWidget):
                             self.show_at_cursor()
                         return f
 
-                    check_thread = CheckThread(rw, self)
-                    check_thread.finished.connect(check_finished(i))
+                    check_thread = CheckThread(rewrite, self)
+                    check_thread.finished.connect(check_finished(index))
                     check_thread.start()
 
-            if i not in self.graph_cache:
-                lhs = rw.lhs.copy() if rw.lhs else Graph()
-                rhs = rw.rhs.copy() if rw.rhs else Graph()
+            if index not in self.graph_cache:
+                lhs = rewrite.lhs.copy() if rewrite.lhs else Graph()
+                rhs = rewrite.rhs.copy() if rewrite.rhs else Graph()
                 convex_layout(lhs)
                 convex_layout(rhs)
-                self.graph_cache[i] = (lhs, rhs)
+                self.graph_cache[index] = (lhs, rhs)
             else:
-                lhs, rhs0 = self.graph_cache[i]
-                if not rhs0: raise ValueError("Rewrite step in graph_cache should have RHS")
+                lhs, rhs0 = self.graph_cache[index]
+                if not rhs0:
+                    raise ValueError("Rewrite step in graph_cache should have RHS")
                 rhs = rhs0
 
-            if rw.status == RewriteState.VALID:
-                self.code_view.set_current_region((part[0], part[1]), status=STATUS_GOOD)
-            elif rw.status == RewriteState.INVALID:
-                self.code_view.set_current_region((part[0], part[1]), status=STATUS_BAD)
+            if rewrite.status == RewriteState.VALID:
+                self.code_view.set_current_region((part.start, part.end),
+                                                  status=STATUS_GOOD)
+            elif rewrite.status == RewriteState.INVALID:
+                self.code_view.set_current_region((part.start, part.end),
+                                                  status=STATUS_BAD)
 
             self.rhs_view.setVisible(True)
             self.lhs_view.set_graph(lhs)
-            if rhs: self.rhs_view.set_graph(rhs)
+            if rhs:
+                self.rhs_view.set_graph(rhs)
         else:
             self.rhs_view.setVisible(False)
             self.lhs_view.set_graph(Graph())
 
     def next_rewrite_at_cursor(self) -> None:
         self.update_state()
-        if not self.parsed: return
+        if not self.parsed:
+            return
 
         pos = self.code_view.textCursor().position()
         part = self.state.part_at(pos)
-        if part and part[2] == 'rewrite' and part[3] in self.state.rewrites:
-            rw = self.state.rewrites[part[3]]
+        if (part and part.part_type == 'rewrite'
+           and part.identifier in self.state.rewrites):
+            rw = self.state.rewrites[part.identifier]
             start, end = rw.term_pos
             text = self.code_view.toPlainText()
             term = text[start:end]
@@ -271,8 +290,9 @@ class Editor(QWidget):
         self.update_state()
         pos = self.code_view.textCursor().position()
         part = self.state.part_at(pos)
-        if part and part[2] == 'rewrite' and part[3] in self.state.rewrites:
-            rw = self.state.rewrites[part[3]]
+        if (part and part.part_type == 'rewrite'
+           and part.identifier in self.state.rewrites):
+            rw = self.state.rewrites[part.identifier]
             tactic = rw.tactic.name()
             args = ', '.join(rw.tactic.args)
 
@@ -287,7 +307,7 @@ class Editor(QWidget):
     def update_state(self) -> None:
         self.state = parser.parse(self.doc.toPlainText(), self.doc.file_name)
         self.code_view.set_current_region(None)
-        
+
         model = self.error_view.model()
         if isinstance(model, ErrorListModel):
             model.set_errors(self.state.errors)
@@ -298,14 +318,16 @@ class Editor(QWidget):
             self.show_at_cursor()
 
     def import_at_cursor(self) -> str:
-        p = self.state.part_at(self.code_view.textCursor().position())
-        if p and p[2] == 'import':
-            return p[3]
+        part = self.state.part_at(self.code_view.textCursor().position())
+        if part and part.part_type == 'import':
+            return part.identifier
         else:
             return ''
 
+
 class CheckThread(QThread):
-    def __init__(self, rw: RewriteState, parent: Optional[QObject] = None) -> None:
+    def __init__(self, rw: RewriteState,
+                 parent: QObject | None = None) -> None:
         super().__init__(parent)
         self.rw = rw
 
