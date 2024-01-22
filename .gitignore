@@ -4,3 +4,4 @@ dist
 *.egg-info
 docs/build
 .vscode
+.DS_Store

@@ -15,7 +15,7 @@
 
 from typing import Optional, Tuple
 import re
-from PySide6.QtGui import QColor, QSyntaxHighlighter, QTextBlockFormat, QTextCursor, QTextDocument
+from PySide6.QtGui import QColor, QSyntaxHighlighter, QTextDocument
 
 from .colors import current_theme
 
@@ -50,14 +50,35 @@ class ChypHighlighter(QSyntaxHighlighter):
 
     def highlightBlock(self, text: str) -> None:
         ident = '[a-zA-Z_][\\.a-zA-Z0-9_]*'
-        for m in re.finditer('(^|\\W)(let|def|gen|rule|by|rewrite|import|as|show)\\s+\\-?\\s*(%s)?' % ident, text):
-            x,y = m.span(2)
+        for m in re.finditer('(^|\\W)(let|def|gen|by|import|as|show|theorem'
+                             + f'|rw|simp|rule)\\s+\\-?\\s*({ident})?', text):
+            x, y = m.span(2)
             self.setFormat(x, y-x, QColor(KEYWORD))
-            x,y = m.span(3)
+            x, y = m.span(3)
+            self.setFormat(x, y-x, QColor(IDENT))
+
+        for m in re.finditer(f'(^|\\W)(rewrite)\\s+\\-?\\s*({ident})?\\s*:', text):
+            x, y = m.span(2)
+            self.setFormat(x, y-x, QColor(KEYWORD))
+            x, y = m.span(3)
+            self.setFormat(x, y-x, QColor(IDENT))
+
+        # Proof syntax highlighting
+        for m in re.finditer('(^|\\W)(proof|sorry|refl|qed|rewrite)(\\s+|$)',
+                             text):
+            x, y = m.span(2)
+            self.setFormat(x, y-x, QColor(KEYWORD))
+
+        for m in re.finditer('(^|\\W)(LHS|RHS)', text):
+            x, y = m.span(2)
             self.setFormat(x, y-x, QColor(IDENT))
 
         for m in re.finditer('[?~<>(),:;*=\\-\\[\\]]', text):
             self.setFormat(m.start(), 1, QColor(OP))
+
+        for m in re.finditer(r'(\/\\|\\\/|=>|<=>|¬)', text):
+            x, y = m.span(1)
+            self.setFormat(x, y-x, QColor(OP))
 
         for m in re.finditer('(\\W|^)([0-9]+)(\\W|$)', text):
             x,y = m.span(2)
@@ -90,4 +111,3 @@ class ChypHighlighter(QSyntaxHighlighter):
                     else:
                         f.setBackground(QColor(SEL))
                     self.setFormat(c, 1, f)
-
