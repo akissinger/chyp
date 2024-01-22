@@ -24,6 +24,7 @@ from lark.tree import Meta
 
 from . import parser
 from .graph import Graph, GraphError, gen, perm, identity, redistributer
+from chyp.proof import Connected, Connective, Formula, Predicate
 from .rule import Rule, RuleError
 from .tactic import Tactic
 from .tactic.simptac import SimpTac
@@ -42,6 +43,10 @@ class Part:
     part_type: str
     """An identifier for this part."""
     identifier: str
+
+
+class TheoremState:
+    ...
 
 
 class RewriteState:
@@ -104,6 +109,7 @@ class State(lark.Transformer):
         self.rules: dict[str, Rule] = {'refl': Rule(Graph(), Graph(), name="refl")}
         self.rule_sequence: dict[str, int] = {'refl': 0}
         self.rewrites: dict[str, RewriteState] = dict()
+        self.theorems: dict[str, TheoremState] = dict()
         self.errors: list[Tuple[str, int, str]] = list()
         self.parts: list[Part] = list()
         self.parsed = False
@@ -464,7 +470,7 @@ class State(lark.Transformer):
     @v_args(meta=True)
     def rewrite_part(self, meta: Meta, items: List[Any]) -> Tuple[int, int, int, int, bool, str, list[str], Graph | None]:
         equiv = items[0]
-        t_start,t_end,rhs = items[1]
+        t_start, t_end, rhs = items[1]
         if items[2]:
             tactic, tactic_args = items[2]
         else:
@@ -491,7 +497,6 @@ class State(lark.Transformer):
             # print(f"defaulting to rule tactic: rule({rule_expr})")
             return ("rule", [rule_expr])
 
-
     @v_args(meta=True)
     def term_hole(self, meta: Meta, items: List[Any]) -> Tuple[int, int, Graph | None]:
         t = items[0] if len(items) != 0 else None
@@ -500,14 +505,38 @@ class State(lark.Transformer):
     def nested_term(self, items: List[Any]) -> Graph | None:
         return items[1]
 
-    def formula(self, items: list[Any]):
-        print("formula", items)
+    @v_args(meta=True)
+    def theorem(self, meta: Meta, items: list[Any]) -> None:
+        name = items[0]
+        formula = items[1]
+        print(formula)
+        self.parts.append(Part(meta.start_pos, meta.end_pos, 'theorem', name))
+        self.theorems[name] = TheoremState()
 
-    def equation(self, items):
-        print("equation", items)
+    def equation(self, items: list[Any]) -> Predicate:
+        return Predicate(items[0], items[2])
 
-    def tactic_statement(self, items):
-        print("tactic statement", items)
+    def connected(self, items: list[Any]) -> Connected:
+        lhs, connective, rhs = items
+        return Connected(connective, lhs, rhs)
+
+    def nested_formula(self, items: list[Any]) -> Formula:
+        return items[1]
+
+    def connective(self, items: list[Any]) -> Connective | None:
+        match items[0].type:
+            case 'AND':
+                return Connective.AND
+            case 'OR':
+                return Connective.OR
+            case 'NOT':
+                return Connective.NOT
+            case 'IMPL':
+                return Connective.IMPLIES
+            case 'IFF':
+                return Connective.IFF
+            case _:
+                return None
 
 def module_filename(name: str, current_file: str) -> str:
     return os.path.join(os.path.dirname(current_file), *name.split('.')) + '.chyp'
@@ -545,4 +574,3 @@ def module_filename(name: str, current_file: str) -> str:
 #     def part_at(self, pos: int) -> Optional[Tuple[int,int,str,str]]:
 #         p = self.part_with_index_at(pos)
 #         return p[1] if p else None
-
