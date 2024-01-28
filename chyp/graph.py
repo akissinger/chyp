@@ -154,6 +154,10 @@ class Graph:
         self._outputs: list[int] = []
         self.vindex = 0
         self.eindex = 0
+        self.name: str = ''
+
+    def __str__(self) -> str:
+        return self.name
 
     def copy(self) -> Graph:
         """Return a copy of the graph."""
@@ -745,6 +749,7 @@ class Graph:
         """
         g = self.copy()
         g.tensor(other)
+        g.name = f'{self.name} * {other.name}'
         return g
 
     def compose(self, other: Graph) -> None:
@@ -895,6 +900,7 @@ class Graph:
         """
         g = self.copy()
         g.compose(other)
+        g.name = f'({self.name} ; {other.name})'
         return g
 
     def highlight(self, vertices: set[int], edges: set[int]) -> None:
@@ -954,6 +960,7 @@ def gen(value: str,
     g.add_edge(inputs, outputs, value, fg=fg, bg=bg)
     g.set_inputs(inputs)
     g.set_outputs(outputs)
+    g.name = value
     return g
 
 

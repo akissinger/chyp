@@ -17,7 +17,10 @@ from __future__ import annotations
 from typing import Callable, Tuple
 from PySide6.QtCore import QByteArray, QFileInfo, QObject, QThread, QTimer, Qt, QSettings
 from PySide6.QtGui import QTextCursor
-from PySide6.QtWidgets import QHBoxLayout, QSplitter, QTreeView, QVBoxLayout, QWidget
+from PySide6.QtWidgets import (
+    QHBoxLayout, QSplitter, QTextEdit, QTreeView,
+    QVBoxLayout, QWidget
+)
 
 
 from .. import parser
@@ -55,10 +58,15 @@ class Editor(QWidget):
         self.rhs_view = GraphView()
         self.rhs_view.setVisible(False)
 
+        self.theorem_view = QTextEdit()
+        self.theorem_view.setReadOnly(True)
+        self.theorem_view.setVisible(False)
+
         self.graph_panel = QWidget(self)
         self.graph_panel.setLayout(QHBoxLayout())
         self.graph_panel.layout().addWidget(self.lhs_view)
         self.graph_panel.layout().addWidget(self.rhs_view)
+        self.graph_panel.layout().addWidget(self.theorem_view)
         self.splitter.addWidget(self.graph_panel)
 
         self.code_view = CodeView()
@@ -199,6 +207,7 @@ class Editor(QWidget):
                 graph, _ = self.graph_cache[index]
             self.rhs_view.setVisible(False)
             self.lhs_view.set_graph(graph)
+            self.theorem_view.setVisible(False)
         elif part.part_type == 'rule' and part.identifier in self.state.rules:
             if index not in self.graph_cache:
                 lhs = self.state.rules[part.identifier].lhs.copy()
@@ -214,6 +223,7 @@ class Editor(QWidget):
             self.rhs_view.setVisible(True)
             self.lhs_view.set_graph(lhs)
             self.rhs_view.set_graph(rhs)
+            self.theorem_view.setVisible(False)
         elif (part.part_type == 'rewrite'
               and part.identifier in self.state.rewrites):
             rewrite = self.state.rewrites[part.identifier]
@@ -255,6 +265,13 @@ class Editor(QWidget):
             self.lhs_view.set_graph(lhs)
             if rhs:
                 self.rhs_view.set_graph(rhs)
+            self.theorem_view.setVisible(False)
+        elif (part.part_type == 'theorem'
+              and part.identifier in self.state.theorems):
+            theorem = self.state.theorems[part.identifier]
+            self.theorem_view.setText(
+                f'Theorem {part.identifier}: {theorem.formula}')
+            self.theorem_view.setVisible(True)
         else:
             self.rhs_view.setVisible(False)
             self.lhs_view.set_graph(Graph())

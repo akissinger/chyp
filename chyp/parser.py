@@ -34,7 +34,7 @@ GRAMMAR = Lark("""
     type_term : type_element ("*" type_element)* | num
     type_element: IDENT ["^" num]
 
-    theorem : "theorem" var ":" formula "proof" "qed"
+    theorem : "theorem" var ":" formula "proof" tactic_statement* "qed"
     ?formula : equation | par_formula
     ?par_formula : connected | nested_formula
     connected : formula connective formula
@@ -46,6 +46,8 @@ GRAMMAR = Lark("""
     OR : "\\/"
     IMPL : "=>"
     IFF : "<=>"
+    ?tactic_statement : sorry
+    sorry : "sorry"
 
     LPAREN: "("
     RPAREN: ")"

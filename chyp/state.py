@@ -45,8 +45,25 @@ class Part:
     identifier: str
 
 
+@dataclass
 class TheoremState:
-    ...
+    """The state of a theorem."""
+
+    formula: Formula
+    proof: list[ProofState]
+
+
+@dataclass
+class ProofState:
+    """A snapshot of a proof at some point in its construction."""
+    goals: list[Formula]
+
+    def apply(self, tactic) -> ProofState:
+        """Apply a given tactic to the open goal at the top of the stack."""
+        goals = self.goals.copy()
+        goal = goals.pop(0)
+        # Apply the tactic to the goal
+        return ProofState(goals)
 
 
 class RewriteState:
@@ -454,7 +471,7 @@ class State(lark.Transformer):
                         else:
                             self.errors.append((self.file_name, meta.line, "Trying to prove converse for unknown rule: " + base_name))
                     else:
-                        if not name in self.rules:
+                        if name not in self.rules:
                             rule = Rule(term.copy(), rhs.copy(), name=name, equiv=all_equiv)
                             # remove any highlights placed there by the first/last proof step
                             rule.lhs.unhighlight()
@@ -509,9 +526,18 @@ class State(lark.Transformer):
     def theorem(self, meta: Meta, items: list[Any]) -> None:
         name = items[0]
         formula = items[1]
-        print(formula)
         self.parts.append(Part(meta.start_pos, meta.end_pos, 'theorem', name))
-        self.theorems[name] = TheoremState()
+        theorem_state = TheoremState(formula, [ProofState([formula])])
+
+        tactic_statements = items[2:]
+        for tactic_statement in tactic_statements:
+            print(tactic_statement)
+            proof_state = theorem_state.proof[-1]
+            new_proof_state = proof_state.apply(tactic_statement)
+            theorem_state.proof.append(new_proof_state)
+            # except TheoremError
+
+        self.theorems[name] = theorem_state
 
     def equation(self, items: list[Any]) -> Predicate:
         return Predicate(items[0], items[2])
@@ -537,6 +563,7 @@ class State(lark.Transformer):
                 return Connective.IFF
             case _:
                 return None
+
 
 def module_filename(name: str, current_file: str) -> str:
     return os.path.join(os.path.dirname(current_file), *name.split('.')) + '.chyp'

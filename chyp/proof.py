@@ -31,14 +31,15 @@ class Connective(Enum):
 
 class Formula:
     """A first order logic formula using graph equations as predicates."""
-    ...
-
 
 @dataclass
 class Predicate(Formula):
     """An equation between two graphs."""
     lhs: Graph
     rhs: Graph
+
+    def __str__(self) -> str:
+        return f'{self.lhs} = {self.rhs}'
 
 
 @dataclass
@@ -47,3 +48,6 @@ class Connected(Formula):
     connective: Connective
     lhs: Formula
     rhs: Formula
+
+    def __str__(self) -> str:
+        return f'{self.lhs} {self.connective.value} {self.rhs}'
