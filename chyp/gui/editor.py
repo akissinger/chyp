@@ -269,8 +269,13 @@ class Editor(QWidget):
         elif (part.part_type == 'theorem'
               and part.identifier in self.state.theorems):
             theorem = self.state.theorems[part.identifier]
+            theorem_text = f'Theorem {part.identifier}: {theorem.formula}'
+            theorem_text += '\nGoals:'
+            for goal in theorem.proof[-1].goals:
+                theorem_text += f'\n{goal}'
             self.theorem_view.setText(
-                f'Theorem {part.identifier}: {theorem.formula}')
+                theorem_text
+            )
             self.theorem_view.setVisible(True)
         else:
             self.rhs_view.setVisible(False)

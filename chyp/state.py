@@ -63,7 +63,10 @@ class ProofState:
         goals = self.goals.copy()
         goal = goals.pop(0)
         # Apply the tactic to the goal
-        return ProofState(goals)
+        if tactic == 'sorry':
+            return ProofState(goals)
+        else:
+            return ProofState([goal] + goals)
 
 
 class RewriteState:
@@ -382,7 +385,7 @@ class State(lark.Transformer):
                                 f'Rule "{rule_name}" already defined.'))
         self.parts.append(Part(meta.start_pos, meta.end_pos, 'rule', rule_name))
 
-    def gen_color(self, items: List[Any]) -> Tuple[str,str]:
+    def gen_color(self, items: List[Any]) -> Tuple[str, str]:
         return (items[1], items[0]) if len(items) == 2 else ('', items[0])
 
     def color(self, items: List[Any]) -> str:
@@ -531,7 +534,6 @@ class State(lark.Transformer):
 
         tactic_statements = items[2:]
         for tactic_statement in tactic_statements:
-            print(tactic_statement)
             proof_state = theorem_state.proof[-1]
             new_proof_state = proof_state.apply(tactic_statement)
             theorem_state.proof.append(new_proof_state)
@@ -563,6 +565,9 @@ class State(lark.Transformer):
                 return Connective.IFF
             case _:
                 return None
+
+    def sorry(self, items: list[Any]) -> str:
+        return 'sorry'
 
 
 def module_filename(name: str, current_file: str) -> str:
