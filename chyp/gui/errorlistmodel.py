@@ -15,6 +15,7 @@
 
 from typing import Any, List, Tuple, Union
 from PySide6.QtCore import QFileInfo, QPersistentModelIndex, Qt, QAbstractItemModel, QModelIndex
+from .fonts import monospace_font
 from PySide6.QtGui import QFont
 
 class ErrorListModel(QAbstractItemModel):
@@ -42,9 +43,7 @@ class ErrorListModel(QAbstractItemModel):
             else:
                 return self.errors[index.row()][index.column()] 
         elif role == Qt.ItemDataRole.FontRole:
-            font = QFont("Cascadia Code", 12)
-            font.setStyleHint(QFont.StyleHint.TypeWriter)
-            return font
+            return monospace_font(12)
         elif role == Qt.ItemDataRole.TextAlignmentRole:
             return Qt.AlignmentFlag.AlignTop
 

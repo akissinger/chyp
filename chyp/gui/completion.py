@@ -16,6 +16,7 @@
 from typing import Any, Iterable, List, Union
 from PySide6.QtCore import QAbstractListModel, QObject, QPersistentModelIndex, Qt, QAbstractItemModel, QModelIndex
 from PySide6.QtGui import QFont
+from .fonts import monospace_font
 
 class CodeCompletionModel(QAbstractListModel):
     """A model containing a list of completions, with line numbers"""
@@ -40,7 +41,7 @@ class CodeCompletionModel(QAbstractListModel):
             if index.column() == 0:
                 return self.completions[index.row()]
         elif role == Qt.ItemDataRole.FontRole:
-            return QFont("monospace", 14)
+            return monospace_font(14)
 
     def rowCount(self, index: Union[QModelIndex, QPersistentModelIndex]=QModelIndex()) -> int:
         """The number of rows"""

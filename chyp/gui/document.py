@@ -20,6 +20,7 @@ from PySide6.QtGui import QFont, QTextDocument
 from PySide6.QtWidgets import QFileDialog, QMessageBox, QPlainTextDocumentLayout, QWidget
 
 from .highlighter import ChypHighlighter
+from .fonts import monospace_font
 
 # class ChypDocumentLayout(QPlainTextDocumentLayout):
 #     def ensureBlockLayout(self, block: QTextBlock) -> None:
@@ -50,9 +51,7 @@ class ChypDocument(QTextDocument):
     def __init__(self, parent: QWidget) -> None:
         super().__init__(parent)
         self.parent_widget = parent
-        font = QFont("Cascadia Code", 14)
-        font.setStyleHint(QFont.StyleHint.TypeWriter)
-        self.setDefaultFont(font)
+        self.setDefaultFont(monospace_font(14))
         self.setDocumentLayout(QPlainTextDocumentLayout(self))
         self.highlighter = ChypHighlighter(self)
         self.file_name = ''

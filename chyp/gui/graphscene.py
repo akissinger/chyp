@@ -25,6 +25,7 @@ from PySide6.QtWidgets import (QGraphicsEllipseItem, QGraphicsItem,
                                QStyleOptionGraphicsItem, QWidget)
 
 from ..graph import Graph
+from .fonts import sans_font
 
 SCALE = 50.0
 
@@ -87,7 +88,7 @@ class EItem(QGraphicsRectItem):
 
         if self.fg != '':
             painter.setPen(QPen(QColor(self.fg)))
-        painter.setFont(QFont("sans", 11))
+        painter.setFont(sans_font(11))
         painter.drawText(self.boundingRect(), Qt.AlignmentFlag.AlignCenter, str(self.value)) # type:ignore
 
 class VItem(QGraphicsEllipseItem):
