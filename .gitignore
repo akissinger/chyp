@@ -4,3 +4,7 @@ dist
 *.egg-info
 docs/_build
 .vscode
+docs/build
+.vscode
+.venv
+
