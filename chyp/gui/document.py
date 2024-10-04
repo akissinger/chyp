@@ -50,7 +50,9 @@ class ChypDocument(QTextDocument):
     def __init__(self, parent: QWidget) -> None:
         super().__init__(parent)
         self.parent_widget = parent
-        self.setDefaultFont(QFont("monospace", 14))
+        font = QFont("Cascadia Code", 14)
+        font.setStyleHint(QFont.StyleHint.TypeWriter)
+        self.setDefaultFont(font)
         self.setDocumentLayout(QPlainTextDocumentLayout(self))
         self.highlighter = ChypHighlighter(self)
         self.file_name = ''

@@ -21,7 +21,7 @@ from . import state
 
 GRAMMAR = Lark("""
     start : statement*
-    ?statement : import_statement | gen | let | def_statement | rule | rewrite | show
+    ?statement : import_statement | gen | let | def_statement | rule | rewrite | show | theorem
     gen : "gen" var ":" type_term "->" type_term [ gen_color ]
     def_statement : "def" var "=" term [ gen_color ]
     gen_color : "\\\"" color "\\\"" | "\\\"" color "\\\"" "\\\"" color "\\\""
@@ -30,6 +30,9 @@ GRAMMAR = Lark("""
     rewrite : "rewrite" [converse] var ":" term rewrite_part*
     rewrite_part : (eq | le) term_hole [ "by" tactic ]
     converse : "-"
+    theorem : THM var ":" formula
+    THM : "theorem" | "lemma" | "proposition"
+    formula : term (eq | le) term
 
     type_term : type_element ("*" type_element)* | num
     type_element: IDENT ["^" num]
