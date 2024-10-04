@@ -50,7 +50,7 @@ GRAMMAR = Lark("""
     perm_indices : num ("," num)+
     id : "id" [ "[" type_element "]" ]
     id0 : "id0"
-    redistribution : "redistribute" ["[" IDENT "]"]("[" size_list "to" size_list "]")
+    redistribution : "rd" ["[" IDENT "]"]("[" size_list "to" size_list "]")
     size_list: num ("," num)*
     show : "show" rule_ref
 

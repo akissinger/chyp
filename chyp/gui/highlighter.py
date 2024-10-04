@@ -59,7 +59,7 @@ class ChypHighlighter(QSyntaxHighlighter):
         for m in re.finditer('[?~<>(),:;*=\\-\\[\\]]', text):
             self.setFormat(m.start(), 1, QColor(OP))
 
-        for m in re.finditer('(\\W|^)([0-9]+)(\\W|$)', text):
+        for m in re.finditer('(\\W|^)([0-9]+)', text):
             x,y = m.span(2)
             self.setFormat(x, y-x, QColor(NUM))
 
