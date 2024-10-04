@@ -129,6 +129,22 @@ def split_perm(perm: List[int]) -> List[List[int]]:
                 break
     return perms
 
+def edge_to_term(g: Graph, e: int) -> str:
+    val = str(g.edge_data(e).value)
+    if val == "_redistributer":
+        in_d = [g.vertex_data(v) for v in g.source(e)]
+        out_d = [g.vertex_data(v) for v in g.target(e)]
+        if len(in_d) > 0:
+            ty = in_d[0].vtype
+        elif len(out_d) > 0:
+            ty = out_d[0].vtype
+        else:
+            ty = None
+        in_list = ", ".join(str(d.size) for d in in_d)
+        out_list = ", ".join(str(d.size) for d in out_d)
+        return "rd" + (f"[{ty}]" if ty else "") + f"[{in_list} to {out_list}]"
+    else:
+        return val
 
 def graph_to_term(g: Graph) -> str:
     """Convert a graph to a term
@@ -156,7 +172,7 @@ def graph_to_term(g: Graph) -> str:
             seq.append(' * '.join([perm_to_s(p) for p in perms]))
 
         # append the parallel composition of the current edge layer
-        par = [str(g.edge_data(e).value) for e in e_layers[i]]
+        par = [edge_to_term(g, e) for e in e_layers[i]]
         seq.append(' * '.join(par))
 
         # compute the permutation from the outputs of the edge layer to the next vertex layer
