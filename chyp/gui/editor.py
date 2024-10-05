@@ -48,7 +48,8 @@ class Editor(QWidget):
         self.splitter = QSplitter(Qt.Orientation.Vertical)
         self.layout().addWidget(self.splitter)
 
-        self.state = State()
+        self.state = State() # latest parsed state
+        self.code = "" # source code used to produce latest parsed state
 
         self.lhs_view = GraphView()
         self.rhs_view = GraphView()
@@ -285,7 +286,16 @@ class Editor(QWidget):
             self.next_rewrite_at_cursor()
 
     def update_state(self) -> None:
-        self.state = parser.parse(self.doc.toPlainText(), self.doc.file_name)
+        code = self.doc.toPlainText()
+        state = parser.parse(code, self.doc.file_name)
+        pos = 0
+        for i in range(len(code)):
+            if i >= len(self.code) or code[i] != self.code[i]:
+                pos = i
+                break
+        state.copy_status_until(self.state, pos)
+        self.code = code
+        self.state = state
         self.code_view.set_current_region(None)
         
         model = self.error_view.model()

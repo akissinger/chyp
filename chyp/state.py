@@ -136,7 +136,13 @@ class State(lark.Transformer):
     def part_at(self, pos: int) -> Optional[Part]:
         p = self.part_with_index_at(pos)
         return p[1] if p else None
-        
+    
+    def copy_status_until(self, state: State, pos: int) -> None:
+        for (i,p) in enumerate(state.parts):
+            if p.end < pos and len(self.parts) > i:
+                self.parts[i].status = p.status
+            else:
+                break
 
     def var(self, items: List[Any]) -> str:
         s = str(items[0])
