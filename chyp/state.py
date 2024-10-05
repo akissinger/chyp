@@ -46,11 +46,12 @@ class Part:
         self.end = end
         self.name = name
         self.status = Part.UNCHECKED
+        self.index = -1
 
 class RulePart(Part): pass
 class GraphPart(Part): pass
-class LetPart(Part): pass
-class GenPart(Part): pass
+class LetPart(GraphPart): pass
+class GenPart(GraphPart): pass
 
 class RewritePart(Part):
     def __init__(self, start: int, end: int, name: str, step: int):
@@ -122,20 +123,24 @@ class State(lark.Transformer):
         self.proofs: Dict[str, ProofState] = dict()
         self.errors: List[Tuple[str, int, str]] = list()
         self.parts: List[Part] = list()
+        self.current_part: Optional[Part] = None
         self.parsed = False
-
-    def part_with_index_at(self, pos: int) -> Optional[Tuple[int, Part]]:
-        p0 = (0, self.parts[0]) if len(self.parts) >= 1 else None
-        for (i,p) in enumerate(self.parts):
-            if p.start <= pos:
-                p0 = (i,p)
-                if p.end >= pos:
-                    return (i,p)
-        return p0
+    
+    def set_current_part(self, p: Optional[Part]) -> None:
+        self.current_part = p
+    
+    def add_part(self, p: Part) -> None:
+        p.index = len(self.parts)
+        self.parts.append(p)
 
     def part_at(self, pos: int) -> Optional[Part]:
-        p = self.part_with_index_at(pos)
-        return p[1] if p else None
+        p0 = self.parts[0] if len(self.parts) >= 1 else None
+        for p in self.parts:
+            if p.start <= pos:
+                p0 = p
+                if p.end >= pos:
+                    return p
+        return p0
     
     def copy_status_until(self, state: State, pos: int) -> None:
         for (i,p) in enumerate(state.parts):
@@ -296,7 +301,7 @@ class State(lark.Transformer):
     def show(self, meta: Meta, items: List[Any]) -> None:
         rule = items[0]
         if rule:
-            self.parts.append(RulePart(meta.start_pos, meta.end_pos, rule.name))
+            self.add_part(RulePart(meta.start_pos, meta.end_pos, rule.name))
 
     @v_args(meta=True)
     def gen(self, meta: Meta, items: List[Any]) -> None:
@@ -313,7 +318,7 @@ class State(lark.Transformer):
             if existing_domain != domain or existing_codomain != codomain:
                 self.errors.append((self.file_name, meta.line, "Term '{}' already defined with incompatible type {} -> {}.".format(name, existing_domain, existing_codomain)))
                 self.errors.append((self.file_name, meta.line, "(Trying to add) {} -> {}.".format(domain, codomain)))
-        self.parts.append(GenPart(meta.start_pos, meta.end_pos, name))
+        self.add_part(GenPart(meta.start_pos, meta.end_pos, name))
 
     @v_args(meta=True)
     def let(self, meta: Meta, items: List[Any]) -> None:
@@ -323,7 +328,7 @@ class State(lark.Transformer):
                 self.graphs[name] = graph
         else:
             self.errors.append((self.file_name, meta.line, "Term '{}' already defined.".format(name)))
-        self.parts.append(LetPart(meta.start_pos, meta.end_pos, name))
+        self.add_part(LetPart(meta.start_pos, meta.end_pos, name))
 
     @v_args(meta=True)
     def rule(self, meta: Meta, items: List[Any]) -> None:
@@ -338,7 +343,7 @@ class State(lark.Transformer):
                     self.errors.append((self.file_name, meta.line, str(e)))
         else:
             self.errors.append((self.file_name, meta.line, "Rule '{}' already defined.".format(name)))
-        self.parts.append(RulePart(meta.start_pos, meta.end_pos, name))
+        self.add_part(RulePart(meta.start_pos, meta.end_pos, name))
 
     @v_args(meta=True)
     def def_statement(self, meta: Meta, items: List[Any]) -> None:
@@ -377,7 +382,7 @@ class State(lark.Transformer):
         else:
             self.errors.append((self.file_name, meta.line,
                                 f'Rule "{rule_name}" already defined.'))
-        self.parts.append(RulePart(meta.start_pos, meta.end_pos, rule_name))
+        self.add_part(RulePart(meta.start_pos, meta.end_pos, rule_name))
 
     def gen_color(self, items: List[Any]) -> Tuple[str,str]:
         return (items[1], items[0]) if len(items) == 2 else ('', items[0])
@@ -407,7 +412,7 @@ class State(lark.Transformer):
         except FileNotFoundError:
             self.errors.append((self.file_name, meta.line, 'File not found: {}'.format(file_name)))
 
-        self.parts.append(ImportPart(meta.start_pos, meta.end_pos, file_name))
+        self.add_part(ImportPart(meta.start_pos, meta.end_pos, file_name))
 
     def import_let(self, items: List[Any]) -> Tuple[str, Graph]:
         return (items[0], items[1])
@@ -422,7 +427,7 @@ class State(lark.Transformer):
         rw_parts = items[3:]
 
         if len(rw_parts) == 0:
-            self.parts.append(RewritePart(meta.start_pos, meta.end_pos, name, 0))
+            self.add_part(RewritePart(meta.start_pos, meta.end_pos, name, 0))
             self.rewrites[name] = [RewriteState(self.sequence, self, lhs=term, stub=True)]
         else:
             start = meta.start_pos
@@ -454,7 +459,7 @@ class State(lark.Transformer):
                         lhs_match if i == 0 else None,
                         rhs_match if i == last_i else None))
                 lhs = rhs.copy() if rhs else None
-                self.parts.append(RewritePart(start, end, name, i))
+                self.add_part(RewritePart(start, end, name, i))
                 start = end
             if term and rhs:
                 try:

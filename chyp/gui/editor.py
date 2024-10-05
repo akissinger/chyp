@@ -88,7 +88,7 @@ class Editor(QWidget):
         self.revision = 0
 
         # index of the part of the parsed document we're currently looking at
-        self.current_part = -1
+        # self.current_part = -1
 
 
     def title(self) -> str:
@@ -110,7 +110,7 @@ class Editor(QWidget):
 
     def invalidate_text(self) -> None:
         self.parsed = False
-        self.current_part = -1
+        self.state.set_current_part(None)
         self.graph_cache = dict()
         self.code_view.set_current_region(None)
         self.revision += 1
@@ -129,8 +129,8 @@ class Editor(QWidget):
 
         cursor = self.code_view.textCursor()
         pos = cursor.position()
-        p = self.state.part_with_index_at(pos)
-        i = p[0] if p else 0
+        p = self.state.part_at(pos)
+        i = p.index if p else 0
         i += step
 
         if i >= 0 and i < len(self.state.parts):
@@ -171,34 +171,30 @@ class Editor(QWidget):
     def show_at_cursor(self) -> None:
         if not self.parsed: return
         pos = self.code_view.textCursor().position()
-        p = self.state.part_with_index_at(pos)
-        if not p: return
-
-        i, part = p
-        # print(part)
-
-        if i == self.current_part: return
-        else: self.current_part = i
+        part = self.state.part_at(pos)
+        if not part: return
+        if self.state.current_part == part: return
+        else: self.state.set_current_part(part)
 
         self.code_view.set_current_region((part.start, part.end))
         if isinstance(part, GraphPart) and part.name in self.state.graphs:
-            if i not in self.graph_cache:
+            if part.index not in self.graph_cache:
                 g = self.state.graphs[part.name].copy()
                 convex_layout(g)
-                self.graph_cache[i] = (g, None)
+                self.graph_cache[part.index] = (g, None)
             else:
-                g, _ = self.graph_cache[i]
+                g, _ = self.graph_cache[part.index]
             self.rhs_view.setVisible(False)
             self.lhs_view.set_graph(g)
         elif isinstance(part, RulePart) and part.name in self.state.rules:
-            if i not in self.graph_cache:
+            if part.index not in self.graph_cache:
                 lhs = self.state.rules[part.name].lhs.copy()
                 rhs = self.state.rules[part.name].rhs.copy()
                 convex_layout(lhs)
                 convex_layout(rhs)
-                self.graph_cache[i] = (lhs, rhs)
+                self.graph_cache[part.index] = (lhs, rhs)
             else:
-                lhs, rhs0 = self.graph_cache[i]
+                lhs, rhs0 = self.graph_cache[part.index]
                 if not rhs0: raise ValueError("Rule in graph_cache should have RHS")
                 rhs = rhs0
             self.rhs_view.setVisible(True)
@@ -212,22 +208,22 @@ class Editor(QWidget):
                     def check_finished(i: int) -> Callable:
                         def f() -> None:
                             self.graph_cache.pop(i, None)
-                            self.current_part = -1
+                            self.state.set_current_part(None)
                             self.show_at_cursor()
                         return f
 
                     check_thread = CheckThread(rw, self)
-                    check_thread.finished.connect(check_finished(i))
+                    check_thread.finished.connect(check_finished(part.index))
                     check_thread.start()
 
-            if i not in self.graph_cache:
+            if part.index not in self.graph_cache:
                 lhs = rw.lhs.copy() if rw.lhs else Graph()
                 rhs = rw.rhs.copy() if rw.rhs else Graph()
                 convex_layout(lhs)
                 convex_layout(rhs)
-                self.graph_cache[i] = (lhs, rhs)
+                self.graph_cache[part.index] = (lhs, rhs)
             else:
-                lhs, rhs0 = self.graph_cache[i]
+                lhs, rhs0 = self.graph_cache[part.index]
                 if not rhs0: raise ValueError("Rewrite step in graph_cache should have RHS")
                 rhs = rhs0
 
