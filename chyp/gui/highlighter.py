@@ -20,23 +20,21 @@ from PySide6.QtGui import QColor, QSyntaxHighlighter, QTextBlockFormat, QTextCur
 from .colors import current_theme
 from ..state import Part, State
 
-NO_STATUS = 0
-STATUS_GOOD = 1
-STATUS_BAD = 2
-
 # palette from: https://github.com/catppuccin/catppuccin
 theme = current_theme()
-FG =      theme['fg']
-BG =      theme['bg']
-SEL =     theme['bg_sel']
-KEYWORD = theme['fg_keyword']
-IDENT =   theme['fg_ident']
-NUM =     theme['fg_num']
-OP =      theme['fg_op']
-COMMENT = theme['fg_comment']
-STRING  = theme['fg_string']
-BG_GOOD = theme['bg_good']
-BG_BAD  = theme['bg_bad']
+FG          = theme['fg']
+BG          = theme['bg']
+SEL         = theme['bg_sel']
+KEYWORD     = theme['fg_keyword']
+IDENT       = theme['fg_ident']
+NUM         = theme['fg_num']
+OP          = theme['fg_op']
+COMMENT     = theme['fg_comment']
+STRING      = theme['fg_string']
+BG_GOOD     = theme['bg_good']
+BG_BAD      = theme['bg_bad']
+BG_SEL_GOOD = theme['bg_sel_good']
+BG_SEL_BAD  = theme['bg_sel_bad']
 
 class ChypHighlighter(QSyntaxHighlighter):
     def __init__(self, doc: QTextDocument) -> None:
@@ -75,24 +73,39 @@ class ChypHighlighter(QSyntaxHighlighter):
             x,y = m.span(0)
             self.setFormat(x, y-x, QColor(COMMENT))
 
-        # highlight the region that is currently in focus
-        if self.state and self.state.current_part:
-            x = self.state.current_part.start
-            y = self.state.current_part.end
+        # highlight the region according to its status
+        if self.state:
             start = self.currentBlock().position()
             length = self.currentBlock().length()
-            end = start + length
-            if y >= start and x < end:
-                x_rel = max(x - start, 0)
-                y_rel = min(y - start, length)
-                for c in range(x_rel, y_rel):
+            for c in range(0, length):
+                p = self.state.part_at(c + start)
+                if p:
                     f = self.format(c)
-
-                    if self.state.current_part.status == Part.VALID:
-                        f.setBackground(QColor(BG_GOOD))
-                    elif self.state.current_part.status == Part.INVALID:
-                        f.setBackground(QColor(BG_BAD))
+                    if self.state.current_part == p:
+                        if p.status == Part.VALID:
+                            f.setBackground(QColor(BG_SEL_GOOD))
+                        elif p.status == Part.INVALID:
+                            f.setBackground(QColor(BG_SEL_BAD))
+                        else:
+                            f.setBackground(QColor(SEL))
                     else:
-                        f.setBackground(QColor(SEL))
+                        if p.status == Part.VALID:
+                            f.setBackground(QColor(BG_GOOD))
+                        elif p.status == Part.INVALID:
+                            f.setBackground(QColor(BG_BAD))
                     self.setFormat(c, 1, f)
+
+            # if y >= start and x < end:
+            #     x_rel = max(x - start, 0)
+            #     y_rel = min(y - start, length)
+            #     for c in range(x_rel, y_rel):
+            #         f = self.format(c)
+
+            #         if self.state.current_part.status == Part.VALID:
+            #             f.setBackground(QColor(BG_GOOD))
+            #         elif self.state.current_part.status == Part.INVALID:
+            #             f.setBackground(QColor(BG_BAD))
+            #         else:
+            #             f.setBackground(QColor(SEL))
+            #         self.setFormat(c, 1, f)
 

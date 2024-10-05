@@ -48,8 +48,10 @@ PALETTES['catppuccin_macchiato'] = {
     'mantle':    '#1e2030',
     'crust':     '#181926',
 
-    'green_bg':  '#36504f', # non-standard
-    'red_bg':    '#863a4f', # non-standard
+    'green_bg':     '#36504f', # non-standard
+    'red_bg':       '#863a4f', # non-standard
+    'green_bg_dim': '#213231', # non-standard
+    'red_bg_dim':   '#4d212d', # non-standard
 }
 
 PALETTES['catppuccin_latte'] = {
@@ -80,8 +82,10 @@ PALETTES['catppuccin_latte'] = {
     'mantle':    '#e6e9ef',
     'crust':     '#dce0e8',
 
-    'green_bg':  '#bbffcc', # non-standard
-    'red_bg':    '#ff9999', # non-standard
+    'green_bg':     '#bbffcc', # non-standard
+    'red_bg':       '#f18080', # non-standard
+    'green_bg_dim': '#bbffcc', # non-standard
+    'red_bg_dim':   '#ff9999', # non-standard
 }
 
 THEMES: Dict[str, Dict[str,str]] = dict()
@@ -90,8 +94,8 @@ for t in ('catppuccin_macchiato', 'catppuccin_latte'):
       'bg': PALETTES[t]['base'],
       'fg': PALETTES[t]['text'],
       'fg_bright': PALETTES[t]['lavender'],
-      'bg_good': PALETTES[t]['green_bg'],
-      'bg_bad': PALETTES[t]['red_bg'],
+      'bg_good': PALETTES[t]['green_bg_dim'],
+      'bg_bad': PALETTES[t]['red_bg_dim'],
       'bg_alt': PALETTES[t]['crust'],
       'bg_button': PALETTES[t]['mantle'],
       'fg_button': PALETTES[t]['text'],
@@ -100,6 +104,8 @@ for t in ('catppuccin_macchiato', 'catppuccin_latte'):
       'fg_highlight': PALETTES[t]['crust'],
 
       'bg_sel': PALETTES[t]['surface0'], 
+      'bg_sel_good': PALETTES[t]['green_bg'], 
+      'bg_sel_bad': PALETTES[t]['red_bg'], 
       'fg_keyword': PALETTES[t]['blue'],
       'fg_ident': PALETTES[t]['sky'], 
       'fg_num': PALETTES[t]['red'],

@@ -33,7 +33,6 @@ from .errorlist import ErrorListModel
 from .graphview import GraphView
 from .codeview import CodeView
 from .document import ChypDocument
-from .highlighter import STATUS_GOOD, STATUS_BAD
 
 class Editor(QWidget):
     def __init__(self) -> None:

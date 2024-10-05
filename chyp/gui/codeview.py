@@ -21,7 +21,7 @@ from PySide6.QtWidgets import QCompleter, QPlainTextEdit
 
 from .completion import CodeCompletionModel
 from .document import ChypDocument
-from .highlighter import BG, FG, NO_STATUS
+from .highlighter import BG, FG
 from ..state import State
 
 
