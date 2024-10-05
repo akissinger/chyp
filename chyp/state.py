@@ -22,13 +22,42 @@ import lark
 from lark import v_args
 from lark.tree import Meta
 
+from build.lib.chyp.graph import VType
+
 from . import parser
 from .graph import Graph, GraphError, gen, perm, identity, redistributer
 from .rule import Rule, RuleError
+from .proofstate import ProofState
 from .tactic import Tactic
 from .tactic.simptac import SimpTac
 from .tactic.ruletac import RuleTac
 
+# Structure represents an atomic "Part" of a theory document. It has a start/end index used for highlighting and
+# to detect if the cursor is currently inside of it, as well as a name (usually used for depecting associated graphs),
+# and a status for showing good/bad results of checking proof steps.
+class Part:
+    UNCHECKED = 0
+    CHECKING = 1
+    VALID = 2
+    INVALID = 3
+
+    def __init__(self, start: int, end: int, name: str):
+        self.start = start
+        self.end = end
+        self.name = name
+        self.status = Part.UNCHECKED
+
+class RulePart(Part): pass
+class GraphPart(Part): pass
+class LetPart(Part): pass
+class GenPart(Part): pass
+
+class RewritePart(Part):
+    def __init__(self, start: int, end: int, name: str, step: int):
+        Part.__init__(self, start, end, name)
+        self.step = step
+
+class ImportPart(Part): pass
 
 class RewriteState:
     UNCHECKED = 0
@@ -89,21 +118,22 @@ class State(lark.Transformer):
         self.graphs: Dict[str, Graph] = dict()
         self.rules: Dict[str, Rule] = {'refl': Rule(Graph(), Graph(), name="refl")}
         self.rule_sequence: Dict[str, int] = {'refl': 0}
-        self.rewrites: Dict[str, RewriteState] = dict()
+        self.rewrites: Dict[str, List[RewriteState]] = dict()
+        self.proofs: Dict[str, ProofState] = dict()
         self.errors: List[Tuple[str, int, str]] = list()
-        self.parts: List[Tuple[int, int, str, str]] = list()
+        self.parts: List[Part] = list()
         self.parsed = False
 
-    def part_with_index_at(self, pos: int) -> Optional[Tuple[int, Tuple[int,int,str,str]]]:
+    def part_with_index_at(self, pos: int) -> Optional[Tuple[int, Part]]:
         p0 = (0, self.parts[0]) if len(self.parts) >= 1 else None
         for (i,p) in enumerate(self.parts):
-            if p[0] <= pos:
+            if p.start <= pos:
                 p0 = (i,p)
-                if p[1] >= pos:
+                if p.end >= pos:
                     return (i,p)
         return p0
 
-    def part_at(self, pos: int) -> Optional[Tuple[int,int,str,str]]:
+    def part_at(self, pos: int) -> Optional[Part]:
         p = self.part_with_index_at(pos)
         return p[1] if p else None
         
@@ -260,7 +290,7 @@ class State(lark.Transformer):
     def show(self, meta: Meta, items: List[Any]) -> None:
         rule = items[0]
         if rule:
-            self.parts.append((meta.start_pos, meta.end_pos, 'rule', rule.name))
+            self.parts.append(RulePart(meta.start_pos, meta.end_pos, rule.name))
 
     @v_args(meta=True)
     def gen(self, meta: Meta, items: List[Any]) -> None:
@@ -277,7 +307,7 @@ class State(lark.Transformer):
             if existing_domain != domain or existing_codomain != codomain:
                 self.errors.append((self.file_name, meta.line, "Term '{}' already defined with incompatible type {} -> {}.".format(name, existing_domain, existing_codomain)))
                 self.errors.append((self.file_name, meta.line, "(Trying to add) {} -> {}.".format(domain, codomain)))
-        self.parts.append((meta.start_pos, meta.end_pos, 'gen', name))
+        self.parts.append(GenPart(meta.start_pos, meta.end_pos, name))
 
     @v_args(meta=True)
     def let(self, meta: Meta, items: List[Any]) -> None:
@@ -287,7 +317,7 @@ class State(lark.Transformer):
                 self.graphs[name] = graph
         else:
             self.errors.append((self.file_name, meta.line, "Term '{}' already defined.".format(name)))
-        self.parts.append((meta.start_pos, meta.end_pos, 'let', name))
+        self.parts.append(LetPart(meta.start_pos, meta.end_pos, name))
 
     @v_args(meta=True)
     def rule(self, meta: Meta, items: List[Any]) -> None:
@@ -302,7 +332,7 @@ class State(lark.Transformer):
                     self.errors.append((self.file_name, meta.line, str(e)))
         else:
             self.errors.append((self.file_name, meta.line, "Rule '{}' already defined.".format(name)))
-        self.parts.append((meta.start_pos, meta.end_pos, 'rule', name))
+        self.parts.append(RulePart(meta.start_pos, meta.end_pos, name))
 
     @v_args(meta=True)
     def def_statement(self, meta: Meta, items: List[Any]) -> None:
@@ -341,7 +371,7 @@ class State(lark.Transformer):
         else:
             self.errors.append((self.file_name, meta.line,
                                 f'Rule "{rule_name}" already defined.'))
-        self.parts.append((meta.start_pos, meta.end_pos, 'rule', rule_name))
+        self.parts.append(RulePart(meta.start_pos, meta.end_pos, rule_name))
 
     def gen_color(self, items: List[Any]) -> Tuple[str,str]:
         return (items[1], items[0]) if len(items) == 2 else ('', items[0])
@@ -371,7 +401,7 @@ class State(lark.Transformer):
         except FileNotFoundError:
             self.errors.append((self.file_name, meta.line, 'File not found: {}'.format(file_name)))
 
-        self.parts.append((meta.start_pos, meta.end_pos, 'import', file_name))
+        self.parts.append(ImportPart(meta.start_pos, meta.end_pos, file_name))
 
     def import_let(self, items: List[Any]) -> Tuple[str, Graph]:
         return (items[0], items[1])
@@ -386,8 +416,8 @@ class State(lark.Transformer):
         rw_parts = items[3:]
 
         if len(rw_parts) == 0:
-            self.parts.append((meta.start_pos, meta.end_pos, "rewrite", name))
-            self.rewrites[name] = RewriteState(self.sequence, self, lhs=term, stub=True)
+            self.parts.append(RewritePart(meta.start_pos, meta.end_pos, name, 0))
+            self.rewrites[name] = [RewriteState(self.sequence, self, lhs=term, stub=True)]
         else:
             start = meta.start_pos
             lhs = term
@@ -402,11 +432,12 @@ class State(lark.Transformer):
                 rhs_match = None
 
             last_i = len(rw_parts)-1
+            self.rewrites[name] = []
             for i, rw_part in enumerate(rw_parts):
                 line_number, rw_end, t_start, t_end, equiv, tactic, tactic_args, rhs = rw_part
                 end = max(rw_end, t_end)
                 all_equiv = all_equiv and equiv
-                self.rewrites[name + ":" + str(i)] = RewriteState(
+                self.rewrites[name].append(RewriteState(
                         self.sequence,
                         self,
                         line_number,
@@ -415,9 +446,9 @@ class State(lark.Transformer):
                         tactic, tactic_args,
                         lhs, rhs,
                         lhs_match if i == 0 else None,
-                        rhs_match if i == last_i else None)
+                        rhs_match if i == last_i else None))
                 lhs = rhs.copy() if rhs else None
-                self.parts.append((start, end, "rewrite", name + ":" + str(i)))
+                self.parts.append(RewritePart(start, end, name, i))
                 start = end
             if term and rhs:
                 try:

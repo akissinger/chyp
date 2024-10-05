@@ -23,7 +23,7 @@ from PySide6.QtWidgets import QHBoxLayout, QSplitter, QTreeView, QVBoxLayout, QW
 from .. import parser
 from ..layout import convex_layout
 from ..graph import Graph
-from ..state import RewriteState, State
+from ..state import RewriteState, State, RewritePart, RulePart, GraphPart, ImportPart
 # from ..term import graph_to_term
 # from ..matcher import match_rule
 # from ..rewrite import rewrite
@@ -134,7 +134,7 @@ class Editor(QWidget):
 
         if i >= 0 and i < len(self.state.parts):
             p1 = self.state.parts[i]
-            cursor.setPosition(p1[1])
+            cursor.setPosition(p1.end)
             self.code_view.setTextCursor(cursor)
             
     def jump_to_error(self) -> None:
@@ -179,20 +179,20 @@ class Editor(QWidget):
         if i == self.current_part: return
         else: self.current_part = i
 
-        self.code_view.set_current_region((part[0], part[1]))
-        if part[2] in ('let','gen') and part[3] in self.state.graphs:
+        self.code_view.set_current_region((part.start, part.end))
+        if isinstance(part, GraphPart) and part.name in self.state.graphs:
             if i not in self.graph_cache:
-                g = self.state.graphs[part[3]].copy()
+                g = self.state.graphs[part.name].copy()
                 convex_layout(g)
                 self.graph_cache[i] = (g, None)
             else:
                 g, _ = self.graph_cache[i]
             self.rhs_view.setVisible(False)
             self.lhs_view.set_graph(g)
-        elif part[2] == 'rule' and part[3] in self.state.rules:
+        elif isinstance(part, RulePart) and part.name in self.state.rules:
             if i not in self.graph_cache:
-                lhs = self.state.rules[part[3]].lhs.copy()
-                rhs = self.state.rules[part[3]].rhs.copy()
+                lhs = self.state.rules[part.name].lhs.copy()
+                rhs = self.state.rules[part.name].rhs.copy()
                 convex_layout(lhs)
                 convex_layout(rhs)
                 self.graph_cache[i] = (lhs, rhs)
@@ -203,8 +203,8 @@ class Editor(QWidget):
             self.rhs_view.setVisible(True)
             self.lhs_view.set_graph(lhs)
             self.rhs_view.set_graph(rhs)
-        elif part[2] == 'rewrite' and part[3] in self.state.rewrites:
-            rw = self.state.rewrites[part[3]]
+        elif isinstance(part, RewritePart) and part.name in self.state.rewrites:
+            rw = self.state.rewrites[part.name][part.step]
             if not rw.stub:
                 if rw.status == RewriteState.UNCHECKED:
                     rw.status = RewriteState.CHECKING
@@ -231,9 +231,9 @@ class Editor(QWidget):
                 rhs = rhs0
 
             if rw.status == RewriteState.VALID:
-                self.code_view.set_current_region((part[0], part[1]), status=STATUS_GOOD)
+                self.code_view.set_current_region((part.start, part.end), status=STATUS_GOOD)
             elif rw.status == RewriteState.INVALID:
-                self.code_view.set_current_region((part[0], part[1]), status=STATUS_BAD)
+                self.code_view.set_current_region((part.start, part.end), status=STATUS_BAD)
 
             self.rhs_view.setVisible(True)
             self.lhs_view.set_graph(lhs)
@@ -248,8 +248,8 @@ class Editor(QWidget):
 
         pos = self.code_view.textCursor().position()
         part = self.state.part_at(pos)
-        if part and part[2] == 'rewrite' and part[3] in self.state.rewrites:
-            rw = self.state.rewrites[part[3]]
+        if part and isinstance(part, RewritePart) and part.name in self.state.rewrites:
+            rw = self.state.rewrites[part.name][part.step]
             start, end = rw.term_pos
             text = self.code_view.toPlainText()
             term = text[start:end]
@@ -271,8 +271,8 @@ class Editor(QWidget):
         self.update_state()
         pos = self.code_view.textCursor().position()
         part = self.state.part_at(pos)
-        if part and part[2] == 'rewrite' and part[3] in self.state.rewrites:
-            rw = self.state.rewrites[part[3]]
+        if part and isinstance(part, RewritePart) and part.name in self.state.rewrites:
+            rw = self.state.rewrites[part.name][part.step]
             tactic = rw.tactic.name()
             args = ', '.join(rw.tactic.args)
 
@@ -299,8 +299,8 @@ class Editor(QWidget):
 
     def import_at_cursor(self) -> str:
         p = self.state.part_at(self.code_view.textCursor().position())
-        if p and p[2] == 'import':
-            return p[3]
+        if p and isinstance(p, ImportPart):
+            return p.name
         else:
             return ''
 
