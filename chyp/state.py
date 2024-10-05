@@ -140,12 +140,6 @@ class State(lark.Transformer):
                 imin = i+1
             else:
                 return p
-        # p0 = self.parts[0] if len(self.parts) >= 1 else None
-        # for p in self.parts:
-        #     if p.start <= pos:
-        #         p0 = p
-        #         if p.end >= pos:
-        #             return p
         return None
     
     def copy_status_until(self, state: State, pos: int) -> None:
