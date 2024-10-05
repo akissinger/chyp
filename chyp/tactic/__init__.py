@@ -244,8 +244,8 @@ class Tactic:
         if not self.__goal_lhs or not self.__goal_rhs: return None
 
         iso = find_iso(self.__goal_lhs, self.__goal_rhs)
-        if (self.__local_state.status != state.RewriteState.INVALID and iso):
-            self.__local_state.status = state.RewriteState.VALID
+        if (self.__local_state.status != state.Part.INVALID and iso):
+            self.__local_state.status = state.Part.VALID
             return iso
         else:
             return None
@@ -301,11 +301,11 @@ class Tactic:
         return next_term
 
     def run_check(self) -> None:
-        self.__local_state.status = state.RewriteState.CHECKING
+        self.__local_state.status = state.Part.CHECKING
         self.__reset()
         self.check()
-        if self.__local_state.status != state.RewriteState.VALID:
-            self.__local_state.status = state.RewriteState.INVALID
+        if self.__local_state.status != state.Part.VALID:
+            self.__local_state.status = state.Part.INVALID
 
     # tactics should override this method
     def name(self) -> str:

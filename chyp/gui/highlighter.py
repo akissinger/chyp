@@ -18,6 +18,7 @@ import re
 from PySide6.QtGui import QColor, QSyntaxHighlighter, QTextBlockFormat, QTextCursor, QTextDocument
 
 from .colors import current_theme
+from ..state import Part, State
 
 NO_STATUS = 0
 STATUS_GOOD = 1
@@ -40,12 +41,15 @@ BG_BAD  = theme['bg_bad']
 class ChypHighlighter(QSyntaxHighlighter):
     def __init__(self, doc: QTextDocument) -> None:
         super().__init__(doc)
-        self.region: Optional[Tuple[int,int]] = None
-        self.region_status = NO_STATUS
+        self.state: Optional[State] = None
 
-    def set_current_region(self, region: Optional[Tuple[int,int]], status: int) -> None:
-        self.region = region
-        self.region_status = status
+    # def set_current_region(self, region: Optional[Tuple[int,int]], status: int) -> None:
+    #     self.region = region
+    #     self.region_status = status
+    #     self.rehighlight()
+    
+    def set_state(self, state: State) -> None:
+        self.state = state
         self.rehighlight()
 
     def highlightBlock(self, text: str) -> None:
@@ -72,8 +76,9 @@ class ChypHighlighter(QSyntaxHighlighter):
             self.setFormat(x, y-x, QColor(COMMENT))
 
         # highlight the region that is currently in focus
-        if self.region:
-            x, y = self.region
+        if self.state and self.state.current_part:
+            x = self.state.current_part.start
+            y = self.state.current_part.end
             start = self.currentBlock().position()
             length = self.currentBlock().length()
             end = start + length
@@ -83,9 +88,9 @@ class ChypHighlighter(QSyntaxHighlighter):
                 for c in range(x_rel, y_rel):
                     f = self.format(c)
 
-                    if self.region_status == STATUS_GOOD:
+                    if self.state.current_part.status == Part.VALID:
                         f.setBackground(QColor(BG_GOOD))
-                    elif self.region_status == STATUS_BAD:
+                    elif self.state.current_part.status == Part.INVALID:
                         f.setBackground(QColor(BG_BAD))
                     else:
                         f.setBackground(QColor(SEL))

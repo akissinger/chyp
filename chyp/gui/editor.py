@@ -23,7 +23,7 @@ from PySide6.QtWidgets import QHBoxLayout, QSplitter, QTreeView, QVBoxLayout, QW
 from .. import parser
 from ..layout import convex_layout
 from ..graph import Graph
-from ..state import RewriteState, State, RewritePart, RulePart, GraphPart, ImportPart
+from ..state import RewriteState, State, Part, RewritePart, RulePart, GraphPart, ImportPart
 # from ..term import graph_to_term
 # from ..matcher import match_rule
 # from ..rewrite import rewrite
@@ -112,7 +112,7 @@ class Editor(QWidget):
         self.parsed = False
         self.state.set_current_part(None)
         self.graph_cache = dict()
-        self.code_view.set_current_region(None)
+        self.code_view.current_region_changed()
         self.revision += 1
 
         def update(r: int) -> Callable:
@@ -176,7 +176,7 @@ class Editor(QWidget):
         if self.state.current_part == part: return
         else: self.state.set_current_part(part)
 
-        self.code_view.set_current_region((part.start, part.end))
+        self.code_view.current_region_changed()
         if isinstance(part, GraphPart) and part.name in self.state.graphs:
             if part.index not in self.graph_cache:
                 g = self.state.graphs[part.name].copy()
@@ -203,12 +203,13 @@ class Editor(QWidget):
         elif isinstance(part, RewritePart) and part.name in self.state.rewrites:
             rw = self.state.rewrites[part.name][part.step]
             if not rw.stub:
-                if rw.status == RewriteState.UNCHECKED:
-                    rw.status = RewriteState.CHECKING
+                if rw.status == Part.UNCHECKED:
+                    rw.status = Part.CHECKING
                     def check_finished(i: int) -> Callable:
                         def f() -> None:
                             self.graph_cache.pop(i, None)
                             self.state.set_current_part(None)
+                            part.status = rw.status
                             self.show_at_cursor()
                         return f
 
@@ -227,10 +228,7 @@ class Editor(QWidget):
                 if not rhs0: raise ValueError("Rewrite step in graph_cache should have RHS")
                 rhs = rhs0
 
-            if rw.status == RewriteState.VALID:
-                self.code_view.set_current_region((part.start, part.end), status=STATUS_GOOD)
-            elif rw.status == RewriteState.INVALID:
-                self.code_view.set_current_region((part.start, part.end), status=STATUS_BAD)
+            self.code_view.current_region_changed()
 
             self.rhs_view.setVisible(True)
             self.lhs_view.set_graph(lhs)
@@ -292,7 +290,7 @@ class Editor(QWidget):
         state.copy_status_until(self.state, pos)
         self.code = code
         self.state = state
-        self.code_view.set_current_region(None)
+        self.code_view.set_state(state)
         
         model = self.error_view.model()
         if isinstance(model, ErrorListModel):

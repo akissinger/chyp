@@ -22,6 +22,7 @@ from PySide6.QtWidgets import QCompleter, QPlainTextEdit
 from .completion import CodeCompletionModel
 from .document import ChypDocument
 from .highlighter import BG, FG, NO_STATUS
+from ..state import State
 
 
 class CodeView(QPlainTextEdit):
@@ -36,6 +37,7 @@ class CodeView(QPlainTextEdit):
         self.completion_model = CodeCompletionModel(self.completer)
         self.completer.setModel(self.completion_model)
         self.completer.activated.connect(self.insert_completion)
+        self.state: Optional[State] = None
 
     def popup_visible(self) -> bool:
         return self.completer.popup().isVisible()
@@ -96,21 +98,37 @@ class CodeView(QPlainTextEdit):
         else:
             super().keyPressEvent(e)
 
-    def set_current_region(self, region: Optional[Tuple[int,int]], status: int = NO_STATUS) -> None:
-        doc = self.document()
+    # def set_current_region(self, region: Optional[Tuple[int,int]], status: int = NO_STATUS) -> None:
+    #     doc = self.document()
 
+    #     if isinstance(doc, ChypDocument):
+    #         self.blockSignals(True)
+    #         doc.highlighter.set_current_region(region, status)
+    #         self.blockSignals(False)
+    
+    def current_region_changed(self) -> None:
+        doc = self.document()
         if isinstance(doc, ChypDocument):
             self.blockSignals(True)
-            doc.highlighter.set_current_region(region, status)
+            doc.highlighter.rehighlight()
             self.blockSignals(False)
+    
+    def set_state(self, state: State) -> None:
+        self.state = state
+        doc = self.document()
+        if isinstance(doc, ChypDocument):
+            self.blockSignals(True)
+            doc.highlighter.set_state(state)
+            self.blockSignals(False)
+
 
     def add_line_below(self, text: str) -> None:
         doc = self.document()
 
         if isinstance(doc, ChypDocument):
             cursor = self.textCursor()
-            if doc.highlighter.region:
-                cursor.setPosition(doc.highlighter.region[1])
+            if self.state and self.state.current_part:
+                cursor.setPosition(self.state.current_part.end)
             cursor.movePosition(QTextCursor.MoveOperation.EndOfLine)
             cursor.insertText('\n' + text)
             self.setTextCursor(cursor)

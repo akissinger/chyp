@@ -61,11 +61,6 @@ class RewritePart(Part):
 class ImportPart(Part): pass
 
 class RewriteState:
-    UNCHECKED = 0
-    CHECKING = 1
-    VALID = 2
-    INVALID = 3
-
     def __init__(self,
                  sequence: int,
                  state: State,
@@ -86,7 +81,7 @@ class RewriteState:
         self.sequence = sequence
 
         self.state = state
-        self.status = RewriteState.UNCHECKED
+        self.status = Part.UNCHECKED
         self.line_number = line_number
         self.term_pos = term_pos
         self.equiv = equiv
@@ -134,13 +129,24 @@ class State(lark.Transformer):
         self.parts.append(p)
 
     def part_at(self, pos: int) -> Optional[Part]:
-        p0 = self.parts[0] if len(self.parts) >= 1 else None
-        for p in self.parts:
-            if p.start <= pos:
-                p0 = p
-                if p.end >= pos:
-                    return p
-        return p0
+        imin = 0
+        imax = len(self.parts)-1
+        while imin <= imax:
+            i = (imax+imin)//2
+            p = self.parts[i]
+            if pos < p.start:
+                imax = i-1
+            elif pos > p.end:
+                imin = i+1
+            else:
+                return p
+        # p0 = self.parts[0] if len(self.parts) >= 1 else None
+        # for p in self.parts:
+        #     if p.start <= pos:
+        #         p0 = p
+        #         if p.end >= pos:
+        #             return p
+        return None
     
     def copy_status_until(self, state: State, pos: int) -> None:
         for (i,p) in enumerate(state.parts):
