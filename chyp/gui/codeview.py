@@ -118,7 +118,6 @@ class CodeView(QPlainTextEdit):
         doc = self.document()
         if isinstance(doc, ChypDocument):
             doc.highlighter.set_state(state)
-        self.state_changed()
 
 
     def add_line_below(self, text: str) -> None:

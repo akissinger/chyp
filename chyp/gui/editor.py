@@ -14,7 +14,7 @@
 # limitations under the License.
 
 from __future__ import annotations
-from typing import Callable, Dict, Optional, Tuple
+from typing import Callable, Optional
 from PySide6.QtCore import QByteArray, QFileInfo, QObject, QThread, QTimer, Qt, QSettings
 from PySide6.QtGui import QTextCursor
 from PySide6.QtWidgets import QHBoxLayout, QSplitter, QTreeView, QVBoxLayout, QWidget
@@ -33,6 +33,7 @@ from .errorlist import ErrorListModel
 from .graphview import GraphView
 from .codeview import CodeView
 from .document import ChypDocument
+from chyp import state
 
 class Editor(QWidget):
     def __init__(self) -> None:
@@ -98,6 +99,10 @@ class Editor(QWidget):
             title += '*'
 
         return title
+
+    def set_state(self, state: State) -> None:
+        self.state = state
+        self.code_view.set_state(state)
 
     def reset_state(self) -> None:
         cursor = self.code_view.textCursor()
@@ -171,6 +176,8 @@ class Editor(QWidget):
         self.code_view.state_changed()
         if not part: return
 
+        # print(part.status)
+
         if isinstance(part, GraphPart) and part.name in self.state.graphs:
             if not part.layed_out:
                 convex_layout(part.graph)
@@ -242,35 +249,23 @@ class Editor(QWidget):
             self.next_rewrite_at_cursor()
 
     def update_state(self) -> None:
-        code = self.doc.toPlainText()
-        state = parser.parse(code, self.doc.file_name)
-        pos = 0
-        for i in range(len(code)):
-            if i >= len(self.code) or code[i] != self.code[i]:
-                pos = i
-                break
-        state.copy_state_until(self.state, pos)
-        self.code = code
-        self.state = state
-        self.state.revision = self.revision
-        self.code_view.set_state(state)
-
+        self.code = self.doc.toPlainText()
         def f() -> None:
             self.show_at_cursor()
+            model = self.error_view.model()
+            if isinstance(model, ErrorListModel):
+                model.set_errors(self.state.errors)
+
+            if len(self.state.errors) == 0:
+                self.parsed = True
+                self.code_view.set_completions(self.state.rules.keys())
+                self.show_at_cursor()
         self.show_at_cursor()
-        check = CheckThread(self.state, self)
+        check = CheckThread(self.revision, self)
         check.finished.connect(f)
         check.start()
 
         
-        model = self.error_view.model()
-        if isinstance(model, ErrorListModel):
-            model.set_errors(self.state.errors)
-
-        if len(self.state.errors) == 0:
-            self.parsed = True
-            self.code_view.set_completions(self.state.rules.keys())
-            self.show_at_cursor()
 
     def import_at_cursor(self) -> str:
         p = self.state.part_at(self.code_view.textCursor().position())
@@ -280,28 +275,41 @@ class Editor(QWidget):
             return ''
 
 class CheckThread(QThread):
-    def __init__(self, state: State, parent: Optional[QObject] = None) -> None:
+    def __init__(self, revision: int, parent: Optional[QObject] = None) -> None:
         super().__init__(parent)
-        self.state = state
+        self.revision = revision
         if parent and isinstance(parent, Editor):
             self.editor = parent
 
     def run(self) -> None:
         if not self.editor: return
+
+        state = parser.parse(self.editor.code, self.editor.doc.file_name)
+        state.revision = self.revision
+
+        if self.revision != self.editor.revision: return
+
+        # TODO: support for incremental checking of parts
+        # pos = 0
+        # for i in range(len(code)):
+        #     if i >= len(self.code) or code[i] != self.code[i]:
+        #         pos = i
+        #         break
+        # state.copy_state_until(self.state, pos)
+
+        self.editor.set_state(state)
         timer = QTimer()
         timer.setInterval(200)
         def f() -> None:
             self.editor.show_at_cursor()
         timer.timeout.connect(f)
         timer.start()
-        for p in self.state.parts:
-            if self.editor.revision != self.state.revision: break
+        for p in state.parts:
+            if self.revision != self.editor.revision: break
             if isinstance(p, RewritePart) and p.status == Part.UNCHECKED:
                 p.status = Part.CHECKING
-                p.check(self.state)
+                p.check(state)
         timer.stop()
-        # timer.setSingleShot(True)
-        # timer.start()
 
 # class UpdateStateThread(QThread):
 #     def __init__(self, state: State, code: str, parent: Optional[QObject] = None) -> None:
