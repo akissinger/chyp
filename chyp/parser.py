@@ -89,24 +89,28 @@ parse_cache: Dict[str, Tuple[float, Tree]] = dict()
 def parse(code: str='', file_name: str='', namespace: str='', parent: Optional[state.State] = None) -> state.State:
     global parse_cache
 
-    if parent and parent.namespace:
-        if namespace != '':
-            namespace = parent.namespace + '.' + namespace
-        else:
-            namespace = parent.namespace
-
-    parse_data = state.State(namespace, file_name)
-
+    old_namespace = ''
     if parent:
-        parse_data.graphs = parent.graphs
-        parse_data.rules = parent.rules
-        parse_data.rewrites = parent.rewrites
-        parse_data.errors = parent.errors
-        parse_data.rule_sequence = parent.rule_sequence
-        parse_data.sequence = parent.sequence
-        parse_data.import_depth = parent.import_depth + 1
-        if parse_data.import_depth > 255:
-            parse_data.errors += [(parent.file_name, -1, "Maximum import depth (255) exceeded. Probably a cyclic import.")]
+        old_namespace = parent.namespace
+        if namespace != '':
+            parent.namespace = parent.namespace + '.' + namespace
+        parent.import_depth += 1
+        if parent.import_depth > 255:
+            parent.errors += [(parent.file_name, -1, "Maximum import depth (255) exceeded. Probably a cyclic import.")]
+        parse_data = parent
+    else:
+        parse_data = state.State(namespace, file_name)
+
+    # if parent:
+    #     parse_data.graphs = parent.graphs
+    #     parse_data.rules = parent.rules
+    #     parse_data.rewrites = parent.rewrites
+    #     parse_data.errors = parent.errors
+    #     parse_data.rule_sequence = parent.rule_sequence
+    #     parse_data.sequence = parent.sequence
+    #     parse_data.import_depth = parent.import_depth + 1
+    #     if parse_data.import_depth > 255:
+    #         parse_data.errors += [(parent.file_name, -1, "Maximum import depth (255) exceeded. Probably a cyclic import.")]
 
     try:
         if file_name and not code:
@@ -120,7 +124,6 @@ def parse(code: str='', file_name: str='', namespace: str='', parent: Optional[s
         else:
             tree = GRAMMAR.parse(code)
         parse_data.transform(tree)
-        parse_data.parsed = True
     except UnexpectedInput as e:
         msg = 'Parse error: '
         e_lines = e.get_context(code).splitlines()
@@ -130,7 +133,10 @@ def parse(code: str='', file_name: str='', namespace: str='', parent: Optional[s
             parse_data.errors += [(file_name, e.line, msg + e_lines[0])]
 
     if parent:
-        parent.sequence = parse_data.sequence
+        parent.import_depth -= 1
+        parent.namespace = old_namespace
+    else:
+        parse_data.parsed = True
 
     return parse_data
 

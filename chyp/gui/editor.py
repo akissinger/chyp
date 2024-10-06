@@ -23,7 +23,7 @@ from PySide6.QtWidgets import QHBoxLayout, QSplitter, QTreeView, QVBoxLayout, QW
 from .. import parser
 from ..layout import convex_layout
 from ..graph import Graph
-from ..state import RewriteState, State, Part, RewritePart, RulePart, GraphPart, ImportPart
+from ..state import State, Part, RewritePart, RulePart, GraphPart, ImportPart
 # from ..term import graph_to_term
 # from ..matcher import match_rule
 # from ..rewrite import rewrite
@@ -199,26 +199,10 @@ class Editor(QWidget):
             self.rhs_view.setVisible(True)
             self.lhs_view.set_graph(lhs)
             self.rhs_view.set_graph(rhs)
-        elif isinstance(part, RewritePart) and part.name in self.state.rewrites:
-            rw = self.state.rewrites[part.name][part.step]
-            # if not rw.stub:
-            #     if rw.status == Part.UNCHECKED:
-            #         rw.status = Part.CHECKING
-            #         def check_finished(i: int) -> Callable:
-            #             def f() -> None:
-            #                 self.graph_cache.pop(i, None)
-            #                 self.state.set_current_part(None)
-            #                 part.status = rw.status
-            #                 self.show_at_cursor()
-            #             return f
-
-            #         check_thread = CheckThread(rw, self)
-            #         check_thread.finished.connect(check_finished(part.index))
-            #         check_thread.start()
-
+        elif isinstance(part, RewritePart):
             if part.index not in self.graph_cache:
-                lhs = rw.lhs.copy() if rw.lhs else Graph()
-                rhs = rw.rhs.copy() if rw.rhs else Graph()
+                lhs = part.lhs.copy() if part.lhs else Graph()
+                rhs = part.rhs.copy() if part.rhs else Graph()
                 convex_layout(lhs)
                 convex_layout(rhs)
                 self.graph_cache[part.index] = (lhs, rhs)
@@ -242,12 +226,12 @@ class Editor(QWidget):
 
         pos = self.code_view.textCursor().position()
         part = self.state.part_at(pos)
-        if part and isinstance(part, RewritePart) and part.name in self.state.rewrites:
-            rw = self.state.rewrites[part.name][part.step]
-            start, end = rw.term_pos
+        if part and isinstance(part, RewritePart):
+            # rw = self.state.rewrites[part.name][part.step]
+            start, end = part.term_pos
             text = self.code_view.toPlainText()
             term = text[start:end]
-            rw_term = rw.tactic.next_rhs(term)
+            rw_term = part.next_rhs(self.state, term)
 
             if rw_term:
                 cursor = self.code_view.textCursor()
@@ -265,10 +249,9 @@ class Editor(QWidget):
         self.update_state()
         pos = self.code_view.textCursor().position()
         part = self.state.part_at(pos)
-        if part and isinstance(part, RewritePart) and part.name in self.state.rewrites:
-            rw = self.state.rewrites[part.name][part.step]
-            tactic = rw.tactic.name()
-            args = ', '.join(rw.tactic.args)
+        if part and isinstance(part, RewritePart):
+            tactic = part.tactic
+            args = ', '.join(part.tactic_args)
 
             if tactic == 'rule':
                 self.code_view.add_line_below('  = ? by ' + args)
@@ -286,7 +269,7 @@ class Editor(QWidget):
             if i >= len(self.code) or code[i] != self.code[i]:
                 pos = i
                 break
-        state.copy_status_until(self.state, pos)
+        state.copy_state_until(self.state, pos)
         self.code = code
         self.state = state
         self.state.revision = self.revision
@@ -327,11 +310,9 @@ class CheckThread(QThread):
         for p in self.state.parts:
             if self.editor.revision != self.state.revision: break
             if isinstance(p, RewritePart) and p.status == Part.UNCHECKED:
-                rw = self.state.rewrites[p.name][p.step]
                 p.status = Part.CHECKING
-                rw.status = Part.CHECKING
-                rw.check()
-                p.status = rw.status
+                p.check(self.state)
+                self.editor.graph_cache.pop(p.index, None)
         timer.stop()
         timer.setSingleShot(True)
         timer.start()

@@ -33,12 +33,12 @@ class Tactic:
     class and only interact with the prover state via its public methods.
     """
 
-    __state: state.State
-    __local_state: state.RewriteState
+    # __state: state.State
+    __local_state: state.RewritePart
 
-    def __init__(self, local_state: state.RewriteState, args: List[str]) -> None:
+    def __init__(self, local_state: state.RewritePart, state: state.State, args: List[str]) -> None:
         self.__local_state = local_state
-        self.__state = local_state.state
+        self.__state = state
         self.__context: Dict[str, Rule] = dict()
         self.__goal_lhs: Optional[Graph] = None
         self.__goal_rhs: Optional[Graph] = None
@@ -65,7 +65,7 @@ class Tactic:
 
     def error(self, message: str) -> None:
         if not message in self.__errors:
-            self.__state.errors.append((self.__state.file_name, self.__local_state.line_number, message))
+            self.__state.errors.append((self.__state.file_name, self.__local_state.line, message))
             self.__errors.add(message)
 
     def has_goal(self) -> bool:
