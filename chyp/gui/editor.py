@@ -167,11 +167,10 @@ class Editor(QWidget):
         if not self.parsed: return
         pos = self.code_view.textCursor().position()
         part = self.state.part_at(pos)
-        if not part: return
-        if self.state.current_part == part: return
-        else: self.state.set_current_part(part)
-
+        self.state.set_current_part(part)
         self.code_view.state_changed()
+        if not part: return
+
         if isinstance(part, GraphPart) and part.name in self.state.graphs:
             if not part.layed_out:
                 convex_layout(part.graph)
@@ -255,8 +254,14 @@ class Editor(QWidget):
         self.state = state
         self.state.revision = self.revision
         self.code_view.set_state(state)
-        self.code_view.state_changed()
-        CheckThread(self.state, self).start()
+
+        def f() -> None:
+            self.show_at_cursor()
+        self.show_at_cursor()
+        check = CheckThread(self.state, self)
+        check.finished.connect(f)
+        check.start()
+
         
         model = self.error_view.model()
         if isinstance(model, ErrorListModel):
@@ -286,7 +291,6 @@ class CheckThread(QThread):
         timer = QTimer()
         timer.setInterval(200)
         def f() -> None:
-            self.editor.code_view.state_changed()
             self.editor.show_at_cursor()
         timer.timeout.connect(f)
         timer.start()
@@ -296,8 +300,8 @@ class CheckThread(QThread):
                 p.status = Part.CHECKING
                 p.check(self.state)
         timer.stop()
-        timer.setSingleShot(True)
-        timer.start()
+        # timer.setSingleShot(True)
+        # timer.start()
 
 # class UpdateStateThread(QThread):
 #     def __init__(self, state: State, code: str, parent: Optional[QObject] = None) -> None:
