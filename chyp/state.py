@@ -157,7 +157,7 @@ class State(lark.Transformer):
     def copy_state_until(self, state: State, pos: int) -> None:
         for (i,p) in enumerate(state.parts):
             if p.end < pos and len(self.parts) > i:
-                self.parts[i].status = p.status
+                self.parts[i] = p
             else:
                 break
 

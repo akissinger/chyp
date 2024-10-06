@@ -255,6 +255,7 @@ class Editor(QWidget):
         self.state = state
         self.state.revision = self.revision
         self.code_view.set_state(state)
+        self.code_view.state_changed()
         CheckThread(self.state, self).start()
         
         model = self.error_view.model()
@@ -286,6 +287,7 @@ class CheckThread(QThread):
         timer.setInterval(200)
         def f() -> None:
             self.editor.code_view.state_changed()
+            self.editor.show_at_cursor()
         timer.timeout.connect(f)
         timer.start()
         for p in self.state.parts:
