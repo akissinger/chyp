@@ -48,7 +48,6 @@ class ChypHighlighter(QSyntaxHighlighter):
     
     def set_state(self, state: State) -> None:
         self.state = state
-        self.rehighlight()
 
     def highlightBlock(self, text: str) -> None:
         ident = '[a-zA-Z_][\\.a-zA-Z0-9_]*'

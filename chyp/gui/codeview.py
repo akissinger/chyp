@@ -106,7 +106,7 @@ class CodeView(QPlainTextEdit):
     #         doc.highlighter.set_current_region(region, status)
     #         self.blockSignals(False)
     
-    def current_region_changed(self) -> None:
+    def state_changed(self) -> None:
         doc = self.document()
         if isinstance(doc, ChypDocument):
             self.blockSignals(True)
@@ -117,9 +117,8 @@ class CodeView(QPlainTextEdit):
         self.state = state
         doc = self.document()
         if isinstance(doc, ChypDocument):
-            self.blockSignals(True)
             doc.highlighter.set_state(state)
-            self.blockSignals(False)
+        self.state_changed()
 
 
     def add_line_below(self, text: str) -> None:

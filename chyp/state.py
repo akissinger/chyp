@@ -109,6 +109,7 @@ class State(lark.Transformer):
     def __init__(self, namespace: str='', file_name: str='') -> None:
         self.namespace = namespace
         self.file_name = file_name
+        self.revision = -1 # to check if state is currently being used by editor
         self.import_depth = 0
         self.sequence: int = 0
         self.graphs: Dict[str, Graph] = dict()
@@ -139,6 +140,8 @@ class State(lark.Transformer):
             elif pos > p.end:
                 imin = i+1
             else:
+                if i > 0 and self.parts[i-1].end >= pos:
+                    return self.parts[i-1]
                 return p
         return None
     
@@ -212,7 +215,8 @@ class State(lark.Transformer):
             # be inferred at composition time.
             infer_type = infer_size = items[0] is None
             if items[0] is None:
-                domain = len(permutation_indices) * [(None, 1)]
+                vnone: VType = None # hack for typechecker
+                domain = len(permutation_indices) * [(vnone, 1)]
             else:
                 domain = items[0]
             return perm(permutation_indices, domain=domain,

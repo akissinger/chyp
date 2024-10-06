@@ -111,7 +111,7 @@ class Editor(QWidget):
         self.parsed = False
         self.state.set_current_part(None)
         self.graph_cache = dict()
-        self.code_view.current_region_changed()
+        self.code_view.state_changed()
         self.revision += 1
 
         def update(r: int) -> Callable:
@@ -175,7 +175,7 @@ class Editor(QWidget):
         if self.state.current_part == part: return
         else: self.state.set_current_part(part)
 
-        self.code_view.current_region_changed()
+        self.code_view.state_changed()
         if isinstance(part, GraphPart) and part.name in self.state.graphs:
             if part.index not in self.graph_cache:
                 g = self.state.graphs[part.name].copy()
@@ -201,20 +201,20 @@ class Editor(QWidget):
             self.rhs_view.set_graph(rhs)
         elif isinstance(part, RewritePart) and part.name in self.state.rewrites:
             rw = self.state.rewrites[part.name][part.step]
-            if not rw.stub:
-                if rw.status == Part.UNCHECKED:
-                    rw.status = Part.CHECKING
-                    def check_finished(i: int) -> Callable:
-                        def f() -> None:
-                            self.graph_cache.pop(i, None)
-                            self.state.set_current_part(None)
-                            part.status = rw.status
-                            self.show_at_cursor()
-                        return f
+            # if not rw.stub:
+            #     if rw.status == Part.UNCHECKED:
+            #         rw.status = Part.CHECKING
+            #         def check_finished(i: int) -> Callable:
+            #             def f() -> None:
+            #                 self.graph_cache.pop(i, None)
+            #                 self.state.set_current_part(None)
+            #                 part.status = rw.status
+            #                 self.show_at_cursor()
+            #             return f
 
-                    check_thread = CheckThread(rw, self)
-                    check_thread.finished.connect(check_finished(part.index))
-                    check_thread.start()
+            #         check_thread = CheckThread(rw, self)
+            #         check_thread.finished.connect(check_finished(part.index))
+            #         check_thread.start()
 
             if part.index not in self.graph_cache:
                 lhs = rw.lhs.copy() if rw.lhs else Graph()
@@ -227,7 +227,7 @@ class Editor(QWidget):
                 if not rhs0: raise ValueError("Rewrite step in graph_cache should have RHS")
                 rhs = rhs0
 
-            self.code_view.current_region_changed()
+            self.code_view.state_changed()
 
             self.rhs_view.setVisible(True)
             self.lhs_view.set_graph(lhs)
@@ -289,7 +289,9 @@ class Editor(QWidget):
         state.copy_status_until(self.state, pos)
         self.code = code
         self.state = state
+        self.state.revision = self.revision
         self.code_view.set_state(state)
+        CheckThread(self.state, self).start()
         
         model = self.error_view.model()
         if isinstance(model, ErrorListModel):
@@ -308,12 +310,31 @@ class Editor(QWidget):
             return ''
 
 class CheckThread(QThread):
-    def __init__(self, rw: RewriteState, parent: Optional[QObject] = None) -> None:
+    def __init__(self, state: State, parent: Optional[QObject] = None) -> None:
         super().__init__(parent)
-        self.rw = rw
+        self.state = state
+        if parent and isinstance(parent, Editor):
+            self.editor = parent
 
     def run(self) -> None:
-        self.rw.check()
+        if not self.editor: return
+        timer = QTimer()
+        timer.setInterval(200)
+        def f() -> None:
+            self.editor.code_view.state_changed()
+        timer.timeout.connect(f)
+        timer.start()
+        for p in self.state.parts:
+            if self.editor.revision != self.state.revision: break
+            if isinstance(p, RewritePart) and p.status == Part.UNCHECKED:
+                rw = self.state.rewrites[p.name][p.step]
+                p.status = Part.CHECKING
+                rw.status = Part.CHECKING
+                rw.check()
+                p.status = rw.status
+        timer.stop()
+        timer.setSingleShot(True)
+        timer.start()
 
 # class UpdateStateThread(QThread):
 #     def __init__(self, state: State, code: str, parent: Optional[QObject] = None) -> None:
