@@ -80,9 +80,6 @@ class Editor(QWidget):
         self.code_view.textChanged.connect(self.invalidate_text)
         self.parsed = True
 
-        # keep a cache of graphs that have already been laid out
-        self.graph_cache : Dict[int, Tuple[Graph, Optional[Graph]]] = dict()
-
         # keep a revision count, so we don't trigger parsing until the user stops typing for a bit
         self.revision = 0
 
@@ -110,7 +107,6 @@ class Editor(QWidget):
     def invalidate_text(self) -> None:
         self.parsed = False
         self.state.set_current_part(None)
-        self.graph_cache = dict()
         self.code_view.state_changed()
         self.revision += 1
 
@@ -177,45 +173,30 @@ class Editor(QWidget):
 
         self.code_view.state_changed()
         if isinstance(part, GraphPart) and part.name in self.state.graphs:
-            if part.index not in self.graph_cache:
-                g = self.state.graphs[part.name].copy()
-                convex_layout(g)
-                self.graph_cache[part.index] = (g, None)
-            else:
-                g, _ = self.graph_cache[part.index]
+            if not part.layed_out:
+                convex_layout(part.graph)
+                part.layed_out = True
             self.rhs_view.setVisible(False)
-            self.lhs_view.set_graph(g)
+            self.lhs_view.set_graph(part.graph)
         elif isinstance(part, RulePart) and part.name in self.state.rules:
-            if part.index not in self.graph_cache:
-                lhs = self.state.rules[part.name].lhs.copy()
-                rhs = self.state.rules[part.name].rhs.copy()
+            if not part.layed_out:
+                convex_layout(part.rule.lhs)
+                convex_layout(part.rule.rhs)
+                part.layed_out = True
+            self.rhs_view.setVisible(True)
+            self.lhs_view.set_graph(part.rule.lhs)
+            self.rhs_view.set_graph(part.rule.rhs)
+        elif isinstance(part, RewritePart):
+            lhs = part.lhs if part.lhs else Graph()
+            rhs = part.rhs if part.rhs else Graph()
+            if not part.layed_out:
                 convex_layout(lhs)
                 convex_layout(rhs)
-                self.graph_cache[part.index] = (lhs, rhs)
-            else:
-                lhs, rhs0 = self.graph_cache[part.index]
-                if not rhs0: raise ValueError("Rule in graph_cache should have RHS")
-                rhs = rhs0
+                part.layed_out = True
+
             self.rhs_view.setVisible(True)
             self.lhs_view.set_graph(lhs)
             self.rhs_view.set_graph(rhs)
-        elif isinstance(part, RewritePart):
-            if part.index not in self.graph_cache:
-                lhs = part.lhs.copy() if part.lhs else Graph()
-                rhs = part.rhs.copy() if part.rhs else Graph()
-                convex_layout(lhs)
-                convex_layout(rhs)
-                self.graph_cache[part.index] = (lhs, rhs)
-            else:
-                lhs, rhs0 = self.graph_cache[part.index]
-                if not rhs0: raise ValueError("Rewrite step in graph_cache should have RHS")
-                rhs = rhs0
-
-            self.code_view.state_changed()
-
-            self.rhs_view.setVisible(True)
-            self.lhs_view.set_graph(lhs)
-            if rhs: self.rhs_view.set_graph(rhs)
         else:
             self.rhs_view.setVisible(False)
             self.lhs_view.set_graph(Graph())
@@ -312,7 +293,6 @@ class CheckThread(QThread):
             if isinstance(p, RewritePart) and p.status == Part.UNCHECKED:
                 p.status = Part.CHECKING
                 p.check(self.state)
-                self.editor.graph_cache.pop(p.index, None)
         timer.stop()
         timer.setSingleShot(True)
         timer.start()
