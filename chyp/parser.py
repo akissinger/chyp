@@ -30,9 +30,13 @@ GRAMMAR = Lark("""
     rewrite : "rewrite" [converse] var ":" term rewrite_part*
     rewrite_part : (eq | le) term_hole [ "by" tactic ]
     converse : "-"
-    theorem : THM var ":" formula
+    theorem : THM var ":" formula [ proof ]
     THM : "theorem" | "lemma" | "proposition"
     formula : term (eq | le) term
+    proof : PF proof_step* QED
+    PF : "proof"
+    QED: "qed"
+    proof_step : tactic
 
     type_term : type_element ("*" type_element)* | num
     type_element: IDENT ["^" num]

@@ -23,7 +23,7 @@ from PySide6.QtWidgets import QHBoxLayout, QSplitter, QTreeView, QVBoxLayout, QW
 from .. import parser
 from ..layout import convex_layout
 from ..graph import Graph
-from ..state import State, Part, RewritePart, RulePart, GraphPart, ImportPart
+from ..state import State, Part, RewritePart, RulePart, GraphPart, ImportPart, TwoGraphPart
 # from ..term import graph_to_term
 # from ..matcher import match_rule
 # from ..rewrite import rewrite
@@ -184,15 +184,7 @@ class Editor(QWidget):
                 part.layed_out = True
             self.rhs_view.setVisible(False)
             self.lhs_view.set_graph(part.graph)
-        elif isinstance(part, RulePart) and part.name in self.state.rules:
-            if not part.layed_out:
-                convex_layout(part.rule.lhs)
-                convex_layout(part.rule.rhs)
-                part.layed_out = True
-            self.rhs_view.setVisible(True)
-            self.lhs_view.set_graph(part.rule.lhs)
-            self.rhs_view.set_graph(part.rule.rhs)
-        elif isinstance(part, RewritePart):
+        elif isinstance(part, TwoGraphPart):
             lhs = part.lhs if part.lhs else Graph()
             rhs = part.rhs if part.rhs else Graph()
             if not part.layed_out:

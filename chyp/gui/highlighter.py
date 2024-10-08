@@ -26,6 +26,7 @@ FG          = theme['fg']
 BG          = theme['bg']
 SEL         = theme['bg_sel']
 KEYWORD     = theme['fg_keyword']
+KEYWORD_ALT = theme['fg_keyword_alt']
 IDENT       = theme['fg_ident']
 NUM         = theme['fg_num']
 OP          = theme['fg_op']
@@ -51,11 +52,15 @@ class ChypHighlighter(QSyntaxHighlighter):
 
     def highlightBlock(self, text: str) -> None:
         ident = '[a-zA-Z_][\\.a-zA-Z0-9_]*'
-        for m in re.finditer('(^|\\W)(let|def|gen|rule|by|rewrite|import|as|show|theorem|lemma|proposition|proof|qed)\\s+\\-?\\s*(%s)?' % ident, text):
+        for m in re.finditer('(^|\\W)(let|def|gen|rule|by|rewrite|import|as|show|theorem|lemma|proposition)\\s+\\-?\\s*(%s)?' % ident, text):
             x,y = m.span(2)
             self.setFormat(x, y-x, QColor(KEYWORD))
             x,y = m.span(3)
             self.setFormat(x, y-x, QColor(IDENT))
+
+        for m in re.finditer('(^|\\W)(proof|qed)(\\s+|$)', text):
+            x,y = m.span(2)
+            self.setFormat(x, y-x, QColor(KEYWORD_ALT))
 
         for m in re.finditer('[?~<>(),:;*=\\-\\[\\]]', text):
             self.setFormat(m.start(), 1, QColor(OP))

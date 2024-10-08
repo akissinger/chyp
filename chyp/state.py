@@ -22,10 +22,9 @@ import lark
 from lark import v_args
 from lark.tree import Meta
 
-from build.lib.chyp.graph import VType
 
 from . import parser
-from .graph import Graph, GraphError, gen, perm, identity, redistributer
+from .graph import Graph, GraphError, gen, perm, identity, redistributer, VType
 from .rule import Rule, RuleError
 from .proofstate import ProofState
 from .tactic import Tactic
@@ -49,12 +48,6 @@ class Part:
         self.status = Part.UNCHECKED
         self.index = -1
 
-class RulePart(Part):
-    def __init__(self, start: int, end: int, line: int, rule: Rule):
-        Part.__init__(self, start, end, line, rule.name)
-        self.rule = rule
-        self.layed_out = False
-
 class GraphPart(Part):
     def __init__(self, start: int, end: int, line: int, name: str, graph: Graph):
         Part.__init__(self, start, end, line, name)
@@ -64,7 +57,19 @@ class GraphPart(Part):
 class LetPart(GraphPart): pass
 class GenPart(GraphPart): pass
 
-class RewritePart(Part):
+class TwoGraphPart(Part):
+    def __init__(self, start: int, end: int, line: int, name: str, lhs: Optional[Graph], rhs: Optional[Graph]):
+        Part.__init__(self, start, end, line, name)
+        self.lhs = lhs
+        self.rhs = rhs
+        self.layed_out = False
+
+class RulePart(TwoGraphPart):
+    def __init__(self, start: int, end: int, line: int, rule: Rule):
+        TwoGraphPart.__init__(self, start, end, line, rule.name, rule.lhs, rule.rhs)
+        self.rule = rule
+
+class RewritePart(TwoGraphPart):
     def __init__(self,
                  start: int,
                  end: int,
@@ -77,7 +82,7 @@ class RewritePart(Part):
                  lhs: Optional[Graph]=None,
                  rhs: Optional[Graph]=None,
                  stub: bool=False):
-        Part.__init__(self, start, end, line, name)
+        TwoGraphPart.__init__(self, start, end, line, name, lhs, rhs)
         self.sequence = sequence
         self.term_pos = term_pos
         self.lhs = lhs

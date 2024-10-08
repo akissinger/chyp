@@ -107,6 +107,7 @@ for t in ('catppuccin_macchiato', 'catppuccin_latte'):
       'bg_sel_good': PALETTES[t]['green_bg'], 
       'bg_sel_bad': PALETTES[t]['red_bg'], 
       'fg_keyword': PALETTES[t]['blue'],
+      'fg_keyword_alt': PALETTES[t]['lavender'],
       'fg_ident': PALETTES[t]['sky'], 
       'fg_num': PALETTES[t]['red'],
       'fg_op': PALETTES[t]['yellow'],
