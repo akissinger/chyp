@@ -1,0 +1,25 @@
+gen f : 1 -> 1
+rule ff: f ; f = f
+
+# apply-style proof
+theorem foo: f ; f; f = f
+proof
+  apply simp(ff)
+qed
+
+# rewrite-style proof
+theorem bar: f ; f; f = f
+proof
+  rewrite LHS
+    = f ; f by ff
+    = f by ff
+qed
+
+# mixed proof
+theorem baz: f ; f ; f; f = f
+proof
+  rewrite LHS
+    = f ; f ; f by ff
+    = f ; f by ff
+  apply simp(ff)
+qed

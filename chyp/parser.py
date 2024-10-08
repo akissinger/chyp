@@ -21,22 +21,25 @@ from . import state
 
 GRAMMAR = Lark("""
     start : statement*
-    ?statement : import_statement | gen | let | def_statement | rule | rewrite | show | theorem
+    ?statement : import_statement | gen | let | def_statement | rule | rewrite | show | theorem_statement
     gen : "gen" var ":" type_term "->" type_term [ gen_color ]
     def_statement : "def" var "=" term [ gen_color ]
     gen_color : "\\\"" color "\\\"" | "\\\"" color "\\\"" "\\\"" color "\\\""
     let : "let" var "=" term
     rule : "rule" var ":" term (eq | le) term
     rewrite : "rewrite" [converse] var ":" term rewrite_part*
+    rewrite_pf : "rewrite" rewrite_side rewrite_part*
+    rewrite_side : "LHS" | "RHS"
     rewrite_part : (eq | le) term_hole [ "by" tactic ]
     converse : "-"
-    theorem : THM var ":" formula [ proof ]
-    THM : "theorem" | "lemma" | "proposition"
+    ?theorem_statement : theorem [ proof ]
+    theorem : ("theorem" | "lemma" | "proposition") var ":" formula
     formula : term (eq | le) term
-    proof : PF proof_step* QED
-    PF : "proof"
-    QED: "qed"
-    proof_step : tactic
+    proof : proof_start proof_step* proof_end
+    proof_start : "proof"
+    proof_end: "qed"
+    proof_step : apply_tac | rewrite_pf
+    apply_tac : "apply" tactic
 
     type_term : type_element ("*" type_element)* | num
     type_element: IDENT ["^" num]

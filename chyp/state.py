@@ -58,7 +58,7 @@ class LetPart(GraphPart): pass
 class GenPart(GraphPart): pass
 
 class TwoGraphPart(Part):
-    def __init__(self, start: int, end: int, line: int, name: str, lhs: Optional[Graph], rhs: Optional[Graph]):
+    def __init__(self, start: int, end: int, line: int, name: str, lhs: Optional[Graph]=None, rhs: Optional[Graph]=None):
         Part.__init__(self, start, end, line, name)
         self.lhs = lhs
         self.rhs = rhs
@@ -112,6 +112,8 @@ class RewritePart(TwoGraphPart):
             t = Tactic(self, state, self.tactic_args)
         return t.next_rhs(term)
 
+class ProofStepPart(TwoGraphPart):
+    pass
 
 class ImportPart(Part): pass
 
@@ -504,6 +506,32 @@ class State(lark.Transformer):
             tactic, tactic_args = ("refl", [])
 
         return (meta.line, meta.end_pos, t_start, t_end, equiv, tactic, tactic_args, rhs)
+
+    def formula(self, items: List[Any]) -> Tuple[Graph, Graph]:
+        lhs = items[0]
+        rhs = items[2]
+        return (lhs, rhs)
+
+    @v_args(meta=True)
+    def theorem(self, meta: Meta, items: List[Any]):
+        name = items[0]
+        (lhs,rhs) = items[1]
+        self.add_part(TwoGraphPart(meta.start_pos, meta.end_pos, meta.line, name, lhs, rhs))
+
+    @v_args(meta=True)
+    def proof_start(self, meta: Meta, _: List[Any]):
+        name = ''
+        self.add_part(ProofStepPart(meta.start_pos, meta.end_pos, meta.line, name))
+
+    @v_args(meta=True)
+    def proof_end(self, meta: Meta, _: List[Any]):
+        name = ''
+        self.add_part(ProofStepPart(meta.start_pos, meta.end_pos, meta.line, name))
+
+    @v_args(meta=True)
+    def proof_step(self, meta: Meta, _: List[Any]):
+        name = ''
+        self.add_part(ProofStepPart(meta.start_pos, meta.end_pos, meta.line, name))
 
     def tactic(self, items: List[Any]) -> Tuple[str, List[str]]:
         if len(items) >= 2 and str(items[1]) == "(": #)
