@@ -26,15 +26,15 @@ class Rule:
     lhs: Graph
     rhs: Graph
 
-    def __init__(self, lhs: Graph, rhs: Graph, name: str='', equiv: bool=True):
-        if lhs.domain() != rhs.domain():
+    def __init__(self, lhs: Optional[Graph]=None, rhs: Optional[Graph]=None, name: str='', equiv: bool=True):
+        self.lhs = lhs if lhs else Graph()
+        self.rhs = rhs if rhs else Graph()
+        if self.lhs.domain() != self.rhs.domain():
             raise RuleError("Inputs must match on LHS and RHS of rule "
-                            + f'({rhs.domain()} != {lhs.domain()})')
-        if lhs.codomain() != rhs.codomain():
+                            + f'({self.rhs.domain()} != {self.lhs.domain()})')
+        if self.lhs.codomain() != self.rhs.codomain():
             raise RuleError("Outputs must match on LHS and RHS of rule "
-                            + f'({rhs.codomain()} != {lhs.codomain()})')
-        self.lhs = lhs
-        self.rhs = rhs
+                            + f'({self.rhs.codomain()} != {self.lhs.codomain()})')
         self.name = name
         self.equiv = equiv
 

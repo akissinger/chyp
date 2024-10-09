@@ -14,7 +14,10 @@
 # limitations under the License.
 
 from typing import List
+
+from .rule import Rule
 from .graph import Graph
+from chyp import graph
 
 # def ready_edges(g: Graph, edges: Set[int], v_pos: Mapping[int,float]) -> Set[int]:
 #     ready = set()
@@ -191,3 +194,6 @@ def graph_to_term(g: Graph) -> str:
 
     return ' ; '.join(seq)
 
+def rule_to_term(rule: Rule) -> str:
+    conn = '=' if rule.equiv else '<='
+    return f'{graph_to_term(rule.lhs)} {conn} {graph_to_term(rule.rhs)}'

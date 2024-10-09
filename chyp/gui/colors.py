@@ -94,6 +94,7 @@ for t in ('catppuccin_macchiato', 'catppuccin_latte'):
       'bg': PALETTES[t]['base'],
       'fg': PALETTES[t]['text'],
       'fg_bright': PALETTES[t]['lavender'],
+      'fg_dim': PALETTES[t]['subtext0'],
       'bg_good': PALETTES[t]['green_bg_dim'],
       'bg_bad': PALETTES[t]['red_bg_dim'],
       'bg_alt': PALETTES[t]['crust'],
