@@ -62,12 +62,13 @@ class ErrorListModel(QAbstractItemModel):
         if not self.hasIndex(row, column, parent): return QModelIndex()
         else: return self.createIndex(row, column, None)
 
-    def columnCount(self, index: Union[QModelIndex, QPersistentModelIndex]=QModelIndex()) -> int:
+    def columnCount(self, parent: Union[QModelIndex, QPersistentModelIndex]=QModelIndex()) -> int:
         """The number of columns"""
         return 3
 
-    def rowCount(self, index: Union[QModelIndex, QPersistentModelIndex]=QModelIndex()) -> int:
+    def rowCount(self, parent: Union[QModelIndex, QPersistentModelIndex]=QModelIndex()) -> int:
         """The number of rows"""
+        index = parent
         if not index or not index.isValid(): return len(self.errors)
         else: return 0
 
