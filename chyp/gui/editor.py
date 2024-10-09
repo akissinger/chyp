@@ -24,12 +24,9 @@ from .. import parser
 from ..layout import convex_layout
 from ..graph import Graph
 from ..state import State, Part, RewritePart, RulePart, GraphPart, ImportPart, TwoGraphPart
-# from ..term import graph_to_term
-# from ..matcher import match_rule
-# from ..rewrite import rewrite
 
 from . import mainwindow
-from .errorlist import ErrorListModel
+from .errorlistmodel import ErrorListModel
 from .graphview import GraphView
 from .codeview import CodeView
 from .document import ChypDocument
