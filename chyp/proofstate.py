@@ -4,7 +4,7 @@ from typing import Dict, Iterator, List, Optional, Set, Tuple
 from .term import graph_to_term
 from .graph import Graph
 from .rewrite import dpo
-from .rule import Rule
+from .rule import Rule, RuleError
 from .matcher import Match, match_rule, find_iso
 from . import state
 
@@ -143,6 +143,38 @@ class ProofState:
             self.goals[0].formula.rhs = graph
         elif target in self.context:
             self.context[target].rhs = graph
+    
+    def replace_lhs(self, new_lhs: Graph) -> None:
+        """Replace the LHS of the top goal with the given graph
+
+        For old_lhs the current LHS of the top goal, this adds a new goal "old_lhs = new_lhs"
+        to the top of the goal stack. Typically this goal will be closed straight away by another
+        tactic like "rule" or "simp".
+        """
+        try:
+            r = Rule(self.lhs(), new_lhs)
+            self.__set_lhs('', new_lhs)
+            g = self.goals[0].copy()
+            g.formula = r
+            self.goals.insert(0, g)
+        except RuleError as e:
+            self.error(str(e))
+
+    def replace_rhs(self, new_rhs: Graph) -> None:
+        """Replace the LHS of the top goal with the given graph
+
+        For old_lhs the current LHS of the top goal, this adds a new goal "old_lhs = new_lhs"
+        to the top of the goal stack. Typically this goal will be closed straight away by another
+        tactic like "rule" or "simp".
+        """
+        try:
+            r = Rule(self.rhs(), new_rhs)
+            self.__set_rhs('', new_rhs)
+            g = self.goals[0].copy()
+            g.formula = r
+            self.goals.insert(0, g)
+        except RuleError as e:
+            self.error(str(e))
 
     def rewrite_lhs(self, rule_expr: str, target: str='') -> Iterator[Tuple[Match,Match]]:
         """Rewrite the LHS of the goal or a rule in the local context using the provided rule

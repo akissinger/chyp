@@ -414,11 +414,14 @@ class State(lark.Transformer):
         if not name in self.rules:
             if lhs and rhs:
                 try:
-                    rule = Rule(lhs, rhs, name, invertible)
-                    self.rules[name] = rule
-                    self.sequence += 1
-                    self.rule_sequence[name] = self.sequence
-                    self.add_part(RulePart(meta.start_pos, meta.end_pos, meta.line, rule))
+                    if not invertible:
+                        self.errors.append((self.file_name, meta.line, "Non-invertible rules currently not supported."))
+                    else:
+                        rule = Rule(lhs, rhs, name)
+                        self.rules[name] = rule
+                        self.sequence += 1
+                        self.rule_sequence[name] = self.sequence
+                        self.add_part(RulePart(meta.start_pos, meta.end_pos, meta.line, rule))
                 except RuleError as e:
                     self.errors.append((self.file_name, meta.line, str(e)))
         else:
@@ -439,7 +442,7 @@ class State(lark.Transformer):
                 if name not in self.graphs:
                     lhs = gen(name, domain, codomain, fg=fg, bg=bg)
                     self.graphs[name] = lhs
-                    rule = Rule(lhs, graph, rule_name, True)
+                    rule = Rule(lhs, graph, rule_name)
                     self.rules[rule_name] = rule
                     self.sequence += 1
                     self.rule_sequence[rule_name] = self.sequence
@@ -449,7 +452,7 @@ class State(lark.Transformer):
                     lhs_domain = lhs.domain()
                     lhs_codomain = lhs.codomain()
                     if lhs_domain == domain and lhs_codomain == codomain:
-                        rule = Rule(lhs, graph, rule_name, True)
+                        rule = Rule(lhs, graph, rule_name)
                         self.rules[rule_name] = rule
                         self.sequence += 1
                         self.rule_sequence[rule_name] = self.sequence
@@ -531,18 +534,20 @@ class State(lark.Transformer):
             if term and rhs:
                 try:
                     if converse:
-                        if base_name in self.rules:
-                            self.rules[base_name].equiv = True
+                        # TODO non-invertible rules
+                        self.errors.append((self.file_name, meta.line, "Non-invertible rules currently not supported: " + base_name))
+                        # if base_name in self.rules:
+                        #     self.rules[base_name].equiv = True
 
-                            # TODO: this will stop the <= version of the rule from being usable before the converse is
-                            # proven. While this is sound and workable, it might confuse people.
-                            self.sequence += 1
-                            self.rule_sequence[base_name] = self.sequence
-                        else:
-                            self.errors.append((self.file_name, meta.line, "Trying to prove converse for unknown rule: " + base_name))
+                        #     # TODO: this will stop the <= version of the rule from being usable before the converse is
+                        #     # proven. While this is sound and workable, it might confuse people.
+                        #     self.sequence += 1
+                        #     self.rule_sequence[base_name] = self.sequence
+                        # else:
+                        #     self.errors.append((self.file_name, meta.line, "Trying to prove converse for unknown rule: " + base_name))
                     else:
                         if not name in self.rules:
-                            rule = Rule(term.copy(), rhs.copy(), name=name, equiv=all_equiv)
+                            rule = Rule(term.copy(), rhs.copy(), name=name)
                             # remove any highlights placed there by the first/last proof step
                             rule.lhs.unhighlight()
                             rule.rhs.unhighlight()

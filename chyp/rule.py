@@ -26,7 +26,7 @@ class Rule:
     lhs: Graph
     rhs: Graph
 
-    def __init__(self, lhs: Optional[Graph]=None, rhs: Optional[Graph]=None, name: str='', equiv: bool=True):
+    def __init__(self, lhs: Optional[Graph]=None, rhs: Optional[Graph]=None, name: str=''):
         self.lhs = lhs if lhs else Graph()
         self.rhs = rhs if rhs else Graph()
         if self.lhs.domain() != self.rhs.domain():
@@ -36,10 +36,10 @@ class Rule:
             raise RuleError("Outputs must match on LHS and RHS of rule "
                             + f'({self.rhs.codomain()} != {self.lhs.codomain()})')
         self.name = name
-        self.equiv = equiv
+        self.equiv = True # TODO support for non-equivalance (i.e. rewrite/partial order) rules
 
     def copy(self) -> Rule:
-        return Rule(self.lhs.copy(), self.rhs.copy(), self.name, self.equiv)
+        return Rule(self.lhs.copy(), self.rhs.copy(), self.name)
 
     def converse(self) -> Rule:
         if self.name.startswith('-'):
@@ -47,7 +47,7 @@ class Rule:
         else:
             name = '-' + self.name
 
-        return Rule(self.rhs.copy(), self.lhs.copy(), name, True)
+        return Rule(self.rhs.copy(), self.lhs.copy(), name)
 
     def is_left_linear(self) -> bool:
         """Returns True if boundary on lhs embeds injectively"""
