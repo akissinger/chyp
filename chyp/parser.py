@@ -28,8 +28,6 @@ GRAMMAR = Lark("""
     let : "let" var "=" term
     rule : "rule" var ":" term (eq | le) term
     rewrite : "rewrite" [converse] var ":" term rewrite_part*
-    rewrite_pf : "rewrite" rewrite_side rewrite_part*
-    rewrite_side : "LHS" | "RHS"
     rewrite_part : (eq | le) term_hole [ "by" tactic ]
     converse : "-"
     ?theorem_statement : theorem [ proof ]
@@ -38,8 +36,11 @@ GRAMMAR = Lark("""
     proof : proof_start proof_step* proof_end
     proof_start : "proof"
     proof_end: "qed"
-    ?proof_step : apply_tac | rewrite_pf
+    ?proof_step : apply_tac | rewrite_tac
     apply_tac : "apply" tactic
+    rewrite_tac : "rewrite" (LHS | RHS) rewrite_part*
+    LHS : "LHS"
+    RHS : "RHS"
 
     type_term : type_element ("*" type_element)* | num
     type_element: IDENT ["^" num]

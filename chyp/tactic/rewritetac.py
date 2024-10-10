@@ -31,7 +31,7 @@ class RewriteTac(Tactic):
         return 'rewrite'
 
     def run(self) -> bool:
-        if len(self.args) == 1 and self.args[0] == 'LHS':
+        if self.args[0] == 'LHS':
             self.proof_state.replace_lhs(self.term)
         else:
             self.proof_state.replace_rhs(self.term)

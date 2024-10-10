@@ -16,10 +16,11 @@
 from __future__ import annotations
 
 import os.path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Literal, Optional, Tuple
 import lark
 from lark import v_args
 from lark.tree import Meta
+
 
 
 from . import parser
@@ -29,6 +30,7 @@ from .proofstate import ProofState
 from .tactic import Tactic
 from .tactic.simptac import SimpTac
 from .tactic.ruletac import RuleTac
+from .tactic.rewritetac import RewriteTac
 
 # Structure represents an atomic "Part" of a theory document. It has a start/end index used for highlighting and
 # to detect if the cursor is currently inside of it, as well as a name (usually used for depecting associated graphs),
@@ -136,6 +138,11 @@ class ProofStepPart(Part):
         self.proof_state = None
         self.layed_out = False
         self.qed = qed
+    
+    def check(self, init_proof_state: ProofState) -> None:
+        self.proof_state = init_proof_state
+        if self.proof_state:
+            self.status = Part.VALID
 
 class ProofTacticPart(ProofStepPart):
     def __init__(self,
@@ -144,17 +151,12 @@ class ProofTacticPart(ProofStepPart):
                  line: int,
                  name: str,
                  sequence: int,
-                 term_pos: Tuple[int,int] = (0,0),
                  tactic: str='',
-                 tactic_args: Optional[List[str]] = None,
-                 stub: bool=False):
+                 tactic_args: Optional[List[str]] = None):
         ProofStepPart.__init__(self, start, end, line, name, False)
         self.sequence = sequence
-        self.term_pos = term_pos
-        self.layed_out = False
         self.tactic = tactic
         self.tactic_args = [] if tactic_args is None else tactic_args
-        self.stub = stub
 
     def check(self, init_proof_state: ProofState) -> None:
         self.layed_out = False
@@ -172,6 +174,50 @@ class ProofTacticPart(ProofStepPart):
         else:
             self.status = Part.INVALID
 
+class ProofRewritePart(ProofStepPart):
+    def __init__(self,
+                 start: int,
+                 end: int,
+                 line: int,
+                 name: str,
+                 sequence: int,
+                 term_pos: Tuple[int,int],
+                 term: Graph,
+                 side: str='LHS',
+                 tactic: str='',
+                 tactic_args: Optional[List[str]] = None):
+        ProofStepPart.__init__(self, start, end, line, name, False)
+        self.sequence = sequence
+        self.term_pos = term_pos
+        self.term = term
+        self.side = side
+        self.tactic = tactic
+        self.tactic_args = [] if tactic_args is None else tactic_args
+
+    def check(self, init_proof_state: ProofState) -> None:
+        self.layed_out = False
+        self.proof_state = init_proof_state.snapshot(self)
+        t: Tactic
+        if self.tactic == 'rule':
+            t = RuleTac(self.proof_state, self.tactic_args)
+        elif self.tactic == 'simp':
+            t = SimpTac(self.proof_state, self.tactic_args)
+        else:
+            t = Tactic(self.proof_state, self.tactic_args)
+
+        num_goals = self.proof_state.num_goals()
+        self.status = Part.CHECKING
+
+        # run RewriteTac, which will generate a new subgoal
+        RewriteTac(self.proof_state, [self.side], self.term).run()
+
+        # run the sub-tactic and check it has closed the new goal
+        if t.run() and num_goals == self.proof_state.num_goals():
+            # try and close the current goal, if it has now been trivialised
+            self.proof_state.try_close_goal()
+            self.status = Part.VALID
+        else:
+            self.status = Part.INVALID
 
 class ImportPart(Part): pass
 
@@ -605,6 +651,29 @@ class State(lark.Transformer):
                                       sequence=self.sequence,
                                       tactic=tactic,
                                       tactic_args=args))
+
+    @v_args(meta=True)
+    def rewrite_tac(self, meta: Meta, items: List[Any]) -> None:
+        name = ''
+        side = items[0]
+
+        start = meta.start_pos
+        for step in items[1:]:
+            line, end, t_start, t_end, _, sub_tac, sub_tac_args, term = step
+            self.add_part(ProofRewritePart(start, end, line, name,
+                                           sequence=self.sequence,
+                                           term_pos=(t_start,t_end),
+                                           term=term,
+                                           side=side,
+                                           tactic=sub_tac,
+                                           tactic_args=sub_tac_args))
+            start = end
+    
+    def LHS(self, _: List[Any]) -> str:
+        return "LHS"
+
+    def RHS(self, _: List[Any]) -> str:
+        return "RHS"
 
     def tactic(self, items: List[Any]) -> Tuple[str, List[str]]:
         if len(items) >= 2 and str(items[1]) == "(": #)

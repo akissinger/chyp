@@ -335,24 +335,23 @@ class CheckThread(QThread):
             self.editor.show_at_cursor()
         timer.timeout.connect(f)
         timer.start()
-        proof_state = None
-        theorem_p = None
+        current_proof_state = None
+        current_theorem_part = None
         for p in state.parts:
             if self.revision != self.editor.revision: break
             if isinstance(p, TheoremPart) and p.status == Part.UNCHECKED:
                 p.status = Part.CHECKING
-                proof_state = ProofState(state, p.sequence, [Goal(p.formula)])
-            elif isinstance(p, ProofTacticPart) and p.status == Part.UNCHECKED:
-                if proof_state:
-                    p.check(proof_state)
-                    proof_state = p.proof_state
+                current_proof_state = ProofState(state, p.sequence, [Goal(p.formula)])
+                current_theorem_part = p
             elif isinstance(p, ProofStepPart) and p.status == Part.UNCHECKED:
-                if proof_state:
-                    p.proof_state = proof_state
+                if current_proof_state:
+                    p.check(current_proof_state)
+                    current_proof_state = p.proof_state
                     if p.qed:
-                        st = Part.VALID if len(proof_state.goals) == 0 else Part.INVALID
+                        st = Part.VALID if current_proof_state and len(current_proof_state.goals) == 0 else Part.INVALID
                         p.status = st
-                        if theorem_p: theorem_p.status = st
+                        if current_theorem_part:
+                            current_theorem_part.status = st
                         
         timer.stop()
 

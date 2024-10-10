@@ -43,6 +43,9 @@ class ProofState:
             self.state.errors.append((self.state.file_name, line, message))
             self.errors.add(message)
 
+    def num_goals(self) -> int:
+        return len(self.goals)
+
     def has_goal(self, i:int=0) -> bool:
         return len(self.goals) > i
 
