@@ -36,7 +36,6 @@ class Tactic:
         self.proof_state = proof_state
         self.args = args
 
-
     def repeat(self, rw: Callable[[str], bool], rules: List[str], max_iter: int=255, bound_lhs: int=-1, bound_rhs: int=-1) -> None:
         got_match = True
         i = 0
@@ -51,8 +50,6 @@ class Tactic:
                     # print('success')
                     got_match = True
                     i += 1
-
-
 
     def highlight_lhs(self, vertices: Set[int], edges: Set[int], goal_i: int=0) -> None:
         if goal_i >= 0 and goal_i < len(self.proof_state.goals):
@@ -88,20 +85,13 @@ class Tactic:
     #         found_prev = (current == t)
     #     return next_term
 
-    def run_check(self) -> None:
-        self.__local_state.status = state.Part.CHECKING
-        self.__reset()
-        self.check()
-        if self.__local_state.status != state.Part.VALID:
-            self.__local_state.status = state.Part.INVALID
-
     # tactics should override this method
     def name(self) -> str:
         return 'refl'
 
     # tactics should override this method
-    def check(self) -> None:
-        self.proof_state.validate_goal()
+    def check(self) -> bool:
+        return self.proof_state.validate_goal() != None
 
     # tactics that can synthesize an RHS should override this method
     def make_rhs(self) -> Iterator[Graph]:

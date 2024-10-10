@@ -113,9 +113,31 @@ class RewritePart(TwoGraphPart):
         #     t = Tactic(self, state, self.tactic_args)
         # return t.next_rhs(term)
 
+class TheoremPart(TwoGraphPart):
+    def __init__(self,
+                 start: int,
+                 end: int,
+                 line: int,
+                 name: str,
+                 formula: Rule,
+                 sequence: int):
+        TwoGraphPart.__init__(self, start, end, line, name, formula.lhs, formula.rhs)
+        self.sequence = sequence
+        self.formula = formula
+
 class ProofStepPart(Part):
     proof_state: Optional[ProofState]
+    def __init__(self,
+                 start: int,
+                 end: int,
+                 line: int,
+                 name: str,
+                 qed: bool):
+        Part.__init__(self, start, end, line, name)
+        self.proof_state = None
+        self.qed = qed
 
+class ProofTacticPart(ProofStepPart):
     def __init__(self,
                  start: int,
                  end: int,
@@ -126,7 +148,7 @@ class ProofStepPart(Part):
                  tactic: str='',
                  tactic_args: Optional[List[str]] = None,
                  stub: bool=False):
-        self.proof_state = None
+        ProofStepPart.__init__(self, start, end, line, name, False)
         self.sequence = sequence
         self.term_pos = term_pos
         self.layed_out = False
@@ -134,18 +156,21 @@ class ProofStepPart(Part):
         self.tactic_args = [] if tactic_args is None else tactic_args
         self.stub = stub
 
-    def check(self, proof_state: ProofState) -> ProofState:
-        proof_state = proof_state.snapshot()
+    def check(self, init_proof_state: ProofState) -> None:
+        self.proof_state = init_proof_state.snapshot(self)
         t: Tactic
         if self.tactic == 'rule':
-            t = RuleTac(proof_state, self.tactic_args)
+            t = RuleTac(self.proof_state, self.tactic_args)
         elif self.tactic == 'simp':
-            t = SimpTac(proof_state, self.tactic_args)
+            t = SimpTac(self.proof_state, self.tactic_args)
         else:
-            t = Tactic(proof_state, self.tactic_args)
-        t.run_check() # TODO check success here and update status
-        self.proof_state = proof_state
-        return proof_state
+            t = Tactic(self.proof_state, self.tactic_args)
+        self.status = Part.CHECKING
+        if t.check():
+            self.status = Part.VALID
+        else:
+            self.status = Part.INVALID
+
 
 class ImportPart(Part): pass
 
@@ -545,25 +570,25 @@ class State(lark.Transformer):
         return (lhs, rhs)
 
     @v_args(meta=True)
-    def theorem(self, meta: Meta, items: List[Any]):
+    def theorem(self, meta: Meta, items: List[Any]) -> None:
         name = items[0]
         (lhs,rhs) = items[1]
         self.add_part(TwoGraphPart(meta.start_pos, meta.end_pos, meta.line, name, lhs, rhs))
 
     @v_args(meta=True)
-    def proof_start(self, meta: Meta, _: List[Any]):
+    def proof_start(self, meta: Meta, _: List[Any]) -> None:
         name = ''
-        self.add_part(ProofStepPart(meta.start_pos, meta.end_pos, meta.line, name))
+        self.add_part(ProofStepPart(meta.start_pos, meta.end_pos, meta.line, name, False))
 
     @v_args(meta=True)
-    def proof_end(self, meta: Meta, _: List[Any]):
+    def proof_end(self, meta: Meta, _: List[Any]) -> None:
         name = ''
-        self.add_part(ProofStepPart(meta.start_pos, meta.end_pos, meta.line, name))
+        self.add_part(ProofStepPart(meta.start_pos, meta.end_pos, meta.line, name, True))
 
     @v_args(meta=True)
-    def proof_step(self, meta: Meta, _: List[Any]):
+    def proof_step(self, meta: Meta, _: List[Any]) -> None:
         name = ''
-        self.add_part(ProofStepPart(meta.start_pos, meta.end_pos, meta.line, name))
+        self.add_part(ProofTacticPart(meta.start_pos, meta.end_pos, meta.line, name, self.sequence))
 
     def tactic(self, items: List[Any]) -> Tuple[str, List[str]]:
         if len(items) >= 2 and str(items[1]) == "(": #)

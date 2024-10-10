@@ -13,7 +13,7 @@ RULE_NAME_RE = re.compile('(-)?\\s*([a-zA-Z_][\\.a-zA-Z0-9_]*)')
 class Goal:
     formula: Rule
     assumptions: Dict[str, Rule]
-    def __init__(self, formula: Rule, assumptions: Optional[Dict[str, Rule]]):
+    def __init__(self, formula: Rule, assumptions: Optional[Dict[str, Rule]]=None):
         self.formula = formula
         self.assumptions = assumptions if assumptions else dict()
     
@@ -28,10 +28,13 @@ class ProofState:
         self.goals = goals if goals else []
         self.context: Dict[str, Rule] = dict()
         self.errors: Set[str] = set()
+        self.line = -1
     
-    def snapshot(self) -> ProofState:
+    def snapshot(self, part: state.ProofStepPart) -> ProofState:
         goals = [g.copy() for g in self.goals]
-        return ProofState(self.state, self.sequence, goals)
+        ps = ProofState(self.state, self.sequence, goals)
+        ps.line = part.line
+        return ps
 
     def error(self, message: str) -> None:
         if not message in self.errors:
@@ -208,9 +211,7 @@ class ProofState:
     def validate_goal(self, i:int=0) -> Optional[Match]:
         if i >= 0 and i < len(self.goals):
             g = self.goals[i]
-            iso = find_iso(g.formula.lhs, g.formula.rhs)
-            if iso:
-                return iso
+            return find_iso(g.formula.lhs, g.formula.rhs)
             # if (self.__local_state.status != state.Part.INVALID and iso):
             #     self.__local_state.status = state.Part.VALID
             #     return iso
