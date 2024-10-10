@@ -26,22 +26,24 @@ class RuleTac(Tactic):
 
     def make_rhs(self) -> Iterator[Graph]:
         if len(self.args) == 0: raise StopIteration()
-        for _, m_rhs in self.rewrite_lhs(self.args[0]):
+        for _, m_rhs in self.proof_state.rewrite_lhs(self.args[0]):
             yield m_rhs.codomain
 
-    def check(self) -> None:
+    def check(self) -> bool:
         if len(self.args) == 0:
-            return
+            return False
 
         # apply a single rewrite rule in all possible ways
-        for m_lhs, m_rhs in self.rewrite_lhs(self.args[0]):
+        for m_lhs, m_rhs in self.proof_state.rewrite_lhs(self.args[0]):
             # if the LHS and RHS are isomorphic, close the goal...
-            iso = self.validate_goal()
+            iso = self.proof_state.validate_goal()
             if iso:
                 # ...and highlight the part that was rewritten
                 rhs_verts = set(iso.vertex_map[v] for v in m_rhs.vertex_image)
                 rhs_edges = set(iso.edge_map[e] for e in m_rhs.edge_image)
                 self.highlight_lhs(m_lhs.vertex_image, m_lhs.edge_image)
                 self.highlight_rhs(rhs_verts, rhs_edges)
-                return
+                return True
+        
+        return False
 
