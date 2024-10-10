@@ -167,7 +167,7 @@ class ProofTacticPart(ProofStepPart):
         else:
             t = Tactic(self.proof_state, self.tactic_args)
         self.status = Part.CHECKING
-        if t.check():
+        if t.run():
             self.status = Part.VALID
         else:
             self.status = Part.INVALID

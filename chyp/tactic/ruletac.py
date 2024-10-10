@@ -29,7 +29,7 @@ class RuleTac(Tactic):
         for _, m_rhs in self.proof_state.rewrite_lhs(self.args[0]):
             yield m_rhs.codomain
 
-    def check(self) -> bool:
+    def run(self) -> bool:
         if len(self.args) == 0:
             return False
 

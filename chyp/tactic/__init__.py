@@ -90,7 +90,7 @@ class Tactic:
         return 'refl'
 
     # tactics should override this method
-    def check(self) -> bool:
+    def run(self) -> bool:
         return self.proof_state.validate_goal() != None
 
     # tactics that can synthesize an RHS should override this method

@@ -49,7 +49,7 @@ class SimpTac(Tactic):
         lhs = self.proof_state.lhs()
         if lhs: yield lhs
 
-    def check(self) -> bool:
+    def run(self) -> bool:
         rules = self.__prepare_rules()
         bound = -1 if '+nobound' in self.args else 400
         self.repeat(self.proof_state.rewrite_lhs1, rules, bound_lhs=bound)
