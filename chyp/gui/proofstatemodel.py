@@ -31,7 +31,7 @@ class ProofStateModel(QAbstractItemModel):
         super().__init__()
         self.proof_state = None
 
-    def set_proof_state(self, proof_state: ProofState) -> None:
+    def set_proof_state(self, proof_state: Optional[ProofState]) -> None:
         self.beginResetModel()
         self.proof_state = proof_state
         self.endResetModel()
@@ -49,7 +49,7 @@ class ProofStateModel(QAbstractItemModel):
                 for k,v in g.assumptions.items():
                     if i == j: return (k, v)
                     else: j += 1
-                if i == j: return ('', g.rule)
+                if i == j: return ('', g.formula)
                 else: j += 1
 
         return ('', Rule())

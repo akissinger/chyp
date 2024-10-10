@@ -14,7 +14,6 @@
 # limitations under the License.
 
 from __future__ import annotations
-from typing import Dict, List, Optional, Tuple
 
 import os.path
 from typing import Any, Dict, List, Optional, Tuple
@@ -93,27 +92,60 @@ class RewritePart(TwoGraphPart):
         self.stub = stub
 
     def check(self, state: State) -> None:
-        t: Tactic
-        if self.tactic == 'rule':
-            t = RuleTac(self, state, self.tactic_args)
-        elif self.tactic == 'simp':
-            t = SimpTac(self, state, self.tactic_args)
-        else:
-            t = Tactic(self, state, self.tactic_args)
-        t.run_check()
+        pass
+        # t: Tactic
+        # if self.tactic == 'rule':
+        #     t = RuleTac(self, state, self.tactic_args)
+        # elif self.tactic == 'simp':
+        #     t = SimpTac(self, state, self.tactic_args)
+        # else:
+        #     t = Tactic(self, state, self.tactic_args)
+        # t.run_check()
     
     def next_rhs(self, state: State, term: str) -> Optional[str]:
+        pass
+        # t: Tactic
+        # if self.tactic == 'rule':
+        #     t = RuleTac(self, state, self.tactic_args)
+        # elif self.tactic == 'simp':
+        #     t = SimpTac(self, state, self.tactic_args)
+        # else:
+        #     t = Tactic(self, state, self.tactic_args)
+        # return t.next_rhs(term)
+
+class ProofStepPart(Part):
+    proof_state: Optional[ProofState]
+
+    def __init__(self,
+                 start: int,
+                 end: int,
+                 line: int,
+                 name: str,
+                 sequence: int,
+                 term_pos: Tuple[int,int] = (0,0),
+                 tactic: str='',
+                 tactic_args: Optional[List[str]] = None,
+                 stub: bool=False):
+        self.proof_state = None
+        self.sequence = sequence
+        self.term_pos = term_pos
+        self.layed_out = False
+        self.tactic = tactic
+        self.tactic_args = [] if tactic_args is None else tactic_args
+        self.stub = stub
+
+    def check(self, proof_state: ProofState) -> ProofState:
+        proof_state = proof_state.snapshot()
         t: Tactic
         if self.tactic == 'rule':
-            t = RuleTac(self, state, self.tactic_args)
+            t = RuleTac(proof_state, self.tactic_args)
         elif self.tactic == 'simp':
-            t = SimpTac(self, state, self.tactic_args)
+            t = SimpTac(proof_state, self.tactic_args)
         else:
-            t = Tactic(self, state, self.tactic_args)
-        return t.next_rhs(term)
-
-class ProofStepPart(TwoGraphPart):
-    pass
+            t = Tactic(proof_state, self.tactic_args)
+        t.run_check() # TODO check success here and update status
+        self.proof_state = proof_state
+        return proof_state
 
 class ImportPart(Part): pass
 
