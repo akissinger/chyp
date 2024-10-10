@@ -15,7 +15,7 @@
 # limitations under the License.
 
 from __future__ import annotations
-from typing import Iterator, List
+from typing import List
 
 from ..graph import Graph
 from . import Tactic
