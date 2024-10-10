@@ -118,10 +118,9 @@ class TheoremPart(TwoGraphPart):
                  start: int,
                  end: int,
                  line: int,
-                 name: str,
                  formula: Rule,
                  sequence: int):
-        TwoGraphPart.__init__(self, start, end, line, name, formula.lhs, formula.rhs)
+        TwoGraphPart.__init__(self, start, end, line, formula.name, formula.lhs, formula.rhs)
         self.sequence = sequence
         self.formula = formula
 
@@ -135,6 +134,7 @@ class ProofStepPart(Part):
                  qed: bool):
         Part.__init__(self, start, end, line, name)
         self.proof_state = None
+        self.layed_out = False
         self.qed = qed
 
 class ProofTacticPart(ProofStepPart):
@@ -157,6 +157,7 @@ class ProofTacticPart(ProofStepPart):
         self.stub = stub
 
     def check(self, init_proof_state: ProofState) -> None:
+        self.layed_out = False
         self.proof_state = init_proof_state.snapshot(self)
         t: Tactic
         if self.tactic == 'rule':
@@ -573,7 +574,13 @@ class State(lark.Transformer):
     def theorem(self, meta: Meta, items: List[Any]) -> None:
         name = items[0]
         (lhs,rhs) = items[1]
-        self.add_part(TwoGraphPart(meta.start_pos, meta.end_pos, meta.line, name, lhs, rhs))
+        try:
+            rule = Rule(lhs, rhs, name)
+            self.sequence += 1
+            self.rule_sequence[name] = self.sequence
+            self.add_part(TheoremPart(meta.start_pos, meta.end_pos, meta.line, rule, self.sequence))
+        except RuleError as e:
+            self.errors.append((self.file_name, meta.line, str(e)))
 
     @v_args(meta=True)
     def proof_start(self, meta: Meta, _: List[Any]) -> None:
@@ -586,9 +593,13 @@ class State(lark.Transformer):
         self.add_part(ProofStepPart(meta.start_pos, meta.end_pos, meta.line, name, True))
 
     @v_args(meta=True)
-    def proof_step(self, meta: Meta, _: List[Any]) -> None:
+    def apply_tac(self, meta: Meta, items: List[Any]) -> None:
         name = ''
-        self.add_part(ProofTacticPart(meta.start_pos, meta.end_pos, meta.line, name, self.sequence))
+        tactic, args = items[0]
+        self.add_part(ProofTacticPart(meta.start_pos, meta.end_pos, meta.line, name,
+                                      sequence=self.sequence,
+                                      tactic=tactic,
+                                      tactic_args=args))
 
     def tactic(self, items: List[Any]) -> Tuple[str, List[str]]:
         if len(items) >= 2 and str(items[1]) == "(": #)

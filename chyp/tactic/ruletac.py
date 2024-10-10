@@ -34,16 +34,17 @@ class RuleTac(Tactic):
             return False
 
         # apply a single rewrite rule in all possible ways
-        for m_lhs, m_rhs in self.proof_state.rewrite_lhs(self.args[0]):
+        for _ in self.proof_state.rewrite_lhs(self.args[0]):
             # if the LHS and RHS are isomorphic, close the goal...
-            iso = self.proof_state.validate_goal()
-            if iso:
+            return self.proof_state.try_close_goal()
+            # if iso:
                 # ...and highlight the part that was rewritten
-                rhs_verts = set(iso.vertex_map[v] for v in m_rhs.vertex_image)
-                rhs_edges = set(iso.edge_map[e] for e in m_rhs.edge_image)
-                self.highlight_lhs(m_lhs.vertex_image, m_lhs.edge_image)
-                self.highlight_rhs(rhs_verts, rhs_edges)
-                return True
+                # TODO highlighting needs to work differently from before
+                # rhs_verts = set(iso.vertex_map[v] for v in m_rhs.vertex_image)
+                # rhs_edges = set(iso.edge_map[e] for e in m_rhs.edge_image)
+                # self.highlight_lhs(m_lhs.vertex_image, m_lhs.edge_image)
+                # self.highlight_rhs(rhs_verts, rhs_edges)
+                # return True
         
         return False
 

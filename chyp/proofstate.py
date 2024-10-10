@@ -83,7 +83,7 @@ class ProofState:
                 rule = self.goals[goal_i].assumptions[rule_name]
 
         if glo and not rule and rule_name in self.state.rule_sequence:
-            if self.state.rule_sequence[rule_name] > self.sequence:
+            if self.state.rule_sequence[rule_name] >= self.sequence:
                 self.error(f'Attempting to use rule {rule_name} before it is defined/proven.')
                 return (None, False)
             rule = self.state.rules[rule_name]
@@ -208,6 +208,7 @@ class ProofState:
             return True
         return False
 
+
     def validate_goal(self, i:int=0) -> Optional[Match]:
         if i >= 0 and i < len(self.goals):
             g = self.goals[i]
@@ -216,6 +217,15 @@ class ProofState:
             #     self.__local_state.status = state.Part.VALID
             #     return iso
         return None
+
+    def try_close_goal(self, i:int=0) -> bool:
+        if i >= 0 and i < len(self.goals):
+            g = self.goals[i]
+            if find_iso(g.formula.lhs, g.formula.rhs) != None:
+                self.goals.pop(i)
+                return True
+        return False
+
 
     def lhs(self, target: str='') -> Optional[Graph]:
         g = self.__lhs(target)

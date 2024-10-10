@@ -54,8 +54,8 @@ class SimpTac(Tactic):
         bound = -1 if '+nobound' in self.args else 400
         self.repeat(self.proof_state.rewrite_lhs1, rules, bound_lhs=bound)
         self.repeat(self.proof_state.rewrite_rhs1, rules, bound_rhs=bound)
-        # self.validate_goal()
+        self.proof_state.try_close_goal()
 
-        # simp always returns True, even if it didn't simplify anything
+        # simp always returns True, even if it didn't succeed in closing the goal
         return True
 

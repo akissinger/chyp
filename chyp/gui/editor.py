@@ -14,7 +14,7 @@
 # limitations under the License.
 
 from __future__ import annotations
-from typing import Callable, Optional
+from typing import Callable, Optional, cast
 from PySide6.QtCore import QByteArray, QFileInfo, QObject, QThread, QTimer, Qt, QSettings
 from PySide6.QtGui import QTextCursor
 from PySide6.QtWidgets import QHBoxLayout, QSplitter, QTreeView, QVBoxLayout, QWidget, QTabWidget
@@ -75,7 +75,7 @@ class Editor(QWidget):
         self.goal_view.setIndentation(0)
         self.goal_view.setModel(ProofStateModel())
         self.goal_view.setHeaderHidden(True)
-        # self.goal_view.clicked.connect(self.show_selected_formula)
+        self.goal_view.clicked.connect(self.show_selected_formula)
         self.tabs.addTab(self.goal_view, "Goals")
 
         self.error_view = QTreeView()
@@ -149,13 +149,15 @@ class Editor(QWidget):
             self.code_view.setTextCursor(cursor)
 
     def show_selected_formula(self) -> None:
-        model = self.error_view.model()
+        model = cast(ProofStateModel, self.goal_view.model())
         i = self.goal_view.currentIndex().row()
-        if isinstance(model, ProofStateModel) and model.proof_state != None:
-            if i >= 0 and i < model.num_formulas():
-                _, rule = model.formula_at_index(i)
-                self.lhs_view.set_graph(rule.lhs)
-                self.rhs_view.set_graph(rule.rhs)
+        if model.proof_state != None:
+            _, rule = model.formula_at_index(i)
+            self.lhs_view.set_graph(rule.lhs)
+            self.rhs_view.set_graph(rule.rhs)
+        else:
+            self.lhs_view.set_graph(Graph())
+            self.rhs_view.set_graph(Graph())
 
     def jump_to_error(self) -> None:
         model = self.error_view.model()
@@ -195,13 +197,14 @@ class Editor(QWidget):
         self.code_view.state_changed()
         if not part: return
 
-        # print(part.status)
+        proof_state_model = cast(ProofStateModel, self.goal_view.model())
 
         if isinstance(part, GraphPart) and part.name in self.state.graphs:
             if not part.layed_out:
                 convex_layout(part.graph)
                 part.layed_out = True
             self.rhs_view.setVisible(False)
+            proof_state_model.set_proof_state(None)
             self.lhs_view.set_graph(part.graph)
         elif isinstance(part, TwoGraphPart):
             lhs = part.lhs if part.lhs else Graph()
@@ -211,11 +214,28 @@ class Editor(QWidget):
                 convex_layout(rhs)
                 part.layed_out = True
 
+            proof_state_model.set_proof_state(None)
             self.rhs_view.setVisible(True)
             self.lhs_view.set_graph(lhs)
             self.rhs_view.set_graph(rhs)
+        elif isinstance(part, ProofStepPart):
+            if not part.layed_out and part.proof_state:
+                for g in part.proof_state.goals:
+                    convex_layout(g.formula.lhs)
+                    convex_layout(g.formula.rhs)
+                    for asm in g.assumptions.values():
+                        convex_layout(asm.lhs)
+                        convex_layout(asm.rhs)
+                part.layed_out = True
+            proof_state_model.set_proof_state(part.proof_state)
+            self.rhs_view.setVisible(True)
+            if part.proof_state and len(part.proof_state.goals) > 0:
+                goal_i = len(part.proof_state.goals[0].assumptions)
+                self.goal_view.setCurrentIndex(proof_state_model.index(goal_i, 0))
+            self.show_selected_formula()
         else:
             self.rhs_view.setVisible(False)
+            proof_state_model.set_proof_state(None)
             self.lhs_view.set_graph(Graph())
 
     def next_rewrite_at_cursor(self) -> None:
@@ -326,11 +346,13 @@ class CheckThread(QThread):
                 if proof_state:
                     p.check(proof_state)
                     proof_state = p.proof_state
-            elif isinstance(p, ProofTacticPart) and p.status == Part.UNCHECKED:
-                if proof_state and p.qed:
-                    st = Part.VALID if len(proof_state.goals) == 0 else Part.INVALID
-                    p.status = st
-                    if theorem_p: theorem_p.status = st
+            elif isinstance(p, ProofStepPart) and p.status == Part.UNCHECKED:
+                if proof_state:
+                    p.proof_state = proof_state
+                    if p.qed:
+                        st = Part.VALID if len(proof_state.goals) == 0 else Part.INVALID
+                        p.status = st
+                        if theorem_p: theorem_p.status = st
                         
         timer.stop()
 

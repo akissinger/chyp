@@ -38,7 +38,7 @@ GRAMMAR = Lark("""
     proof : proof_start proof_step* proof_end
     proof_start : "proof"
     proof_end: "qed"
-    proof_step : apply_tac | rewrite_pf
+    ?proof_step : apply_tac | rewrite_pf
     apply_tac : "apply" tactic
 
     type_term : type_element ("*" type_element)* | num

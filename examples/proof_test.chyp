@@ -1,10 +1,13 @@
 gen f : 1 -> 1
+gen g : 1 -> 1
 rule ff: f ; f = f
+rule gg: g ; g = g
 
 # apply-style proof
-theorem foo: f ; f; f = f
+theorem foo: f ; f; f ; f ; g = f ; g ; g
 proof
   apply simp(ff)
+  apply rule(-gg)
 qed
 
 # rewrite-style proof
