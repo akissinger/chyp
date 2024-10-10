@@ -36,7 +36,13 @@ class ProofStateModel(QAbstractItemModel):
         self.proof_state = proof_state
         self.endResetModel()
     
-    def rule_at_index(self, i: int) -> Tuple[str, Rule]:
+    def num_formulas(self) -> int:
+        if self.proof_state:
+            return sum(1+len(g.assumptions) for g in self.proof_state.goals)
+        else:
+            return 0
+
+    def formula_at_index(self, i: int) -> Tuple[str, Rule]:
         j = 0
         if self.proof_state:
             for g in self.proof_state.goals:
@@ -52,7 +58,7 @@ class ProofStateModel(QAbstractItemModel):
         """Overrides `QAbstractItemModel.data` to populate a view with errors"""
         if role == Qt.ItemDataRole.DisplayRole:
             if self.proof_state:
-                asm, rule = self.rule_at_index(index.row())
+                asm, rule = self.formula_at_index(index.row())
                 return f'{asm if asm != "" else " |-"} {rule_to_term(rule)}'
             return ""
         elif role == Qt.ItemDataRole.FontRole:
@@ -61,20 +67,20 @@ class ProofStateModel(QAbstractItemModel):
             return font
         elif role == Qt.ItemDataRole.ForegroundRole:
             if self.proof_state:
-                asm, _ = self.rule_at_index(index.row())
+                asm, _ = self.formula_at_index(index.row())
                 if asm != '':
                     return QBrush(QColor(current_theme()['fg_dim']))
             return QBrush(QColor(current_theme()['fg']))
         elif role == Qt.ItemDataRole.TextAlignmentRole:
             return Qt.AlignmentFlag.AlignTop
 
-    def headerData(self, section: int, orientation: Qt.Orientation, role: int=Qt.ItemDataRole.DisplayRole) -> Any:
-        """Overrides `QAbstractItemModel.headerData` to populate a view with column names"""
+    # def headerData(self, section: int, orientation: Qt.Orientation, role: int=Qt.ItemDataRole.DisplayRole) -> Any:
+    #     """Overrides `QAbstractItemModel.headerData` to populate a view with column names"""
 
-        if role == Qt.ItemDataRole.DisplayRole:
-            return "Goal"
-        else:
-            return None
+    #     if role == Qt.ItemDataRole.DisplayRole:
+    #         return "Goal"
+    #     else:
+    #         return None
 
     def index(self, row: int, column: int, parent: Union[QModelIndex, QPersistentModelIndex]=QModelIndex()) -> QModelIndex:
         """Construct a `QModelIndex` for the given row and column"""
@@ -90,7 +96,7 @@ class ProofStateModel(QAbstractItemModel):
         """The number of rows"""
         index = parent
         if self.proof_state and (not index or not index.isValid()):
-            return self.proof_state.num_formulas()
+            return self.num_formulas()
         else: return 0
 
     def parent(self, child: Any=None) -> Any:

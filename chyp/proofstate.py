@@ -11,6 +11,3 @@ class Goal:
 class ProofState:
     def __init__(self, goals: Optional[List[Goal]] = None):
         self.goals = goals if goals else []
-
-    def num_formulas(self) -> int:
-        return sum(1+len(g.assumptions) for g in self.goals)

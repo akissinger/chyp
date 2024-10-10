@@ -17,8 +17,7 @@ from __future__ import annotations
 from typing import Callable, Optional
 from PySide6.QtCore import QByteArray, QFileInfo, QObject, QThread, QTimer, Qt, QSettings
 from PySide6.QtGui import QTextCursor
-from PySide6.QtWidgets import QHBoxLayout, QSplitter, QTreeView, QVBoxLayout, QWidget
-
+from PySide6.QtWidgets import QHBoxLayout, QSplitter, QTreeView, QVBoxLayout, QWidget, QTabWidget
 
 from .. import parser
 from ..layout import convex_layout
@@ -27,6 +26,7 @@ from ..state import State, Part, RewritePart, RulePart, GraphPart, ImportPart, T
 
 from . import mainwindow
 from .errorlistmodel import ErrorListModel
+from .proofstatemodel import ProofStateModel
 from .graphview import GraphView
 from .codeview import CodeView
 from .document import ChypDocument
@@ -65,11 +65,22 @@ class Editor(QWidget):
 
         self.splitter.addWidget(self.code_view)
 
+        self.tabs = QTabWidget()
+        self.tabs.setTabPosition(QTabWidget.TabPosition.West)
+        self.splitter.addWidget(self.tabs)
+
+        self.goal_view = QTreeView()
+        self.goal_view.setIndentation(0)
+        self.goal_view.setModel(ProofStateModel())
+        self.goal_view.setHeaderHidden(True)
+        # self.goal_view.clicked.connect(self.show_selected_formula)
+        self.tabs.addTab(self.goal_view, "Goals")
+
         self.error_view = QTreeView()
         self.error_view.setIndentation(0)
         self.error_view.setModel(ErrorListModel())
         self.error_view.clicked.connect(self.jump_to_error)
-        self.splitter.addWidget(self.error_view)
+        self.tabs.addTab(self.error_view, "Errors")
 
         splitter_state = conf.value("editor_splitter_state")
         if splitter_state and isinstance(splitter_state, QByteArray): self.splitter.restoreState(splitter_state)
@@ -134,7 +145,16 @@ class Editor(QWidget):
             p1 = self.state.parts[i]
             cursor.setPosition(p1.end)
             self.code_view.setTextCursor(cursor)
-            
+
+    def show_selected_formula(self) -> None:
+        model = self.error_view.model()
+        i = self.goal_view.currentIndex().row()
+        if isinstance(model, ProofStateModel) and model.proof_state != None:
+            if i >= 0 and i < model.num_formulas():
+                _, rule = model.formula_at_index(i)
+                self.lhs_view.set_graph(rule.lhs)
+                self.rhs_view.set_graph(rule.rhs)
+
     def jump_to_error(self) -> None:
         model = self.error_view.model()
         window = self.window()

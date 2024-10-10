@@ -42,7 +42,9 @@ class ErrorListModel(QAbstractItemModel):
             else:
                 return self.errors[index.row()][index.column()] 
         elif role == Qt.ItemDataRole.FontRole:
-            return QFont("monospace", 12)
+            font = QFont("Cascadia Code", 12)
+            font.setStyleHint(QFont.StyleHint.TypeWriter)
+            return font
         elif role == Qt.ItemDataRole.TextAlignmentRole:
             return Qt.AlignmentFlag.AlignTop
 

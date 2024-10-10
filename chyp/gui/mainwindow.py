@@ -260,7 +260,7 @@ class MainWindow(QMainWindow):
                 self.open(f)
 
 
-    def closeEvent(self, e: QCloseEvent) -> None:
+    def closeEvent(self, event: QCloseEvent) -> None:
         conf = QSettings('chyp', 'chyp')
         conf.setValue("editor_window_geometry", self.saveGeometry())
 
@@ -274,12 +274,12 @@ class MainWindow(QMainWindow):
             w = self.tabs.widget(0)
             if isinstance(w, editor.Editor):
                 if not self.close_tab(w):
-                    e.ignore()
+                    event.ignore()
                     return
             else:
                 raise RuntimeError("Unexpected widget in tab list")
 
-        e.accept()
+        event.accept()
 
     def build_menu(self) -> None:
         menu = QMenuBar()
