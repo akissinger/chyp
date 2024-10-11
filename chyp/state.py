@@ -16,7 +16,7 @@
 from __future__ import annotations
 
 import os.path
-from typing import Any, Dict, List, Literal, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 import lark
 from lark import v_args
 from lark.tree import Meta
@@ -24,13 +24,9 @@ from lark.tree import Meta
 
 
 from . import parser
-from .graph import Graph, GraphError, gen, perm, identity, redistributer, VType
+from .graph import Graph, GraphError, gen, perm, identity, redistributer
 from .rule import Rule, RuleError
 from .proofstate import ProofState
-from .tactic import Tactic
-from .tactic.simptac import SimpTac
-from .tactic.ruletac import RuleTac
-from .tactic.rewritetac import RewriteTac
 
 # Structure represents an atomic "Part" of a theory document. It has a start/end index used for highlighting and
 # to detect if the cursor is currently inside of it, as well as a name (usually used for depecting associated graphs),
@@ -47,13 +43,13 @@ class Part:
         self.line = line
         self.name = name
         self.status = Part.UNCHECKED
+        self.layed_out = False
         self.index = -1
 
 class GraphPart(Part):
     def __init__(self, start: int, end: int, line: int, name: str, graph: Graph):
         Part.__init__(self, start, end, line, name)
         self.graph = graph
-        self.layed_out = False
 
 class LetPart(GraphPart): pass
 class GenPart(GraphPart): pass
@@ -63,7 +59,6 @@ class TwoGraphPart(Part):
         Part.__init__(self, start, end, line, name)
         self.lhs = lhs
         self.rhs = rhs
-        self.layed_out = False
 
 class RulePart(TwoGraphPart):
     def __init__(self, start: int, end: int, line: int, rule: Rule):
@@ -88,32 +83,9 @@ class RewritePart(TwoGraphPart):
         self.term_pos = term_pos
         self.lhs = lhs
         self.rhs = rhs
-        self.layed_out = False
         self.tactic = tactic
         self.tactic_args = [] if tactic_args is None else tactic_args
         self.stub = stub
-
-    def check(self, state: State) -> None:
-        pass
-        # t: Tactic
-        # if self.tactic == 'rule':
-        #     t = RuleTac(self, state, self.tactic_args)
-        # elif self.tactic == 'simp':
-        #     t = SimpTac(self, state, self.tactic_args)
-        # else:
-        #     t = Tactic(self, state, self.tactic_args)
-        # t.run_check()
-    
-    def next_rhs(self, state: State, term: str) -> Optional[str]:
-        pass
-        # t: Tactic
-        # if self.tactic == 'rule':
-        #     t = RuleTac(self, state, self.tactic_args)
-        # elif self.tactic == 'simp':
-        #     t = SimpTac(self, state, self.tactic_args)
-        # else:
-        #     t = Tactic(self, state, self.tactic_args)
-        # return t.next_rhs(term)
 
 class TheoremPart(TwoGraphPart):
     def __init__(self,
@@ -136,13 +108,7 @@ class ProofStepPart(Part):
                  qed: bool):
         Part.__init__(self, start, end, line, name)
         self.proof_state = None
-        self.layed_out = False
         self.qed = qed
-    
-    def check(self, init_proof_state: ProofState) -> None:
-        self.proof_state = init_proof_state
-        if self.proof_state:
-            self.status = Part.VALID
 
 class ProofTacticPart(ProofStepPart):
     def __init__(self,
@@ -157,22 +123,6 @@ class ProofTacticPart(ProofStepPart):
         self.sequence = sequence
         self.tactic = tactic
         self.tactic_args = [] if tactic_args is None else tactic_args
-
-    def check(self, init_proof_state: ProofState) -> None:
-        self.layed_out = False
-        self.proof_state = init_proof_state.snapshot(self)
-        t: Tactic
-        if self.tactic == 'rule':
-            t = RuleTac(self.proof_state, self.tactic_args)
-        elif self.tactic == 'simp':
-            t = SimpTac(self.proof_state, self.tactic_args)
-        else:
-            t = Tactic(self.proof_state, self.tactic_args)
-        self.status = Part.CHECKING
-        if t.run():
-            self.status = Part.VALID
-        else:
-            self.status = Part.INVALID
 
 class ProofRewritePart(ProofStepPart):
     def __init__(self,
@@ -193,31 +143,6 @@ class ProofRewritePart(ProofStepPart):
         self.side = side
         self.tactic = tactic
         self.tactic_args = [] if tactic_args is None else tactic_args
-
-    def check(self, init_proof_state: ProofState) -> None:
-        self.layed_out = False
-        self.proof_state = init_proof_state.snapshot(self)
-        t: Tactic
-        if self.tactic == 'rule':
-            t = RuleTac(self.proof_state, self.tactic_args)
-        elif self.tactic == 'simp':
-            t = SimpTac(self.proof_state, self.tactic_args)
-        else:
-            t = Tactic(self.proof_state, self.tactic_args)
-
-        num_goals = self.proof_state.num_goals()
-        self.status = Part.CHECKING
-
-        # run RewriteTac, which will generate a new subgoal
-        RewriteTac(self.proof_state, [self.side], self.term).run()
-
-        # run the sub-tactic and check it has closed the new goal
-        if t.run() and num_goals == self.proof_state.num_goals():
-            # try and close the current goal, if it has now been trivialised
-            self.proof_state.try_close_goal()
-            self.status = Part.VALID
-        else:
-            self.status = Part.INVALID
 
 class ImportPart(Part): pass
 

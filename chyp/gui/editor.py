@@ -21,10 +21,10 @@ from PySide6.QtWidgets import QHBoxLayout, QSplitter, QTreeView, QVBoxLayout, QW
 
 
 from .. import parser
+from .. import checker
 from ..layout import convex_layout
 from ..graph import Graph
 from ..state import ProofStepPart, State, Part, RewritePart, GraphPart, ImportPart, TheoremPart, TwoGraphPart, ProofTacticPart
-from ..proofstate import Goal, ProofState
 
 from . import mainwindow
 from .errorlistmodel import ErrorListModel
@@ -317,42 +317,19 @@ class CheckThread(QThread):
 
         state = parser.parse(self.editor.code, self.editor.doc.file_name)
         state.revision = self.revision
+        if state.revision != self.editor.revision: return
 
-        if self.revision != self.editor.revision: return
-
-        # TODO: support for incremental checking of parts
-        # pos = 0
-        # for i in range(len(code)):
-        #     if i >= len(self.code) or code[i] != self.code[i]:
-        #         pos = i
-        #         break
-        # state.copy_state_until(self.state, pos)
+        def update_gui() -> None:
+            self.editor.show_at_cursor()
+        def gui_revision() -> int:
+            return self.editor.revision
 
         self.editor.set_state(state)
         timer = QTimer()
         timer.setInterval(200)
-        def f() -> None:
-            self.editor.show_at_cursor()
-        timer.timeout.connect(f)
+        timer.timeout.connect(update_gui)
         timer.start()
-        current_proof_state = None
-        current_theorem_part = None
-        for p in state.parts:
-            if self.revision != self.editor.revision: break
-            if isinstance(p, TheoremPart) and p.status == Part.UNCHECKED:
-                p.status = Part.CHECKING
-                current_proof_state = ProofState(state, p.sequence, [Goal(p.formula)])
-                current_theorem_part = p
-            elif isinstance(p, ProofStepPart) and p.status == Part.UNCHECKED:
-                if current_proof_state:
-                    p.check(current_proof_state)
-                    current_proof_state = p.proof_state
-                    if p.qed:
-                        st = Part.VALID if current_proof_state and len(current_proof_state.goals) == 0 else Part.INVALID
-                        p.status = st
-                        if current_theorem_part:
-                            current_theorem_part.status = st
-                        
+        checker.check(state, gui_revision)
         timer.stop()
 
 # class UpdateStateThread(QThread):
