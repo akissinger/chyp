@@ -72,30 +72,32 @@ def check(state: State, get_revision: Callable[[],int]) -> None:
 
         elif isinstance(p, RewritePart):
             p.layed_out = False
+            proof_state = None
             if current_proof_state:
-                p.proof_state = current_proof_state.snapshot(p)
-                if p.proof_state.num_goals() > 0:
-                    if   p.side == 'LHS': p.lhs = p.proof_state.lhs()
-                    elif p.side == 'RHS': p.lhs = p.proof_state.rhs()
+                proof_state = current_proof_state.snapshot(p)
+                p.proof_state = proof_state
+                if proof_state.num_goals() > 0:
+                    if   p.side == 'LHS': p.lhs = proof_state.lhs()
+                    elif p.side == 'RHS': p.lhs = proof_state.rhs()
             elif p.lhs:
                 rhs = p.rhs if p.rhs else p.lhs
-                p.proof_state = ProofState(state,
-                                           p.sequence,
-                                           [Goal(Rule(p.lhs, rhs))])
-                p.proof_state.line = p.line
+                proof_state = ProofState(state,
+                                         p.sequence,
+                                         [Goal(Rule(p.lhs, rhs))])
+                proof_state.line = p.line
 
-            if p.proof_state:
-                t = get_tactic(p.proof_state, p.tactic, p.tactic_args)
+            if proof_state:
+                t = get_tactic(proof_state, p.tactic, p.tactic_args)
                 p.status = Part.CHECKING
 
                 if p.side and p.rhs:
-                    if p.side == 'LHS': p.proof_state.replace_lhs(p.rhs)
-                    else: p.proof_state.replace_rhs(p.rhs)
+                    if p.side == 'LHS': proof_state.replace_lhs(p.rhs)
+                    else: proof_state.replace_rhs(p.rhs)
 
-                num_goals = p.proof_state.num_goals()
+                num_goals = proof_state.num_goals()
                 if t.run():
-                    if p.proof_state.num_goals() < num_goals:
-                        p.proof_state.try_close_goal()
+                    if proof_state.num_goals() < num_goals:
+                        proof_state.try_close_goal()
                         p.status = Part.VALID
                     else:
                         p.status = Part.INVALID

@@ -36,9 +36,9 @@ GRAMMAR = Lark("""
     proof : proof_start proof_step* proof_end
     proof_start : "proof"
     proof_end: "qed"
-    ?proof_step : apply_tac | rewrite_tac
+    ?proof_step : apply_tac | rewrite_in_proof
     apply_tac : "apply" tactic
-    rewrite_tac : "rewrite" (LHS | RHS) rewrite_part*
+    rewrite_in_proof : "rewrite" (LHS | RHS) rewrite_part*
     LHS : "LHS"
     RHS : "RHS"
 

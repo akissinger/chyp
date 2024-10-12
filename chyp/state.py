@@ -76,14 +76,16 @@ class TheoremPart(TwoGraphPart):
         self.sequence = sequence
         self.formula = formula
 
-class ProofStepPart(Part):
+class ProofStepPart(TwoGraphPart):
     proof_state: Optional[ProofState]
     def __init__(self,
                  start: int,
                  end: int,
                  line: int,
-                 name: str):
-        Part.__init__(self, start, end, line, name)
+                 name: str,
+                 lhs: Optional[Graph]=None,
+                 rhs: Optional[Graph]=None):
+        TwoGraphPart.__init__(self, start, end, line, name, lhs, rhs)
         self.proof_state = None
 
 class ProofStartPart(ProofStepPart): pass
@@ -117,11 +119,9 @@ class RewritePart(ProofStepPart):
                  tactic: str='',
                  tactic_args: Optional[List[str]] = None,
                  stub: bool = False):
-        ProofStepPart.__init__(self, start, end, line, name)
+        ProofStepPart.__init__(self, start, end, line, name, lhs, rhs)
         self.sequence = sequence
         self.term_pos = term_pos
-        self.lhs = lhs
-        self.rhs = rhs
         self.side = side
         self.tactic = tactic
         self.tactic_args = [] if tactic_args is None else tactic_args
@@ -555,7 +555,7 @@ class State(lark.Transformer):
                                       tactic_args=args))
 
     @v_args(meta=True)
-    def rewrite_tac(self, meta: Meta, items: List[Any]) -> None:
+    def rewrite_in_proof(self, meta: Meta, items: List[Any]) -> None:
         name = ''
         side = items[0]
 

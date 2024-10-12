@@ -223,30 +223,7 @@ class Editor(QWidget):
             self.update_proof_state(None)
             self.rhs_view.setVisible(False)
             self.lhs_view.set_graph(part.graph)
-        elif isinstance(part, TwoGraphPart):
-            lhs = part.lhs if part.lhs else Graph()
-            rhs = part.rhs if part.rhs else Graph()
-            if not part.layed_out:
-                convex_layout(lhs)
-                convex_layout(rhs)
-                part.layed_out = True
-
-            self.update_proof_state(None)
-            self.rhs_view.setVisible(True)
-            self.lhs_view.set_graph(lhs)
-            self.rhs_view.set_graph(rhs)
-        elif isinstance(part, RewritePart) and part.lhs:
-            lhs = part.lhs
-            rhs = part.rhs if part.rhs else Graph()
-            if not part.layed_out:
-                convex_layout(lhs)
-                convex_layout(rhs)
-
-            self.update_proof_state(None)
-            self.rhs_view.setVisible(True)
-            self.lhs_view.set_graph(lhs)
-            self.rhs_view.set_graph(rhs)
-        elif isinstance(part, ProofStepPart):
+        elif isinstance(part, ProofStepPart) and part.proof_state:
             if not part.layed_out and part.proof_state:
                 for g in part.proof_state.goals:
                     convex_layout(g.formula.lhs)
@@ -259,6 +236,18 @@ class Editor(QWidget):
             self.update_proof_state(part.proof_state, part.status)
             self.rhs_view.setVisible(True)
             self.show_selected_formula()
+        elif isinstance(part, TwoGraphPart):
+            lhs = part.lhs if part.lhs else Graph()
+            rhs = part.rhs if part.rhs else Graph()
+            if not part.layed_out:
+                convex_layout(lhs)
+                convex_layout(rhs)
+                part.layed_out = True
+
+            self.update_proof_state(None)
+            self.rhs_view.setVisible(True)
+            self.lhs_view.set_graph(lhs)
+            self.rhs_view.set_graph(rhs)
         else:
             self.update_proof_state(None)
             self.rhs_view.setVisible(False)
