@@ -16,119 +16,16 @@
 from __future__ import annotations
 
 import os.path
-from typing import Any, Dict, List, Literal, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 import lark
 from lark import v_args
 from lark.tree import Meta
-
-
 
 from . import parser
 from .graph import Graph, GraphError, gen, perm, identity, redistributer
 from .rule import Rule, RuleError
 from .proofstate import ProofState
-
-# Structure represents an atomic "Part" of a theory document. It has a start/end index used for highlighting and
-# to detect if the cursor is currently inside of it, as well as a name (usually used for depecting associated graphs),
-# and a status for showing good/bad results of checking proof steps.
-class Part:
-    UNCHECKED = 0
-    CHECKING = 1
-    VALID = 2
-    INVALID = 3
-
-    def __init__(self, start: int, end: int, line: int, name: str):
-        self.start = start
-        self.end = end
-        self.line = line
-        self.name = name
-        self.status = Part.UNCHECKED
-        self.layed_out = False
-        self.index = -1
-
-class GraphPart(Part):
-    def __init__(self, start: int, end: int, line: int, name: str, graph: Graph):
-        Part.__init__(self, start, end, line, name)
-        self.graph = graph
-
-class LetPart(GraphPart): pass
-class GenPart(GraphPart): pass
-
-class TwoGraphPart(Part):
-    def __init__(self, start: int, end: int, line: int, name: str, lhs: Optional[Graph]=None, rhs: Optional[Graph]=None):
-        Part.__init__(self, start, end, line, name)
-        self.lhs = lhs
-        self.rhs = rhs
-
-class RulePart(TwoGraphPart):
-    def __init__(self, start: int, end: int, line: int, rule: Rule):
-        TwoGraphPart.__init__(self, start, end, line, rule.name, rule.lhs, rule.rhs)
-        self.rule = rule
-
-class TheoremPart(TwoGraphPart):
-    def __init__(self,
-                 start: int,
-                 end: int,
-                 line: int,
-                 formula: Rule,
-                 sequence: int):
-        TwoGraphPart.__init__(self, start, end, line, formula.name, formula.lhs, formula.rhs)
-        self.sequence = sequence
-        self.formula = formula
-
-class ProofStepPart(TwoGraphPart):
-    proof_state: Optional[ProofState]
-    def __init__(self,
-                 start: int,
-                 end: int,
-                 line: int,
-                 name: str,
-                 lhs: Optional[Graph]=None,
-                 rhs: Optional[Graph]=None):
-        TwoGraphPart.__init__(self, start, end, line, name, lhs, rhs)
-        self.proof_state = None
-
-class ProofStartPart(ProofStepPart): pass
-class ProofQedPart(ProofStepPart): pass
-
-class ApplyTacticPart(ProofStepPart):
-    def __init__(self,
-                 start: int,
-                 end: int,
-                 line: int,
-                 name: str,
-                 sequence: int,
-                 tactic: str='',
-                 tactic_args: Optional[List[str]] = None):
-        ProofStepPart.__init__(self, start, end, line, name)
-        self.sequence = sequence
-        self.tactic = tactic
-        self.tactic_args = [] if tactic_args is None else tactic_args
-
-class RewritePart(ProofStepPart):
-    def __init__(self,
-                 start: int,
-                 end: int,
-                 line: int,
-                 name: str,
-                 sequence: int,
-                 term_pos: Tuple[int,int]=(0,0),
-                 side: Optional[Literal['LHS', 'RHS']]=None,
-                 lhs: Optional[Graph]=None,
-                 rhs: Optional[Graph]=None,
-                 tactic: str='',
-                 tactic_args: Optional[List[str]] = None,
-                 stub: bool = False):
-        ProofStepPart.__init__(self, start, end, line, name, lhs, rhs)
-        self.sequence = sequence
-        self.term_pos = term_pos
-        self.side = side
-        self.tactic = tactic
-        self.tactic_args = [] if tactic_args is None else tactic_args
-        self.stub = stub
-
-class ImportPart(Part): pass
-
+from .parts import *
 
 
 class State(lark.Transformer):
@@ -538,12 +435,12 @@ class State(lark.Transformer):
     @v_args(meta=True)
     def proof_start(self, meta: Meta, _: List[Any]) -> None:
         name = ''
-        self.add_part(ProofStartPart(meta.start_pos, meta.end_pos, meta.line, name))
+        self.add_part(ProofStartPart(meta.start_pos, meta.end_pos, meta.line, name, self.sequence))
 
     @v_args(meta=True)
     def proof_end(self, meta: Meta, _: List[Any]) -> None:
         name = ''
-        self.add_part(ProofQedPart(meta.start_pos, meta.end_pos, meta.line, name))
+        self.add_part(ProofQedPart(meta.start_pos, meta.end_pos, meta.line, name, self.sequence))
 
     @v_args(meta=True)
     def apply_tac(self, meta: Meta, items: List[Any]) -> None:

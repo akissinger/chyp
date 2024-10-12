@@ -1,22 +1,10 @@
 from typing import Callable, Optional
 
 from .rule import Rule
-from .state import ProofQedPart, ProofStartPart, State, Part, TheoremPart, ApplyTacticPart, RewritePart
+from .state import State
+from .parts import Part, ProofStartPart, ProofQedPart, TheoremPart, ApplyTacticPart, RewritePart
 from .proofstate import ProofState, Goal
-from .tactic import Tactic
-from .tactic.simptac import SimpTac
-from .tactic.ruletac import RuleTac
-
-def get_tactic(proof_state: ProofState, name: str, args: list[str]) -> Tactic:
-    if name == 'rule':
-        return RuleTac(proof_state, args)
-    elif name == 'simp':
-        return SimpTac(proof_state, args)
-    elif name == 'refl':
-        return Tactic(proof_state, args)
-    else:
-        proof_state.error('Unknown tactic: ' + name)
-        return Tactic(proof_state, args)
+from .tactic import get_tactic
 
 def next_rhs(state: State, part: RewritePart, term: str) -> Optional[str]:
     if not part.lhs: return None
@@ -30,11 +18,11 @@ def next_rhs(state: State, part: RewritePart, term: str) -> Optional[str]:
     return t.next_rhs(term)
 
 
-def check(state: State, get_revision: Callable[[],int]) -> None:
+def check(state: State, get_revision: Optional[Callable[[],int]]=None) -> None:
     current_proof_state = None
     current_theorem_part = None
     for p in state.parts:
-        if state.revision != get_revision(): break
+        if get_revision and state.revision != get_revision(): break
         if p.status != Part.UNCHECKED: continue
 
         if isinstance(p, TheoremPart):

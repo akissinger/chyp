@@ -216,14 +216,7 @@ class Editor(QWidget):
         self.code_view.state_changed()
         if not part: return
 
-        if isinstance(part, GraphPart) and part.name in self.state.graphs:
-            if not part.layed_out:
-                convex_layout(part.graph)
-                part.layed_out = True
-            self.update_proof_state(None)
-            self.rhs_view.setVisible(False)
-            self.lhs_view.set_graph(part.graph)
-        elif isinstance(part, ProofStepPart) and part.proof_state:
+        if isinstance(part, ProofStepPart) and part.proof_state:
             if not part.layed_out and part.proof_state:
                 for g in part.proof_state.goals:
                     convex_layout(g.formula.lhs)
@@ -232,10 +225,18 @@ class Editor(QWidget):
                         convex_layout(asm.lhs)
                         convex_layout(asm.rhs)
                 part.layed_out = True
-
             self.update_proof_state(part.proof_state, part.status)
             self.rhs_view.setVisible(True)
             self.show_selected_formula()
+
+        elif isinstance(part, GraphPart) and part.name in self.state.graphs:
+            if not part.layed_out:
+                convex_layout(part.graph)
+                part.layed_out = True
+            self.update_proof_state(None)
+            self.rhs_view.setVisible(False)
+            self.lhs_view.set_graph(part.graph)
+
         elif isinstance(part, TwoGraphPart):
             lhs = part.lhs if part.lhs else Graph()
             rhs = part.rhs if part.rhs else Graph()
@@ -243,11 +244,11 @@ class Editor(QWidget):
                 convex_layout(lhs)
                 convex_layout(rhs)
                 part.layed_out = True
-
             self.update_proof_state(None)
             self.rhs_view.setVisible(True)
             self.lhs_view.set_graph(lhs)
             self.rhs_view.set_graph(rhs)
+
         else:
             self.update_proof_state(None)
             self.rhs_view.setVisible(False)
@@ -260,7 +261,6 @@ class Editor(QWidget):
         pos = self.code_view.textCursor().position()
         part = self.state.part_at(pos)
         if part and isinstance(part, RewritePart):
-            # rw = self.state.rewrites[part.name][part.step]
             start, end = part.term_pos
             text = self.code_view.toPlainText()
             term = text[start:end]

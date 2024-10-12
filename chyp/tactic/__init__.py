@@ -15,16 +15,23 @@
 
 from __future__ import annotations
 from typing import Callable, Dict, Iterator, List, Optional, Set, Tuple
-import re
 
 from ..term import graph_to_term
 from ..graph import Graph
-from ..rewrite import dpo
-from ..rule import Rule
 from ..proofstate import ProofState
-from ..matcher import Match, match_rule, find_iso
-from .. import state
 
+def get_tactic(proof_state: ProofState, name: str, args: list[str]) -> Tactic:
+    from .ruletac import RuleTac
+    from .simptac import SimpTac
+    if name == 'rule':
+        return RuleTac(proof_state, args)
+    elif name == 'simp':
+        return SimpTac(proof_state, args)
+    elif name == 'refl':
+        return Tactic(proof_state, args)
+    else:
+        proof_state.error('Unknown tactic: ' + name)
+        return Tactic(proof_state, args)
 
 class Tactic:
     """The base class for all tactics
