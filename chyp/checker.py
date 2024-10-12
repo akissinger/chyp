@@ -5,7 +5,6 @@ from .proofstate import ProofState, Goal
 from .tactic import Tactic
 from .tactic.simptac import SimpTac
 from .tactic.ruletac import RuleTac
-from .tactic.rewritetac import RewriteTac
 
 def check(state: State, get_revision: Callable[[],int]) -> None:
     current_proof_state = None
@@ -33,7 +32,8 @@ def check(state: State, get_revision: Callable[[],int]) -> None:
 
                     if isinstance(p, ProofRewritePart):
                         num_goals = p.proof_state.num_goals()
-                        RewriteTac(p.proof_state, [p.side], p.term).run()
+                        if p.side == 'LHS': p.proof_state.replace_lhs(p.term)
+                        else: p.proof_state.replace_rhs(p.term)
                         if t.run():
                             if p.proof_state.num_goals() == num_goals:
                                 p.proof_state.try_close_goal()
