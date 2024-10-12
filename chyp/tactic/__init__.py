@@ -66,24 +66,23 @@ class Tactic:
     #     self.__goal_rhs = self.__local_state.rhs.copy() if self.__local_state.rhs else None
     #     # self.__goal_stack = []
 
-    # def next_rhs(self, current: str) -> Optional[str]:
-    #     self.__reset()
-    #     seen: Set[str] = set()
-    #     seen = set([current])
+    def next_rhs(self, current: str) -> Optional[str]:
+        seen: Set[str] = set()
+        seen = set([current])
 
-    #     found_prev = (current == '?')
-    #     next_term = None
-    #     for g in self.make_rhs():
-    #         t = graph_to_term(g)
-    #         if found_prev and not t in seen:
-    #             next_term = t
-    #             break
-    #         elif not next_term:
-    #             next_term = t
+        found_prev = (current == '?')
+        next_term = None
+        for g in self.make_rhs():
+            t = graph_to_term(g)
+            if found_prev and not t in seen:
+                next_term = t
+                break
+            elif not next_term:
+                next_term = t
 
-    #         seen.add(t)
-    #         found_prev = (current == t)
-    #     return next_term
+            seen.add(t)
+            found_prev = (current == t)
+        return next_term
 
     # tactics should override this method
     def name(self) -> str:

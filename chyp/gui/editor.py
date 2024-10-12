@@ -16,6 +16,7 @@
 from __future__ import annotations
 from typing import Callable, Optional, cast
 from PySide6.QtCore import QByteArray, QFileInfo, QObject, QThread, QTimer, Qt, QSettings
+from PySide6.QtGui import QTextCursor
 from PySide6.QtWidgets import QHBoxLayout, QSplitter, QTreeView, QVBoxLayout, QWidget, QTabWidget
 
 from .. import parser
@@ -274,16 +275,15 @@ class Editor(QWidget):
             start, end = part.term_pos
             text = self.code_view.toPlainText()
             term = text[start:end]
-            # TODO fix rewriting
-            # rw_term = part.next_rhs(self.state, term)
-            # if rw_term:
-            #     cursor = self.code_view.textCursor()
-            #     cursor.clearSelection()
-            #     cursor.setPosition(start)
-            #     cursor.setPosition(end, mode=QTextCursor.MoveMode.KeepAnchor)
+            rw_term = checker.next_rhs(part, term)
+            if rw_term:
+                cursor = self.code_view.textCursor()
+                cursor.clearSelection()
+                cursor.setPosition(start)
+                cursor.setPosition(end, mode=QTextCursor.MoveMode.KeepAnchor)
 
-            #     cursor.insertText(rw_term)
-            #     self.code_view.setTextCursor(cursor)
+                cursor.insertText(rw_term)
+                self.code_view.setTextCursor(cursor)
 
     def repeat_step_at_cursor(self) -> None:
         self.update_state()

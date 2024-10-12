@@ -28,6 +28,16 @@ class ProofState:
         self.context: Dict[str, Rule] = dict()
         self.errors: Set[str] = set()
         self.line = -1
+
+    def copy(self) -> ProofState:
+        goals = [g.copy() for g in self.goals]
+        context = { rn: r.copy() for rn, r in self.context.items() }
+        errors = self.errors.copy()
+        ps = ProofState(self.state, self.sequence, goals)
+        ps.line = self.line
+        ps.context = context
+        ps.errors = errors
+        return ps
     
     def snapshot(self, part: state.ProofStepPart) -> ProofState:
         goals = [g.copy() for g in self.goals]

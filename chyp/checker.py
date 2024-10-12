@@ -1,4 +1,4 @@
-from typing import Callable
+from typing import Callable, Optional
 
 from .rule import Rule
 from .state import ProofQedPart, ProofStartPart, State, Part, TheoremPart, ApplyTacticPart, RewritePart
@@ -17,6 +17,14 @@ def get_tactic(proof_state: ProofState, name: str, args: list[str]) -> Tactic:
     else:
         proof_state.error('Unknown tactic: ' + name)
         return Tactic(proof_state, args)
+
+def next_rhs(part: RewritePart, term: str) -> Optional[str]:
+    if part.proof_state:
+        proof_state = part.proof_state.copy()
+        t = get_tactic(proof_state, part.tactic, part.tactic_args)
+        return t.next_rhs(term)
+    return None
+
 
 def check(state: State, get_revision: Callable[[],int]) -> None:
     current_proof_state = None
@@ -59,12 +67,12 @@ def check(state: State, get_revision: Callable[[],int]) -> None:
             current_proof_state = p.proof_state
 
         elif isinstance(p, RewritePart):
-            if p.stub: continue
             p.layed_out = False
-            if p.lhs and p.rhs:
+            if p.lhs:
+                rhs = p.rhs if p.rhs else p.lhs
                 p.proof_state = ProofState(state,
                                            p.sequence,
-                                           [Goal(Rule(p.lhs, p.rhs))])
+                                           [Goal(Rule(p.lhs, rhs))])
                 p.proof_state.line = p.line
             elif current_proof_state:
                 p.proof_state = current_proof_state.snapshot(p)
