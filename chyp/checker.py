@@ -19,22 +19,15 @@ def get_tactic(proof_state: ProofState, name: str, args: list[str]) -> Tactic:
         return Tactic(proof_state, args)
 
 def next_rhs(state: State, part: RewritePart, term: str) -> Optional[str]:
-    if part.lhs:
-        # not in a proof, make a fake proof state to send to the tactic
-        proof_state = ProofState(state, part.sequence, [Goal(Rule(part.lhs, part.lhs))])
-    else:
-        # in a proof, take a copy of the prior proof state
-        p = state.parts[part.index-1] if part.index > 0 else None
-        if p and isinstance(p, RewritePart) and p.proof_state:
-            proof_state = p.proof_state.copy()
-        else:
-            proof_state = None
+    if not part.lhs: return None
 
-    if proof_state:
-        t = get_tactic(proof_state, part.tactic, part.tactic_args)
-        return t.next_rhs(term)
-    else:
-        return None
+    # make a fake proof state to send to the tactic
+    g = Goal(Rule(part.lhs, part.lhs))
+    if part.proof_state and part.proof_state.num_goals() > 0:
+        g.assumptions = { n : a.copy() for n,a in part.proof_state.goals[0].assumptions.items() }
+    proof_state = ProofState(state, part.sequence, [g])
+    t = get_tactic(proof_state, part.tactic, part.tactic_args)
+    return t.next_rhs(term)
 
 
 def check(state: State, get_revision: Callable[[],int]) -> None:
@@ -81,6 +74,9 @@ def check(state: State, get_revision: Callable[[],int]) -> None:
             p.layed_out = False
             if current_proof_state:
                 p.proof_state = current_proof_state.snapshot(p)
+                if p.proof_state.num_goals() > 0:
+                    if   p.side == 'LHS': p.lhs = p.proof_state.lhs()
+                    elif p.side == 'RHS': p.lhs = p.proof_state.rhs()
             elif p.lhs:
                 rhs = p.rhs if p.rhs else p.lhs
                 p.proof_state = ProofState(state,
