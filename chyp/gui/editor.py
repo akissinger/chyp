@@ -275,7 +275,7 @@ class Editor(QWidget):
             start, end = part.term_pos
             text = self.code_view.toPlainText()
             term = text[start:end]
-            rw_term = checker.next_rhs(part, term)
+            rw_term = checker.next_rhs(self.state, part, term)
             if rw_term:
                 cursor = self.code_view.textCursor()
                 cursor.clearSelection()

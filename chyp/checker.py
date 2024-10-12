@@ -18,12 +18,23 @@ def get_tactic(proof_state: ProofState, name: str, args: list[str]) -> Tactic:
         proof_state.error('Unknown tactic: ' + name)
         return Tactic(proof_state, args)
 
-def next_rhs(part: RewritePart, term: str) -> Optional[str]:
-    if part.proof_state:
-        proof_state = part.proof_state.copy()
+def next_rhs(state: State, part: RewritePart, term: str) -> Optional[str]:
+    if part.lhs:
+        # not in a proof, make a fake proof state to send to the tactic
+        proof_state = ProofState(state, part.sequence, [Goal(Rule(part.lhs, part.lhs))])
+    else:
+        # in a proof, take a copy of the prior proof state
+        p = state.parts[part.index-1] if part.index > 0 else None
+        if p and isinstance(p, RewritePart) and p.proof_state:
+            proof_state = p.proof_state.copy()
+        else:
+            proof_state = None
+
+    if proof_state:
         t = get_tactic(proof_state, part.tactic, part.tactic_args)
         return t.next_rhs(term)
-    return None
+    else:
+        return None
 
 
 def check(state: State, get_revision: Callable[[],int]) -> None:
@@ -68,34 +79,34 @@ def check(state: State, get_revision: Callable[[],int]) -> None:
 
         elif isinstance(p, RewritePart):
             p.layed_out = False
-            if p.lhs:
+            if current_proof_state:
+                p.proof_state = current_proof_state.snapshot(p)
+            elif p.lhs:
                 rhs = p.rhs if p.rhs else p.lhs
                 p.proof_state = ProofState(state,
                                            p.sequence,
                                            [Goal(Rule(p.lhs, rhs))])
                 p.proof_state.line = p.line
-            elif current_proof_state:
-                p.proof_state = current_proof_state.snapshot(p)
 
-            if not p.proof_state:
-                raise RuntimeError('Could not get ProofState for "rewrite"')
+            if p.proof_state:
+                t = get_tactic(p.proof_state, p.tactic, p.tactic_args)
+                p.status = Part.CHECKING
 
-            t = get_tactic(p.proof_state, p.tactic, p.tactic_args)
-            p.status = Part.CHECKING
+                if p.side and p.rhs:
+                    if p.side == 'LHS': p.proof_state.replace_lhs(p.rhs)
+                    else: p.proof_state.replace_rhs(p.rhs)
 
-            if p.side and p.rhs:
-                if p.side == 'LHS': p.proof_state.replace_lhs(p.rhs)
-                else: p.proof_state.replace_rhs(p.rhs)
-
-            num_goals = p.proof_state.num_goals()
-            if t.run():
-                if p.proof_state.num_goals() < num_goals:
-                    p.proof_state.try_close_goal()
-                    p.status = Part.VALID
+                num_goals = p.proof_state.num_goals()
+                if t.run():
+                    if p.proof_state.num_goals() < num_goals:
+                        p.proof_state.try_close_goal()
+                        p.status = Part.VALID
+                    else:
+                        p.status = Part.INVALID
                 else:
                     p.status = Part.INVALID
+
+                if current_proof_state:
+                    current_proof_state = p.proof_state
             else:
                 p.status = Part.INVALID
-
-            if current_proof_state:
-                current_proof_state = p.proof_state

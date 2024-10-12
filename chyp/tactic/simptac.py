@@ -43,6 +43,7 @@ class SimpTac(Tactic):
         return defs + rest
 
     def make_rhs(self) -> Iterator[Graph]:
+        if self.proof_state.num_goals() == 0: raise StopIteration()
         rules = self.__prepare_rules()
         bound = -1 if '+nobound' in self.args else 200
         self.repeat(self.proof_state.rewrite_lhs1, rules, bound_rhs=bound)
@@ -50,6 +51,7 @@ class SimpTac(Tactic):
         if lhs: yield lhs
 
     def run(self) -> bool:
+        if self.proof_state.num_goals() == 0: return False
         rules = self.__prepare_rules()
         bound = -1 if '+nobound' in self.args else 400
         self.repeat(self.proof_state.rewrite_lhs1, rules, bound_lhs=bound)

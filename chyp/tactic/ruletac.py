@@ -25,12 +25,12 @@ class RuleTac(Tactic):
         return 'rule'
 
     def make_rhs(self) -> Iterator[Graph]:
-        if len(self.args) == 0: raise StopIteration()
+        if len(self.args) == 0 or self.proof_state.num_goals() == 0: raise StopIteration()
         for _, m_rhs in self.proof_state.rewrite_lhs(self.args[0]):
             yield m_rhs.codomain
 
     def run(self) -> bool:
-        if len(self.args) == 0:
+        if len(self.args) == 0 or self.proof_state.num_goals() == 0:
             return False
 
         # apply a single rewrite rule in all possible ways

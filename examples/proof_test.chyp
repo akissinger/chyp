@@ -3,7 +3,6 @@ gen g : 1 -> 1
 rule ff: f ; f = f
 rule gg: g ; g = g
 
-
 # rewrite-only theorem
 rewrite rwfoo: f ; f ; f
   = f ; f by ff
