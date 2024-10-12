@@ -16,23 +16,23 @@
 from __future__ import annotations
 from typing import Callable, Optional, cast
 from PySide6.QtCore import QByteArray, QFileInfo, QObject, QThread, QTimer, Qt, QSettings
-from PySide6.QtGui import QTextCursor
 from PySide6.QtWidgets import QHBoxLayout, QSplitter, QTreeView, QVBoxLayout, QWidget, QTabWidget
-
 
 from .. import parser
 from .. import checker
 from ..layout import convex_layout
 from ..graph import Graph
-from ..state import ProofStepPart, State, Part, RewritePart, GraphPart, ImportPart, TheoremPart, TwoGraphPart, ProofTacticPart
+from ..state import Part, ProofStepPart, State, RewritePart, GraphPart, ImportPart, TwoGraphPart
+from .. import proofstate
 
 from . import mainwindow
+from .colors import current_theme
 from .errorlistmodel import ErrorListModel
 from .proofstatemodel import ProofStateModel
 from .graphview import GraphView
 from .codeview import CodeView
 from .document import ChypDocument
-from chyp import state
+# from .. import state
 
 class Editor(QWidget):
     def __init__(self) -> None:
@@ -189,6 +189,24 @@ class Editor(QWidget):
             sizes[2] = 0
         self.splitter.setSizes(sizes)
 
+    def update_proof_state(self, proof_state: Optional[proofstate.ProofState], status: int=Part.UNCHECKED) -> None:
+        proof_state_model = cast(ProofStateModel, self.goal_view.model())
+        proof_state_model.set_proof_state(proof_state)
+        if proof_state:
+            self.tabs.setTabText(0, f'Goals ({proof_state.num_goals()})')
+            if status == Part.VALID:
+                self.tabs.tabBar().setTabTextColor(0, current_theme()['fg_good'])
+            elif status == Part.INVALID:
+                self.tabs.tabBar().setTabTextColor(0, current_theme()['fg_bad'])
+            else:
+                self.tabs.tabBar().setTabTextColor(0, current_theme()['fg_button'])
+            if len(proof_state.goals) > 0:
+                goal_i = len(proof_state.goals[0].assumptions)
+                self.goal_view.setCurrentIndex(proof_state_model.index(goal_i, 0))
+        else:
+            self.tabs.setTabText(0, f'Goals')
+            self.tabs.tabBar().setTabTextColor(0, current_theme()['fg_button'])
+
     def show_at_cursor(self) -> None:
         if not self.parsed: return
         pos = self.code_view.textCursor().position()
@@ -197,14 +215,12 @@ class Editor(QWidget):
         self.code_view.state_changed()
         if not part: return
 
-        proof_state_model = cast(ProofStateModel, self.goal_view.model())
-
         if isinstance(part, GraphPart) and part.name in self.state.graphs:
             if not part.layed_out:
                 convex_layout(part.graph)
                 part.layed_out = True
+            self.update_proof_state(None)
             self.rhs_view.setVisible(False)
-            proof_state_model.set_proof_state(None)
             self.lhs_view.set_graph(part.graph)
         elif isinstance(part, TwoGraphPart):
             lhs = part.lhs if part.lhs else Graph()
@@ -214,7 +230,18 @@ class Editor(QWidget):
                 convex_layout(rhs)
                 part.layed_out = True
 
-            proof_state_model.set_proof_state(None)
+            self.update_proof_state(None)
+            self.rhs_view.setVisible(True)
+            self.lhs_view.set_graph(lhs)
+            self.rhs_view.set_graph(rhs)
+        elif isinstance(part, RewritePart) and part.lhs:
+            lhs = part.lhs
+            rhs = part.rhs if part.rhs else Graph()
+            if not part.layed_out:
+                convex_layout(lhs)
+                convex_layout(rhs)
+
+            self.update_proof_state(None)
             self.rhs_view.setVisible(True)
             self.lhs_view.set_graph(lhs)
             self.rhs_view.set_graph(rhs)
@@ -227,15 +254,13 @@ class Editor(QWidget):
                         convex_layout(asm.lhs)
                         convex_layout(asm.rhs)
                 part.layed_out = True
-            proof_state_model.set_proof_state(part.proof_state)
+
+            self.update_proof_state(part.proof_state, part.status)
             self.rhs_view.setVisible(True)
-            if part.proof_state and len(part.proof_state.goals) > 0:
-                goal_i = len(part.proof_state.goals[0].assumptions)
-                self.goal_view.setCurrentIndex(proof_state_model.index(goal_i, 0))
             self.show_selected_formula()
         else:
+            self.update_proof_state(None)
             self.rhs_view.setVisible(False)
-            proof_state_model.set_proof_state(None)
             self.lhs_view.set_graph(Graph())
 
     def next_rewrite_at_cursor(self) -> None:
@@ -249,19 +274,16 @@ class Editor(QWidget):
             start, end = part.term_pos
             text = self.code_view.toPlainText()
             term = text[start:end]
-            rw_term = part.next_rhs(self.state, term)
+            # TODO fix rewriting
+            # rw_term = part.next_rhs(self.state, term)
+            # if rw_term:
+            #     cursor = self.code_view.textCursor()
+            #     cursor.clearSelection()
+            #     cursor.setPosition(start)
+            #     cursor.setPosition(end, mode=QTextCursor.MoveMode.KeepAnchor)
 
-            if rw_term:
-                cursor = self.code_view.textCursor()
-                cursor.clearSelection()
-                cursor.setPosition(start)
-                cursor.setPosition(end, mode=QTextCursor.MoveMode.KeepAnchor)
-
-                # self.blockSignals(True)
-                cursor.insertText(rw_term)
-                self.code_view.setTextCursor(cursor)
-                # self.blockSignals(False)
-                # self.update_state()
+            #     cursor.insertText(rw_term)
+            #     self.code_view.setTextCursor(cursor)
 
     def repeat_step_at_cursor(self) -> None:
         self.update_state()
@@ -287,14 +309,20 @@ class Editor(QWidget):
             if isinstance(model, ErrorListModel):
                 model.set_errors(self.state.errors)
 
-            if len(self.state.errors) == 0:
+            num_errors = len(self.state.errors)
+            if num_errors == 0:
                 self.parsed = True
                 self.code_view.set_completions(self.state.rules.keys())
                 self.show_at_cursor()
+                self.tabs.setTabText(1, 'Errors')
+                self.tabs.tabBar().setTabTextColor(1, current_theme()['fg_button'])
+            else:
+                self.tabs.setTabText(1, f'Errors ({num_errors})')
+                self.tabs.tabBar().setTabTextColor(1, current_theme()['fg_bad'])
         self.show_at_cursor()
-        check = CheckThread(self.revision, self)
-        check.finished.connect(f)
-        check.start()
+        update = UpdateThread(self.revision, self)
+        update.finished.connect(f)
+        update.start()
 
         
 
@@ -305,7 +333,7 @@ class Editor(QWidget):
         else:
             return ''
 
-class CheckThread(QThread):
+class UpdateThread(QThread):
     def __init__(self, revision: int, parent: Optional[QObject] = None) -> None:
         super().__init__(parent)
         self.revision = revision
@@ -332,12 +360,3 @@ class CheckThread(QThread):
         checker.check(state, gui_revision)
         timer.stop()
 
-# class UpdateStateThread(QThread):
-#     def __init__(self, state: State, code: str, parent: Optional[QObject] = None) -> None:
-#         super().__init__(parent)
-#         self.state = state
-#         self.code = code
-
-#     def run(self) -> None:
-#         self.msleep(300)
-#         self.state.update(self.code)

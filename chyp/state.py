@@ -16,7 +16,7 @@
 from __future__ import annotations
 
 import os.path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Literal, Optional, Tuple
 import lark
 from lark import v_args
 from lark.tree import Meta
@@ -65,28 +65,6 @@ class RulePart(TwoGraphPart):
         TwoGraphPart.__init__(self, start, end, line, rule.name, rule.lhs, rule.rhs)
         self.rule = rule
 
-class RewritePart(TwoGraphPart):
-    def __init__(self,
-                 start: int,
-                 end: int,
-                 line: int,
-                 name: str,
-                 sequence: int,
-                 term_pos: Tuple[int,int] = (0,0),
-                 tactic: str='',
-                 tactic_args: Optional[List[str]] = None,
-                 lhs: Optional[Graph]=None,
-                 rhs: Optional[Graph]=None,
-                 stub: bool=False):
-        TwoGraphPart.__init__(self, start, end, line, name, lhs, rhs)
-        self.sequence = sequence
-        self.term_pos = term_pos
-        self.lhs = lhs
-        self.rhs = rhs
-        self.tactic = tactic
-        self.tactic_args = [] if tactic_args is None else tactic_args
-        self.stub = stub
-
 class TheoremPart(TwoGraphPart):
     def __init__(self,
                  start: int,
@@ -104,13 +82,14 @@ class ProofStepPart(Part):
                  start: int,
                  end: int,
                  line: int,
-                 name: str,
-                 qed: bool):
+                 name: str):
         Part.__init__(self, start, end, line, name)
         self.proof_state = None
-        self.qed = qed
 
-class ProofTacticPart(ProofStepPart):
+class ProofStartPart(ProofStepPart): pass
+class ProofQedPart(ProofStepPart): pass
+
+class ApplyTacticPart(ProofStepPart):
     def __init__(self,
                  start: int,
                  end: int,
@@ -119,30 +98,34 @@ class ProofTacticPart(ProofStepPart):
                  sequence: int,
                  tactic: str='',
                  tactic_args: Optional[List[str]] = None):
-        ProofStepPart.__init__(self, start, end, line, name, False)
+        ProofStepPart.__init__(self, start, end, line, name)
         self.sequence = sequence
         self.tactic = tactic
         self.tactic_args = [] if tactic_args is None else tactic_args
 
-class ProofRewritePart(ProofStepPart):
+class RewritePart(ProofStepPart):
     def __init__(self,
                  start: int,
                  end: int,
                  line: int,
                  name: str,
                  sequence: int,
-                 term_pos: Tuple[int,int],
-                 term: Graph,
-                 side: str='LHS',
+                 term_pos: Tuple[int,int]=(0,0),
+                 side: Optional[Literal['LHS', 'RHS']]=None,
+                 lhs: Optional[Graph]=None,
+                 rhs: Optional[Graph]=None,
                  tactic: str='',
-                 tactic_args: Optional[List[str]] = None):
-        ProofStepPart.__init__(self, start, end, line, name, False)
+                 tactic_args: Optional[List[str]] = None,
+                 stub: bool = False):
+        ProofStepPart.__init__(self, start, end, line, name)
         self.sequence = sequence
         self.term_pos = term_pos
-        self.term = term
+        self.lhs = lhs
+        self.rhs = rhs
         self.side = side
         self.tactic = tactic
         self.tactic_args = [] if tactic_args is None else tactic_args
+        self.stub = stub
 
 class ImportPart(Part): pass
 
@@ -381,6 +364,7 @@ class State(lark.Transformer):
 
     @v_args(meta=True)
     def rule(self, meta: Meta, items: List[Any]) -> None:
+        self.sequence += 1
         name, lhs, invertible, rhs = items
         if not name in self.rules:
             if lhs and rhs:
@@ -390,7 +374,6 @@ class State(lark.Transformer):
                     else:
                         rule = Rule(lhs, rhs, name)
                         self.rules[name] = rule
-                        self.sequence += 1
                         self.rule_sequence[name] = self.sequence
                         self.add_part(RulePart(meta.start_pos, meta.end_pos, meta.line, rule))
                 except RuleError as e:
@@ -400,6 +383,7 @@ class State(lark.Transformer):
 
     @v_args(meta=True)
     def def_statement(self, meta: Meta, items: List[Any]) -> None:
+        self.sequence += 1
         name = items[0]
         graph = items[1]
         (fg, bg) = items[2] if items[2] else ('', '')
@@ -415,7 +399,6 @@ class State(lark.Transformer):
                     self.graphs[name] = lhs
                     rule = Rule(lhs, graph, rule_name)
                     self.rules[rule_name] = rule
-                    self.sequence += 1
                     self.rule_sequence[rule_name] = self.sequence
                     self.add_part(RulePart(meta.start_pos, meta.end_pos, meta.line, rule))
                 else:
@@ -474,6 +457,7 @@ class State(lark.Transformer):
 
     @v_args(meta=True)
     def rewrite(self, meta: Meta, items: List[Any]) -> None:
+        self.sequence += 1
         converse = True if items[0] else False
         base_name = items[1]
         name = '-' + base_name if converse else base_name
@@ -482,7 +466,10 @@ class State(lark.Transformer):
         rw_parts = items[3:]
 
         if len(rw_parts) == 0:
-            self.add_part(RewritePart(meta.start_pos, meta.end_pos, meta.line, name, self.sequence, stub=True))
+            self.add_part(RewritePart(meta.start_pos, meta.end_pos, meta.line, name,
+                                      sequence=self.sequence,
+                                      lhs=term,
+                                      stub=True))
         else:
             start = meta.start_pos
             lhs = term
@@ -507,15 +494,6 @@ class State(lark.Transformer):
                     if converse:
                         # TODO non-invertible rules
                         self.errors.append((self.file_name, meta.line, "Non-invertible rules currently not supported: " + base_name))
-                        # if base_name in self.rules:
-                        #     self.rules[base_name].equiv = True
-
-                        #     # TODO: this will stop the <= version of the rule from being usable before the converse is
-                        #     # proven. While this is sound and workable, it might confuse people.
-                        #     self.sequence += 1
-                        #     self.rule_sequence[base_name] = self.sequence
-                        # else:
-                        #     self.errors.append((self.file_name, meta.line, "Trying to prove converse for unknown rule: " + base_name))
                     else:
                         if not name in self.rules:
                             rule = Rule(term.copy(), rhs.copy(), name=name)
@@ -523,7 +501,6 @@ class State(lark.Transformer):
                             rule.lhs.unhighlight()
                             rule.rhs.unhighlight()
                             self.rules[name] = rule
-                            self.sequence += 1
                             self.rule_sequence[name] = self.sequence
                         else:
                             self.errors.append((self.file_name, meta.line, "Rule '{}' already defined.".format(name)))
@@ -548,11 +525,11 @@ class State(lark.Transformer):
 
     @v_args(meta=True)
     def theorem(self, meta: Meta, items: List[Any]) -> None:
+        self.sequence += 1
         name = items[0]
         (lhs,rhs) = items[1]
         try:
             rule = Rule(lhs, rhs, name)
-            self.sequence += 1
             self.rule_sequence[name] = self.sequence
             self.add_part(TheoremPart(meta.start_pos, meta.end_pos, meta.line, rule, self.sequence))
         except RuleError as e:
@@ -561,18 +538,18 @@ class State(lark.Transformer):
     @v_args(meta=True)
     def proof_start(self, meta: Meta, _: List[Any]) -> None:
         name = ''
-        self.add_part(ProofStepPart(meta.start_pos, meta.end_pos, meta.line, name, False))
+        self.add_part(ProofStartPart(meta.start_pos, meta.end_pos, meta.line, name))
 
     @v_args(meta=True)
     def proof_end(self, meta: Meta, _: List[Any]) -> None:
         name = ''
-        self.add_part(ProofStepPart(meta.start_pos, meta.end_pos, meta.line, name, True))
+        self.add_part(ProofQedPart(meta.start_pos, meta.end_pos, meta.line, name))
 
     @v_args(meta=True)
     def apply_tac(self, meta: Meta, items: List[Any]) -> None:
         name = ''
         tactic, args = items[0]
-        self.add_part(ProofTacticPart(meta.start_pos, meta.end_pos, meta.line, name,
+        self.add_part(ApplyTacticPart(meta.start_pos, meta.end_pos, meta.line, name,
                                       sequence=self.sequence,
                                       tactic=tactic,
                                       tactic_args=args))
@@ -585,13 +562,13 @@ class State(lark.Transformer):
         start = meta.start_pos
         for step in items[1:]:
             line, end, t_start, t_end, _, sub_tac, sub_tac_args, term = step
-            self.add_part(ProofRewritePart(start, end, line, name,
-                                           sequence=self.sequence,
-                                           term_pos=(t_start,t_end),
-                                           term=term,
-                                           side=side,
-                                           tactic=sub_tac,
-                                           tactic_args=sub_tac_args))
+            self.add_part(RewritePart(start, end, line, name,
+                                      sequence=self.sequence,
+                                      term_pos=(t_start,t_end),
+                                      side=side,
+                                      rhs=term,
+                                      tactic=sub_tac,
+                                      tactic_args=sub_tac_args))
             start = end
     
     def LHS(self, _: List[Any]) -> str:
@@ -603,12 +580,9 @@ class State(lark.Transformer):
     def tactic(self, items: List[Any]) -> Tuple[str, List[str]]:
         if len(items) >= 2 and str(items[1]) == "(": #)
             args = items[2:] if not items[2] is None else []
-            # arg_str = ', '.join(args)
-            # print(f"got tactic: {items[0]}({arg_str})")
             return (items[0], args)
         else:
             rule_expr = ('-' if items[0] else '') + items[1]
-            # print(f"defaulting to rule tactic: rule({rule_expr})")
             return ("rule", [rule_expr])
 
 

@@ -36,7 +36,8 @@ class RuleTac(Tactic):
         # apply a single rewrite rule in all possible ways
         for _ in self.proof_state.rewrite_lhs(self.args[0]):
             # if the LHS and RHS are isomorphic, close the goal...
-            return self.proof_state.try_close_goal()
+            if self.proof_state.try_close_goal():
+                return True
             # if iso:
                 # ...and highlight the part that was rewritten
                 # TODO highlighting needs to work differently from before

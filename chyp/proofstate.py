@@ -1,7 +1,6 @@
 from __future__ import annotations
 import re
 from typing import Dict, Iterator, List, Optional, Set, Tuple
-from .term import graph_to_term
 from .graph import Graph
 from .rewrite import dpo
 from .rule import Rule, RuleError
@@ -38,9 +37,7 @@ class ProofState:
 
     def error(self, message: str) -> None:
         if not message in self.errors:
-            # TODO get the line number from somewhere
-            line = -1
-            self.state.errors.append((self.state.file_name, line, message))
+            self.state.errors.append((self.state.file_name, self.line, message))
             self.errors.add(message)
 
     def num_goals(self) -> int:
@@ -86,8 +83,9 @@ class ProofState:
                 rule = self.goals[goal_i].assumptions[rule_name]
 
         if glo and not rule and rule_name in self.state.rule_sequence:
-            if self.state.rule_sequence[rule_name] >= self.sequence:
-                self.error(f'Attempting to use rule {rule_name} before it is defined/proven.')
+            seq = self.state.rule_sequence[rule_name]
+            if seq >= self.sequence:
+                self.error(f'Attempting to use rule {rule_name} before it is defined/proven ({seq} >= {self.sequence}).')
                 return (None, False)
             rule = self.state.rules[rule_name]
 

@@ -3,14 +3,20 @@ gen g : 1 -> 1
 rule ff: f ; f = f
 rule gg: g ; g = g
 
-# apply-style proof
+
+# rewrite-only theorem
+rewrite rwfoo: f ; f ; f
+  = f ; f by ff
+  = f by ff
+
+# theorem with apply-style proof
 theorem foo: f ; f; f ; f ; g = f ; g ; g
 proof
   apply simp(ff)
   apply rule(-gg)
 qed
 
-# rewrite-style proof
+# theorem with rewrite-style proof
 theorem bar: f ; f; f = f
 proof
   rewrite LHS
@@ -18,7 +24,7 @@ proof
     = f by ff
 qed
 
-# mixed proof
+# theorem with mixed proof
 theorem baz: f ; f ; f; f = f
 proof
   rewrite LHS
