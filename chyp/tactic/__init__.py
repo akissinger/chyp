@@ -14,7 +14,7 @@
 # limitations under the License.
 
 from __future__ import annotations
-from typing import Callable, Dict, Iterator, List, Optional, Set, Tuple
+from typing import Callable, Iterator, List, Optional, Set
 
 from ..term import graph_to_term
 from ..graph import Graph

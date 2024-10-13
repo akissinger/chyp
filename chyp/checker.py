@@ -2,7 +2,7 @@ from typing import Callable, Optional
 
 from .rule import Rule
 from .state import State
-from .parts import Part, ProofStartPart, ProofQedPart, TheoremPart, ApplyTacticPart, RewritePart
+from .parts import Part, ProofStartPart, ProofQedPart, ProofStepPart, TheoremPart, ApplyTacticPart, RewritePart
 from .proofstate import ProofState, Goal
 from .tactic import get_tactic
 
@@ -10,9 +10,18 @@ def next_rhs(state: State, part: RewritePart, term: str) -> Optional[str]:
     if not part.lhs: return None
 
     # make a fake proof state to send to the tactic
+
+    # set the goal equal to LHS = LHS
     g = Goal(Rule(part.lhs, part.lhs))
-    if part.proof_state and part.proof_state.num_goals() > 0:
-        g.assumptions = { n : a.copy() for n,a in part.proof_state.goals[0].assumptions.items() }
+
+    # if we are inside a proof, set the assumptions equal to those of the top goal before the current
+    # proof step
+    if part.index > 0:
+        prev_part = state.parts[part.index-1]
+        if (isinstance(prev_part, ProofStepPart) and
+            prev_part.proof_state and
+            prev_part.proof_state.num_goals() > 0):
+            g.assumptions = { n : a.copy() for n,a in prev_part.proof_state.goals[0].assumptions.items() }
     proof_state = ProofState(state, part.sequence, [g])
     t = get_tactic(proof_state, part.tactic, part.tactic_args)
     return t.next_rhs(term)
@@ -23,7 +32,6 @@ def check(state: State, get_revision: Optional[Callable[[],int]]=None) -> None:
     current_theorem_part = None
     for p in state.parts:
         if get_revision and state.revision != get_revision(): break
-        if p.status != Part.UNCHECKED: continue
 
         if isinstance(p, TheoremPart):
             p.status = Part.CHECKING
@@ -31,7 +39,7 @@ def check(state: State, get_revision: Optional[Callable[[],int]]=None) -> None:
 
         elif isinstance(p, ProofStartPart):
             if not current_theorem_part:
-                raise RuntimeError('Get proof without theorem')
+                raise RuntimeError('Got proof without theorem')
             p.status = Part.VALID
             p.proof_state = ProofState(state,
                                        current_theorem_part.sequence,
@@ -65,22 +73,27 @@ def check(state: State, get_revision: Optional[Callable[[],int]]=None) -> None:
                 proof_state = current_proof_state.snapshot(p)
                 p.proof_state = proof_state
                 if proof_state.num_goals() > 0:
-                    if   p.side == 'LHS': p.lhs = proof_state.lhs()
-                    elif p.side == 'RHS': p.lhs = proof_state.rhs()
+                    if p.rhs_side == 'LHS':
+                        p.rhs = proof_state.lhs()
+                    elif p.rhs_side == 'RHS':
+                        p.rhs = proof_state.rhs()
+
+                    if p.lhs_side == 'LHS':
+                        p.lhs = proof_state.lhs()
+                        if p.rhs: proof_state.replace_lhs(p.rhs)
+                    elif p.lhs_side == 'RHS':
+                        p.lhs = proof_state.rhs()
+                        if p.rhs: proof_state.replace_rhs(p.rhs)
             elif p.lhs:
-                rhs = p.rhs if p.rhs else p.lhs
+                if not p.rhs: p.rhs = p.lhs
                 proof_state = ProofState(state,
                                          p.sequence,
-                                         [Goal(Rule(p.lhs, rhs))])
+                                         [Goal(Rule(p.lhs, p.rhs))])
                 proof_state.line = p.line
 
             if proof_state:
                 t = get_tactic(proof_state, p.tactic, p.tactic_args)
                 p.status = Part.CHECKING
-
-                if p.side and p.rhs:
-                    if p.side == 'LHS': proof_state.replace_lhs(p.rhs)
-                    else: proof_state.replace_rhs(p.rhs)
 
                 num_goals = proof_state.num_goals()
                 if t.run():

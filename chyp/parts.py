@@ -104,7 +104,8 @@ class ApplyTacticPart(ProofStepPart):
 class RewritePart(ProofStepPart):
     tactic: str
     tactic_args: List[str]
-    side: Optional[Literal['LHS', 'RHS']]
+    lhs_side: Optional[Literal['LHS', 'RHS']]
+    rhs_side: Optional[Literal['LHS', 'RHS']]
     stub: bool
     term_pos: Tuple[int,int]
     def __init__(self,
@@ -114,7 +115,8 @@ class RewritePart(ProofStepPart):
                  name: str,
                  sequence: int,
                  term_pos: Tuple[int,int]=(0,0),
-                 side: Optional[Literal['LHS', 'RHS']]=None,
+                 lhs_side: Optional[Literal['LHS', 'RHS']]=None,
+                 rhs_side: Optional[Literal['LHS', 'RHS']]=None,
                  lhs: Optional[Graph]=None,
                  rhs: Optional[Graph]=None,
                  tactic: str='',
@@ -124,7 +126,8 @@ class RewritePart(ProofStepPart):
         self.term_pos = term_pos
         self.tactic = tactic
         self.tactic_args = [] if tactic_args is None else tactic_args
-        self.side = side
+        self.lhs_side = lhs_side
+        self.rhs_side = rhs_side
         self.stub = stub
 
 class ImportPart(Part): pass

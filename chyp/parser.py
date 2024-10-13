@@ -27,8 +27,6 @@ GRAMMAR = Lark("""
     gen_color : "\\\"" color "\\\"" | "\\\"" color "\\\"" "\\\"" color "\\\""
     let : "let" var "=" term
     rule : "rule" var ":" term (eq | le) term
-    rewrite : "rewrite" [converse] var ":" term rewrite_part*
-    rewrite_part : (eq | le) term_hole [ "by" tactic ]
     converse : "-"
     ?theorem_statement : theorem [ proof ]
     theorem : ("theorem" | "lemma" | "proposition") var ":" formula
@@ -38,7 +36,9 @@ GRAMMAR = Lark("""
     proof_end: "qed"
     ?proof_step : apply_tac | rewrite_in_proof
     apply_tac : "apply" tactic
+    rewrite : "rewrite" [converse] var ":" term rewrite_part*
     rewrite_in_proof : "rewrite" (LHS | RHS) rewrite_part*
+    rewrite_part : (eq | le) term_hole [ "by" tactic ]
     LHS : "LHS"
     RHS : "RHS"
 
@@ -72,7 +72,7 @@ GRAMMAR = Lark("""
     var : IDENT
     term_ref : IDENT
     rule_ref : IDENT
-    term_hole : term | "?"
+    term_hole : term | "?" | LHS | RHS
     color : HEXDIGIT HEXDIGIT HEXDIGIT HEXDIGIT HEXDIGIT HEXDIGIT
     IDENT: ("_"|LETTER) ("_"|"."|LETTER|DIGIT)*
     TACTIC_ARG: /[^(),]+/

@@ -54,7 +54,7 @@ class State(lark.Transformer):
             p.index = len(self.parts)
             self.parts.append(p)
 
-    def part_at(self, pos: int) -> Optional[Part]:
+    def part_at(self, pos: int, strict: bool=False) -> Optional[Part]:
         imin = 0
         imax = len(self.parts)-1
         while imin <= imax:
@@ -68,7 +68,10 @@ class State(lark.Transformer):
                 if i > 0 and self.parts[i-1].end >= pos:
                     return self.parts[i-1]
                 return p
-        return None
+        if not strict and len(self.parts) > 0:
+            return self.parts[max(0, imin-1)]
+        else:
+            return None
     
     def copy_state_until(self, state: State, pos: int) -> None:
         for (i,p) in enumerate(state.parts):
@@ -377,16 +380,19 @@ class State(lark.Transformer):
                 line_number, rw_end, t_start, t_end, equiv, tactic, tactic_args, rhs = rw_part
                 end = max(rw_end, t_end)
                 all_equiv = all_equiv and equiv
-                self.add_part(RewritePart(start, end, line_number, name,
-                                          sequence=self.sequence,
-                                          term_pos=(t_start,t_end),
-                                          tactic=tactic,
-                                          tactic_args=tactic_args,
-                                          lhs=lhs,
-                                          rhs=rhs))
-                lhs = rhs.copy() if rhs else None
+                if rhs == 'LHS' or rhs == 'RHS':
+                    self.errors.append((self.file_name, meta.line, "Cannot use LHS/RHS outside of proof."))
+                else:
+                    self.add_part(RewritePart(start, end, line_number, name,
+                                              sequence=self.sequence,
+                                              term_pos=(t_start,t_end),
+                                              tactic=tactic,
+                                              tactic_args=tactic_args,
+                                              lhs=lhs,
+                                              rhs=rhs))
+                    lhs = rhs.copy() if rhs else None
                 start = end
-            if term and rhs:
+            if term and rhs and isinstance(rhs, Graph):
                 try:
                     if converse:
                         # TODO non-invertible rules
@@ -454,16 +460,24 @@ class State(lark.Transformer):
     @v_args(meta=True)
     def rewrite_in_proof(self, meta: Meta, items: List[Any]) -> None:
         name = ''
-        side = items[0]
+        lhs_side = items[0]
 
         start = meta.start_pos
         for step in items[1:]:
-            line, end, t_start, t_end, _, sub_tac, sub_tac_args, term = step
+            line, end, t_start, t_end, _, sub_tac, sub_tac_args, term_or_side = step
+            if isinstance(term_or_side, Graph):
+                rhs = term_or_side
+                rhs_side = None
+            else:
+                rhs = None
+                rhs_side = term_or_side
             self.add_part(RewritePart(start, end, line, name,
                                       sequence=self.sequence,
                                       term_pos=(t_start,t_end),
-                                      side=side,
-                                      rhs=term,
+                                      lhs_side=lhs_side,
+                                      rhs_side=rhs_side,
+                                      lhs=None,
+                                      rhs=rhs,
                                       tactic=sub_tac,
                                       tactic_args=sub_tac_args))
             start = end

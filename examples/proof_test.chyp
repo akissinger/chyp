@@ -1,5 +1,5 @@
-gen f : 1 -> 1
-gen g : 1 -> 1
+gen f : 1 -> 1 "ffdddd"
+gen g : 1 -> 1 "ddffdd"
 rule ff: f ; f = f
 rule gg: g ; g = g
 
@@ -20,7 +20,7 @@ theorem bar: f ; f; f = f
 proof
   rewrite LHS
     = f ; f by ff
-    = f by ff
+    = RHS by ff
 qed
 
 # theorem with mixed proof

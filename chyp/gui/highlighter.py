@@ -58,6 +58,10 @@ class ChypHighlighter(QSyntaxHighlighter):
             x,y = m.span(3)
             self.setFormat(x, y-x, QColor(IDENT))
 
+        for m in re.finditer('(^|\\W)(LHS|RHS)(\\s+|$)', text):
+            x,y = m.span(2)
+            self.setFormat(x, y-x, QColor(IDENT))
+
         for m in re.finditer('(^|\\W)(proof|qed)(\\s+|$)', text):
             x,y = m.span(2)
             self.setFormat(x, y-x, QColor(KEYWORD_ALT))
@@ -81,8 +85,11 @@ class ChypHighlighter(QSyntaxHighlighter):
         if self.state:
             start = self.currentBlock().position()
             length = self.currentBlock().length()
-            for c in range(0, length):
-                p = self.state.part_at(c + start)
+            c = 0
+            p = None
+            while c < length:
+                if p == None or p.end < c + start:
+                    p = self.state.part_at(c + start, strict=True)
                 if p:
                     f = self.format(c)
                     if self.state.current_part == p:
@@ -98,6 +105,7 @@ class ChypHighlighter(QSyntaxHighlighter):
                         elif p.status == Part.INVALID:
                             f.setBackground(QColor(BG_BAD))
                     self.setFormat(c, 1, f)
+                c += 1
 
             # if y >= start and x < end:
             #     x_rel = max(x - start, 0)
