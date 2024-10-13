@@ -13,9 +13,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Optional, Tuple
+from typing import Optional
 import re
-from PySide6.QtGui import QColor, QSyntaxHighlighter, QTextBlockFormat, QTextCursor, QTextDocument
+from PySide6.QtGui import QColor, QSyntaxHighlighter, QTextDocument
 
 from .colors import current_theme
 from ..state import Part, State
@@ -86,10 +86,11 @@ class ChypHighlighter(QSyntaxHighlighter):
             start = self.currentBlock().position()
             length = self.currentBlock().length()
             c = 0
-            p = None
+            p: Optional[Part] = None
             while c < length:
-                if p == None or p.end < c + start:
+                if not p or (p and p.end < c + start):
                     p = self.state.part_at(c + start, strict=True)
+
                 if p:
                     f = self.format(c)
                     if self.state.current_part == p:

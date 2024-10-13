@@ -119,9 +119,10 @@ class EData:
         """Return how many width 'units' this box needs to display nicely.
 
         This uses a simple rule:
-            - If the number of inputs and outputs are both <= 1, draw as a
-            small (1 width unit) box.
+            - If the number of inputs and outputs are both <= 1, draw as a small
+              (1 width unit) box.
             - Otherwise draw as a larger (size 2) box.
+
         """
         return 1 if len(self.s) <= 1 and len(self.t) <= 1 else 2
 
@@ -143,8 +144,6 @@ class Graph:
     Attributes:
         vdata: Mapping from integer identifiers of each vertex to its data.
         edata: Mapping from integer identifiers of each hyperedge to its data.
-        vindex:
-        eindex:
     """
 
     def __init__(self) -> None:
@@ -152,8 +151,8 @@ class Graph:
         self.edata: dict[int, EData] = {}
         self._inputs: list[int] = []
         self._outputs: list[int] = []
-        self.vindex = 0
-        self.eindex = 0
+        self._vindex = 0
+        self._eindex = 0
 
     def copy(self) -> Graph:
         """Return a copy of the graph."""
@@ -162,8 +161,8 @@ class Graph:
         g.edata = copy.deepcopy(self.edata)
         g._inputs = self._inputs.copy()
         g._outputs = self._outputs.copy()
-        g.vindex = self.vindex
-        g.eindex = self.eindex
+        g._vindex = self._vindex
+        g._eindex = self._eindex
         return g
 
     def vertices(self) -> Iterator[int]:
@@ -310,12 +309,12 @@ class Graph:
                   is not already in use).
         """
         if name == -1:
-            v = self.vindex
-            self.vindex += 1
+            v = self._vindex
+            self._vindex += 1
         else:
             v = name
-            max_index = max(name, self.vindex)
-            self.vindex = max_index + 1
+            max_index = max(name, self._vindex)
+            self._vindex = max_index + 1
 
         self.vdata[v] = VData(
             vtype=vtype, size=size,
@@ -349,12 +348,12 @@ class Graph:
                is not already in use).
         """
         if name == -1:
-            e = self.eindex
-            self.eindex += 1
+            e = self._eindex
+            self._eindex += 1
         else:
             e = name
-            max_index = max(name, self.eindex)
-            self.eindex = max_index + 1
+            max_index = max(name, self._eindex)
+            self._eindex = max_index + 1
 
         self.edata[e] = EData(s, t, value, x, y, fg, bg, hyper)
         for v in s:
