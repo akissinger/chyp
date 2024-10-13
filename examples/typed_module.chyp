@@ -1,0 +1,6 @@
+gen m : 2 -> 1
+gen e : 0 -> 1
+gen a : u * A -> A
+
+rule assoc : m * id[A] ; a = id * a ; a
+rule unit : e * id ; a = id[A]
