@@ -331,21 +331,19 @@ class Graph:
         """Add a new hyperedge to the graph.
 
         Args:
-        s: A list of source vertex ids.
-        t: A list of target vertex ids.
-        value: The value carried by this edge (currently unused).
-
-        x: x-coordinate at which to draw the hyperedge.
-        y: y-coordinate at which to draw the hyperedge.
-        fg: Hex code for the text and outline color of the hyperedge.
-        bg: Hex code for the box fill color of the hyperedge.
-        hyper: Whether to draw this hyperedge as a box or as line connecting
-               two vertices (currently not implemented).
-
-        name:  The integer identifier to use for this vertex. If this is
-               set to -1, the identifier is set automatically.
-               (Note: no checks are currently made to ensure the identifier
-               is not already in use).
+            s: A list of source vertex ids.
+            t: A list of target vertex ids.
+            value: The value carried by this edge (currently unused).
+            x: x-coordinate at which to draw the hyperedge.
+            y: y-coordinate at which to draw the hyperedge.
+            fg: Hex code for the text and outline color of the hyperedge.
+            bg: Hex code for the box fill color of the hyperedge.
+            hyper: Whether to draw this hyperedge as a box or as line connecting
+                   two vertices (currently not implemented).
+            name: The integer identifier to use for this vertex. If this is
+                  set to -1, the identifier is set automatically.
+                  (Note: no checks are currently made to ensure the identifier
+                  is not already in use).
         """
         if name == -1:
             e = self._eindex
@@ -969,6 +967,7 @@ def perm(p: list[int], domain: list[tuple[VType, int]],
     Note this is one of two reasonable conventions for specifying a
     permutation as a list of numbers.
     This one has the property, e.g. for graphs aj : 0 -> 1, we have:
+
         (a0 * a1 * a2) >> perm([2, 0, 1]) = a2 * a0 * a1.
 
     Args:

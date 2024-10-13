@@ -36,6 +36,13 @@ chyp.parser
    :members:
    :show-inheritance:
 
+chyp.checker
+------------
+
+.. automodule:: chyp.checker
+   :members:
+   :show-inheritance:
+
 chyp.rewrite
 ------------
 
@@ -54,6 +61,20 @@ chyp.state
 ----------
 
 .. automodule:: chyp.state
+   :members:
+   :show-inheritance:
+
+chyp.proofstate
+---------------
+
+.. automodule:: chyp.proofstate
+   :members:
+   :show-inheritance:
+
+chyp.parts
+----------
+
+.. automodule:: chyp.parts
    :members:
    :show-inheritance:
 

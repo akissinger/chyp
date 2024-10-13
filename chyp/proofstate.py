@@ -10,6 +10,8 @@ from . import state
 RULE_NAME_RE = re.compile('(-)?\\s*([a-zA-Z_][\\.a-zA-Z0-9_]*)')
 
 class Goal:
+    """Stores a single goal in a Chyp proof
+    """
     formula: Rule
     assumptions: Dict[str, Rule]
     def __init__(self, formula: Rule, assumptions: Optional[Dict[str, Rule]]=None):
@@ -21,6 +23,12 @@ class Goal:
         return Goal(self.formula.copy(), assumptions)
 
 class ProofState:
+    """Stores the current proof state in a Chyp proof
+
+    The proof state consists of a list of goals, a local context, a pointer to the `State` and
+    a `sequence` indicating where in the theory document this occurs (and hence which theorems
+    should be accessible).
+    """
     def __init__(self, state: state.State, sequence: int, goals: Optional[List[Goal]] = None):
         self.state = state
         self.sequence = sequence
