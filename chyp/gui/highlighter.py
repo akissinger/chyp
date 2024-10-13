@@ -42,17 +42,13 @@ class ChypHighlighter(QSyntaxHighlighter):
         super().__init__(doc)
         self.state: Optional[State] = None
 
-    # def set_current_region(self, region: Optional[Tuple[int,int]], status: int) -> None:
-    #     self.region = region
-    #     self.region_status = status
-    #     self.rehighlight()
-    
     def set_state(self, state: State) -> None:
         self.state = state
 
     def highlightBlock(self, text: str) -> None:
         ident = '[a-zA-Z_][\\.a-zA-Z0-9_]*'
-        for m in re.finditer('(^|\\W)(let|def|gen|rule|by|rewrite|import|as|show|theorem|lemma|proposition|apply)\\s+\\-?\\s*(%s)?' % ident, text):
+        ident_kw = 'let|def|gen|rule|by|rewrite|import|as|show|theorem|lemma|proposition|apply'
+        for m in re.finditer(f'(^|\\W)({ident_kw})\\s+\\-?\\s*({ident})?', text):
             x,y = m.span(2)
             self.setFormat(x, y-x, QColor(KEYWORD))
             x,y = m.span(3)
@@ -107,18 +103,3 @@ class ChypHighlighter(QSyntaxHighlighter):
                             f.setBackground(QColor(BG_BAD))
                     self.setFormat(c, 1, f)
                 c += 1
-
-            # if y >= start and x < end:
-            #     x_rel = max(x - start, 0)
-            #     y_rel = min(y - start, length)
-            #     for c in range(x_rel, y_rel):
-            #         f = self.format(c)
-
-            #         if self.state.current_part.status == Part.VALID:
-            #             f.setBackground(QColor(BG_GOOD))
-            #         elif self.state.current_part.status == Part.INVALID:
-            #             f.setBackground(QColor(BG_BAD))
-            #         else:
-            #             f.setBackground(QColor(SEL))
-            #         self.setFormat(c, 1, f)
-
