@@ -29,22 +29,45 @@ class GraphError(Exception):
 
 
 class VData:
-    """Data associated with a single vertex.
+    """Data associated with a single vertex."""
 
-    Attributes:
-        vtype: The vertex type.
-        size: The register size (number of bundled parallel wires)
-              of the vertex.
-        infer_type: Whether to infer the vertex type during composition.
-                    Used for special generators (identities, permutations,
-                    redistributers).
-        infer_size: Whether to infer the vertex size during composition.
-                    Used for special generators (identities, permutations,
-                    redistributers).
+    vtype: VType
+    """The vertex type."""
 
-        x: x-coordinate at which to draw the vertex.
-        y: y-coordinate at which to draw the vertex.
-    """
+    size: int
+    """The register size (number of bundled parallel wires) of the vertex."""
+
+    infer_type: bool
+    """Whether to infer the vertex type during composition. Used for
+    special generators (identities, permutations, redistributers)."""
+
+    infer_size: bool
+    """Whether to infer the vertex size during composition. Used for special
+    generators (identities, permutations, redistributers)."""
+
+    x: float
+    """x-coordinate at which to draw the vertex"""
+
+    y: float
+    """y-coordinate at which to draw the vertex"""
+
+    in_edges: set[int]
+    """Integer identifiers of input hyperedges of this vertex"""
+
+    out_edges: set[int]
+    """Integer identifiers of output hyperedges of this vertex"""
+
+    in_indices: set[int]
+    """Indices (if any) where this vertex occurs in the input lists of the hypergraph."""
+
+    out_indices: set[int]
+    """Indices (if any) where this vertex occurs in the output lists of the hypergraph."""
+
+    highlight: bool
+    """Flag indicating whether to visually highlight this vertex"""
+
+    value: Any
+    """A field that can hold arbitrary data attached to a vertex"""
 
     def __init__(self,
                  vtype: VType = None, size: int = 1,
@@ -77,19 +100,35 @@ class VData:
 
 
 class EData:
-    """Data associated with a single edge.
+    """Data associated with a single edge."""
 
-    Attributes:
-        sources: The source vertex list of the hyperedge.
-        targets: The target vertex list of the hyperedge.
+    s: list[int]
+    """The source vertex list of the hyperedge."""
 
-        x: x-coordinate at which to draw the hyperedge.
-        y: y-coordinate at which to draw the hyperedge.
-        fg: Hex code for the text and outline color of the hyperedge.
-        bg: Hex code for the box fill color of the hyperedge.
-        hyper: Whether to draw this hyperedge as a box or as line connecting
-               two vertices (currently not implemented).
-    """
+    t: list[int]
+    """The target vertex list of the hyperedge."""
+
+    x: float
+    """x-coordinate at which to draw the hyperedge."""
+
+    y: float
+    """y-coordinate at which to draw the hyperedge."""
+
+    fg: str
+    """Hex code for the text and outline color of the hyperedge."""
+
+    bg: str
+    """Hex code for the box fill color of the hyperedge."""
+
+    hyper: bool
+    """Whether to draw this hyperedge as a box or as line connecting two
+    vertices (currently not implemented)."""
+
+    highlight: bool
+    """Flag indicating whether to visually highlight this edge"""
+
+    value: Any
+    """A field that can hold arbitrary data attached to a edge"""
 
     def __init__(self,
                  s: list[int] | None = None, t: list[int] | None = None,
@@ -140,11 +179,13 @@ class Graph:
     list of source vertices and a list of target vertices. The hypergraph
     itself also has a list of input vertices and a list of output vertices,
     which are used for sequential composition and rewriting.
-
-    Attributes:
-        vdata: Mapping from integer identifiers of each vertex to its data.
-        edata: Mapping from integer identifiers of each hyperedge to its data.
     """
+
+    vdata: dict[int, VData]
+    """Mapping from integer identifiers of each vertex to its data."""
+
+    edata: dict[int, EData]
+    """Mapping from integer identifiers of each hyperedge to its data."""
 
     def __init__(self) -> None:
         self.vdata: dict[int, VData] = {}
