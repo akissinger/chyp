@@ -41,8 +41,6 @@ GRAMMAR = Lark("""
     rewrite_part : (eq | le) term_hole [ "by" tactic ]
     LHS : "LHS"
     RHS : "RHS"
-
-    converse : "-"
                
     family: "family" var ["(" var_list ")"] ":" type_term "->" type_term
     var_list: var ("," var)*
