@@ -1,0 +1,11 @@
+gen f: 2 -> 2
+gen g: u^2 -> u^2
+
+
+family divide(n, m): u^(n + m) -> u^(n - m) * n
+family gather(n, m): u^(n - m) * n -> u^(n + m)
+
+
+# but not quite
+rule dg_inv: divide(n, m) ; gather(n, m) = id[u^(n+m)]
+rule gd_inv: gather(n, m) ; divide(n, m) = id[n] * id[m]

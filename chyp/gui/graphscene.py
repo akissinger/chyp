@@ -17,8 +17,8 @@ from __future__ import annotations
 import itertools
 from typing import Optional, List, Tuple
 
-from PySide6.QtCore import Qt, QPointF
-from PySide6.QtGui import QBrush, QColor, QFont, QPainter, QPainterPath, QPen, QTransform, QUndoStack
+from PySide6.QtCore import Qt, QPointF, QRectF
+from PySide6.QtGui import QBrush, QColor, QFont, QPainter, QPainterPath, QPen, QTransform, QUndoStack, QImage
 from PySide6.QtWidgets import (QGraphicsEllipseItem, QGraphicsItem,
                                QGraphicsPathItem, QGraphicsRectItem, QGraphicsScene,
                                QGraphicsSceneMouseEvent, QGraphicsTextItem,
@@ -270,3 +270,22 @@ class GraphScene(QGraphicsScene):
     def mouseReleaseEvent(self, _: QGraphicsSceneMouseEvent) -> None:
         self.drag_items = []
 
+
+    def save(self, filename, scale=1):
+        rect = self.itemsBoundingRect()
+
+        bottom_margin = rect.height() * 0.05
+
+        width = rect.width() * scale
+        height = (rect.height() + bottom_margin) * scale
+        
+        
+        image = QImage(width, height, QImage.Format_ARGB32)
+        image.fill(0)
+
+        painter = QPainter(image)
+        self.render(painter, QRectF(0, 0, width, height), rect)
+        painter.end()
+
+
+        image.save(filename)

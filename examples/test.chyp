@@ -1,0 +1,47 @@
+gen f : 2 -> 1 "00ff00"            # green background, default (black) foreground
+gen g : 1 -> 2 "000000" "ffffff"   # black background, white foreground
+gen h : 1 -> 1 "0000ff" "0000ff"   # blue background, blue foreground (i.e. hidden text)
+
+
+rule assoc : f * id ; f = id * f ; f
+rule bialg : f ; g = g * g ; id * sw * id ; f * f
+
+
+let term = f * id ; f ; g ; g * id
+rewrite ba1 :
+  term
+  = id * f ; f ; g ; g * id by assoc
+  = g * f ; id * id * g ; id * sw * id ; f * f ; g * id by bialg
+
+rewrite ba2 :
+  f * id ; f ; g ; g * id
+  = id * f ; f ; g ; g * id by assoc
+
+gen x: 1 -> 2 
+gen y: 2 -> 1 
+gen h: 1 -> 1 
+
+rule r2: h = x ; y 
+
+rewrite re1: 
+  h ; h = x ; y ; h by r2
+  = x ; y ; x ; y by r2
+
+
+gen u : 0 -> 1
+gen m : 2 -> 1
+rule unitL : u * id ; m = id
+rule unitR : id * u ; m = id
+#rule assoc : m * id ; m = id * m ; m
+
+
+
+
+rewrite random_monoid_eq :
+  id * u * u * id ; m * m ; m
+  = m by simp(unitL, unitR, assoc)
+
+
+
+
+

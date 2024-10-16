@@ -47,7 +47,7 @@ class ChypHighlighter(QSyntaxHighlighter):
 
     def highlightBlock(self, text: str) -> None:
         ident = '[a-zA-Z_][\\.a-zA-Z0-9_]*'
-        ident_kw = 'let|def|gen|rule|by|rewrite|import|as|show|theorem|lemma|proposition|apply'
+        ident_kw = 'let|def|gen|rule|by|rewrite|import|as|show|theorem|lemma|proposition|apply|family'
         for m in re.finditer(f'(^|\\W)({ident_kw})\\s+\\-?\\s*({ident})?', text):
             x,y = m.span(2)
             self.setFormat(x, y-x, QColor(KEYWORD))

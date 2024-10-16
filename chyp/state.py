@@ -186,6 +186,9 @@ class State(lark.Transformer):
     def size_list(self, items: list[int]) -> list[int]:
         return items
 
+    def var_list(self, items: List[Any]) -> List[str]:
+        return [self.var((item,)) for item in items]
+
     @v_args(meta=True)
     def term_ref(self, meta: Meta, items: List[Any]) -> Optional[Graph]:
         s = str(items[0])
@@ -236,6 +239,7 @@ class State(lark.Transformer):
 
     @v_args(meta=True)
     def gen(self, meta: Meta, items: List[Any]) -> None:
+        print(meta, items)
         name = items[0]
         domain = items[1]
         codomain = items[2]
@@ -251,6 +255,24 @@ class State(lark.Transformer):
                 self.errors.append((self.file_name, meta.line, "Term '{}' already defined with incompatible type {} -> {}.".format(name, existing_domain, existing_codomain)))
                 self.errors.append((self.file_name, meta.line, "(Trying to add) {} -> {}.".format(domain, codomain)))
         self.add_part(GenPart(meta.start_pos, meta.end_pos, meta.line, name, g))
+
+    @v_args(meta=True)
+    def family(self, meta: Meta, items: List[Any]) -> None:
+        print(meta, items)
+        name = items[0]
+        args = items[1]
+        domain = items[2]
+        codomain = items[3]
+        if name not in self.graphs:
+            self.graphs[name] = gen(name, domain, codomain)
+        else:
+            g = self.graphs[name]
+            existing_domain = g.domain()
+            existing_codomain = g.codomain()
+            if existing_domain != domain or existing_codomain != codomain:
+                self.errors.append((self.file_name, meta.line, "Term '{}' already defined with incompatible type {} -> {}.".format(name, existing_domain, existing_codomain)))
+                self.errors.append((self.file_name, meta.line, "(Trying to add) {} -> {}.".format(domain, codomain)))
+        self.parts.append((meta.start_pos, meta.end_pos, 'family', name))
 
     @v_args(meta=True)
     def let(self, meta: Meta, items: List[Any]) -> None:

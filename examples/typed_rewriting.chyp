@@ -1,9 +1,0 @@
-gen f: A^7 * B^42 -> C * D
-gen g: A^7 -> C
-gen h: B^42 -> D
-gen h2: None -> A^7 * B^42
-
-rule typedRule: f = g * h
-
-rewrite typedRewrite: h2 * id[A^7] ; f * g
-= h2 * id[A^7] ; g * h * g by typedRule
