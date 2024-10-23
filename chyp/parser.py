@@ -45,15 +45,24 @@ GRAMMAR = Lark("""
     family: "family" var ["(" var_list ")"] ":" type_term "->" type_term
     var_list: var ("," var)*
 
-    type_term : type_element ("*" type_element)*
-    type_element: IDENT ["^" num]
+    type_term : type_element ("*" type_element)* | poly_expr
+    type_element: IDENT_NO_NUM ["^" ["("] poly_expr  [")"]] 
 
 
-    polynomial: poly_term (("+") poly_term)*
-    variable_exponent: var ("^" num)?
-    poly_term: num "*" variable_exponent?
-        | variable_exponent
-        | num
+    poly_expr: poly_term (("+" poly_term) | sub_term)*   -> add
+    ?sub_term: ("-" poly_term) -> sub
+    
+    poly_term: num                              
+         | monomial             
+         | num "*" monomial
+
+    
+    monomial: var_term ("*" var_term)*
+    ?var_term: myvar 
+             | myvar "^" num -> pow
+             
+
+    myvar: IDENT -> myvar
 
     
 
@@ -87,6 +96,7 @@ GRAMMAR = Lark("""
     term_hole : term | "?" | LHS | RHS
     color : HEXDIGIT HEXDIGIT HEXDIGIT HEXDIGIT HEXDIGIT HEXDIGIT
     IDENT: ("_"|LETTER) ("_"|"."|LETTER|DIGIT)*
+    IDENT_NO_NUM: ("_"|LETTER) ("_"|"."|LETTER|LETTER(DIGIT)*)* 
     TACTIC_ARG: /[^(),]+/
 
     %import common.LETTER

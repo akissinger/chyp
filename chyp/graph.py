@@ -18,6 +18,7 @@ from typing import Iterable, Iterator, Any
 from typing import TypeAlias
 import json
 import copy
+from .polynomial import Polynomial, const_poly
 
 
 # Non-default vertex types are identified by a string label
@@ -34,7 +35,7 @@ class VData:
     vtype: VType
     """The vertex type."""
 
-    size: int
+    size: Polynomial
     """The register size (number of bundled parallel wires) of the vertex."""
 
     infer_type: bool
@@ -70,7 +71,7 @@ class VData:
     """A field that can hold arbitrary data attached to a vertex"""
 
     def __init__(self,
-                 vtype: VType = None, size: int = 1,
+                 vtype: VType = None, size: Polynomial = const_poly(1),
                  infer_type: bool = False, infer_size: bool = False,
                  x: float = 0.0, y: float = 0.0,
                  value: Any = None) -> None:

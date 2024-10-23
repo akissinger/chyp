@@ -27,6 +27,9 @@ from .rule import Rule, RuleError
 from .proofstate import ProofState
 from .parts import *
 
+from collections import Counter, defaultdict
+from itertools import zip_longest
+from chyp.polynomial import Polynomial, const_poly
 
 class State(lark.Transformer):
     def __init__(self, namespace: str='', file_name: str='') -> None:
@@ -44,7 +47,12 @@ class State(lark.Transformer):
         self.parts: List[Part] = list()
         self.current_part: Optional[Part] = None
         self.parsed = False
-    
+
+        self.vars = []
+        self.nvars = 0
+
+        self.context = {}
+        
     def set_current_part(self, p: Optional[Part]) -> None:
         self.current_part = p
     
@@ -100,18 +108,19 @@ class State(lark.Transformer):
             return None
         else:
             vtype = str(items[0])
-        size = 1 if items[1] is None else items[1]
+            
+        size = const_poly(1) if items[1] is None else items[1]
         return vtype, size
 
-    def type_term(self, items: list[tuple[str | None, int] | None]
-                  ) -> (list[tuple[None, int]]
-                        | list[tuple[str | None, int] | None]):
-        # An integer n is parsed as n parallel default type wires of
-        # register size 1.
-        if isinstance(items[0], int):
-            return items[0] * [(None, int(1))]
+    def type_term(self, items):
+
+        if isinstance(items[0], Polynomial) and items[0].is_const():
+            return items[0]() * [(None, const_poly(1))]
+        
         # Assuming strict monoidal category: ignore remove monoidal units
         items = [i for i in items if i is not None]
+
+        
         return items
 
     def id(self, items: list[Any]) -> Graph:
@@ -258,13 +267,46 @@ class State(lark.Transformer):
 
     @v_args(meta=True)
     def family(self, meta: Meta, items: List[Any]) -> None:
-        print(meta, items)
         name = items[0]
         args = items[1]
         domain = items[2]
         codomain = items[3]
+
+
+        if args is None:
+            args = []
+        
+        self.context[name] = args
+
+       
+
+        
+
+        #print(f'family: args = {args}, domain={domain}')
+
+        gen_vars  = set(args)
+        poly_vars = set()
+
+        types = set()
+        
+        for typ, p in domain + codomain:
+            poly_vars |= set(p.subs)
+            types.add(typ)
+
+        if not poly_vars.issubset(gen_vars):
+            diff = list(poly_vars - gen_vars)
+            self.errors.append((self.file_name, meta.line,
+                                f'Variables {diff} used but not defined!'))
+
+        # Check if types are shadowing poly vars
+        shadowed_vars = list(types & gen_vars)
+        if shadowed_vars:
+            self.errors.append((self.file_name, meta.line,
+                                f'Types {shadowed_vars} shadow arguments!'))
+            
+        
         if name not in self.graphs:
-            self.graphs[name] = gen(name, domain, codomain)
+            self.graphs[name] = gen(f'{name}({", ".join(args)})', domain, codomain)
         else:
             g = self.graphs[name]
             existing_domain = g.domain()
@@ -526,6 +568,77 @@ class State(lark.Transformer):
 
     def nested_term(self, items: List[Any]) -> Optional[Graph]:
         return items[1]
+
+    def myvar(self, v):
+        var = v[0][0]
+
+        if var not in self.vars: 
+            self.vars.append(var)
+            self.nvars += 1
+        
+        return (var, 1)
+
+    def pow(self, args):
+        var = args[0][0]
+        power = args[0][1]
+        new_power = args[1]
+        
+        return (var, power + new_power - 1)
+
+    def add(self, args):
+        p = Polynomial(args, subs=self.vars)
+
+        # Reset state for processing next polynomial 
+        self.vars = []
+        self.nvars = 0
+
+        return p
+
+    def sub(self, args):
+        monomial = args[0][0]
+        coeff = args[0][1] 
+        
+        return (monomial, -coeff)
+        
+
+    def poly_term(self, args):
+        if len(args) == 1: 
+            a = args[0]
+            if isinstance(a, int): 
+                # The term only has a coefficient 
+                return ((0,), a)
+            else: 
+                # The term only has a monomial 
+                return (a, 1)
+
+        # The term has a coefficient and a monomial 
+        coeff = args[0]
+        monomial = args[1]
+            
+        return (monomial, coeff)
+
+    def monomial(self, args):
+        c = Counter() 
+        for var, power in args: 
+            c[var] += power
+    
+        # Get the variable indices and their respective powers 
+        # we need to do everything in reverse order because 
+        # we use zip_longest to pair variables to their powers 
+        # and we always want to start with the latest variable
+        vs     = reversed(range(self.nvars))
+        powers = map(lambda x: c[x], reversed(c.keys()))
+
+        # Pair the variables to their powers, filling in 0 if the 
+        # variable does not occur in this monomial. 
+        # Then take only the power
+        exps = map(lambda x: x[1], # Take the second value
+                   zip_longest(vs, powers, fillvalue=0))
+
+        # We need to put back everything into the correct order
+        exps = list(reversed(list(exps)))
+        
+        return tuple(exps)
 
 
 def module_filename(name: str, current_file: str) -> str:

@@ -7,4 +7,6 @@ docs/_build
 docs/build
 .vscode
 .venv
-
+test/*.png
+.ipynb_checkpoints
+.#*

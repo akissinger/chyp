@@ -22,6 +22,7 @@ from chyp.term import rule_to_term
 from ..proofstate import ProofState
 from ..rule import Rule
 from .colors import current_theme
+from .fonts import monospace_font
 
 class ProofStateModel(QAbstractItemModel):
     """A model containing a list of errors, with line numbers"""
@@ -62,8 +63,7 @@ class ProofStateModel(QAbstractItemModel):
                 return f'{asm if asm != "" else " |-"} {rule_to_term(rule)}'
             return ""
         elif role == Qt.ItemDataRole.FontRole:
-            font = QFont("Cascadia Code", 14)
-            font.setStyleHint(QFont.StyleHint.TypeWriter)
+            font = monospace_font(14)
             return font
         elif role == Qt.ItemDataRole.ForegroundRole:
             if self.proof_state:

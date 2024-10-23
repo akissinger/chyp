@@ -31,6 +31,7 @@ SCALE = 50.0
 
 BOX_WIDTH = 1.1
 
+from ..polynomial import const_poly
 
 class EItem(QGraphicsRectItem):
     def __init__(self, g: Graph, e: int) -> None:
@@ -104,8 +105,10 @@ class VItem(QGraphicsEllipseItem):
         self.setBrush(QBrush(QColor(0, 0, 0)))
 
         # Add text item to indicate vertex type
-        infix = '^' if vd.vtype is not None and vd.size > 1 else ''
-        size = vd.size if vd.size > 1 else ''
+        # TODO: Figure out what to do about these
+        # FIXME: I need to add comparison to plynomials and fix this mess 
+        infix = '^' if vd.vtype is not None and (vd.size != const_poly(1) or vd.size != const_poly(0)) else ''
+        size = vd.size if (vd.size != const_poly(1) or vd.size != const_poly(0)) else ''
         vtype = vd.vtype if vd.vtype is not None else ''
         self.textItem = QGraphicsTextItem(f'{vtype}{infix}{size}')
         self.textItem.setDefaultTextColor(QColor(0, 0, 0))
@@ -175,13 +178,13 @@ class TItem(QGraphicsPathItem):
         path.cubicTo(p1x + dx * 0.4, p1y,
                      p2x - dx * 0.4, p2y,
                      p2x, p2y)
-        if self.size > 1:
-            dash_start = QPointF(self.vitem.pos().x() - 0.1 * SCALE,
+        #if self.size > 1:
+        dash_start = QPointF(self.vitem.pos().x() - 0.1 * SCALE,
                                  self.vitem.pos().y() - 0.1 * SCALE)
-            dash_end = QPointF(self.vitem.pos().x() + 0.1 * SCALE,
+        dash_end = QPointF(self.vitem.pos().x() + 0.1 * SCALE,
                                self.vitem.pos().y() + 0.1 * SCALE)
-            path.moveTo(dash_start)
-            path.lineTo(dash_end)
+        path.moveTo(dash_start)
+        path.lineTo(dash_end)
         self.setPath(path)
         self.update(-2000, -2000, 4000, 4000)
 
