@@ -195,6 +195,7 @@ class Graph:
         self._outputs: list[int] = []
         self._vindex = 0
         self._eindex = 0
+                
 
     def copy(self) -> Graph:
         """Return a copy of the graph."""
@@ -223,7 +224,15 @@ class Graph:
         """Return the number of edges in the graph."""
         return len(self.edata)
 
-    def domain(self) -> list[tuple[VType, int]]:
+    def vars(self):
+        vmap = []
+        
+        for typ, p in self.domain() + self.codomain():
+            vmap.append((tuple(p.subs), p))
+            
+        return vmap
+
+    def domain(self) -> list[tuple[VType, Polynomial]]:
         """Return the domain of the graph.
 
         This consists of a list of pairs (vertex type, register size)
@@ -234,7 +243,7 @@ class Graph:
                   for vertex in self.inputs()]
         return domain
 
-    def codomain(self) -> list[tuple[VType, int]]:
+    def codomain(self) -> list[tuple[VType, Polynomial]]:
         """Return the domain of the graph.
 
         This consists of a list of pairs (vertex type, register size)

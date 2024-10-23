@@ -28,7 +28,7 @@ from .proofstate import ProofState
 from .parts import *
 
 from collections import Counter, defaultdict
-from itertools import zip_longest
+from itertools import zip_longest, takewhile
 from chyp.polynomial import Polynomial, const_poly
 
 class State(lark.Transformer):
@@ -198,6 +198,9 @@ class State(lark.Transformer):
     def var_list(self, items: List[Any]) -> List[str]:
         return [self.var((item,)) for item in items]
 
+    def arg_list(self, items: List[Any]) -> List[str]:
+        return [self.var((item,)) for item in items]
+
     @v_args(meta=True)
     def term_ref(self, meta: Meta, items: List[Any]) -> Optional[Graph]:
         s = str(items[0])
@@ -277,13 +280,7 @@ class State(lark.Transformer):
             args = []
         
         self.context[name] = args
-
-       
-
         
-
-        #print(f'family: args = {args}, domain={domain}')
-
         gen_vars  = set(args)
         poly_vars = set()
 
@@ -642,6 +639,37 @@ class State(lark.Transformer):
         
         return tuple(exps)
 
+    @v_args(meta=True)
+    def call(self, meta: Meta, args):
+
+        s = str(args[0])
+        values = args[1]
+        params = self.context[s]
+        
+        if self.namespace:
+            s = self.namespace + '.' + s
+
+        
+        if len(values) != len(params):
+            self.errors.append((self.file_name, meta.line, f'Generator {s} takes {len(params)} arguments but {len(values)} values given!'))
+
+        if s in self.graphs:
+            f = self.graphs[s].copy()
+            vmap = f.vars()
+            f.name = f'{s}({", ".join(values)})'
+
+            l = {p:v for p, v in zip(params, values)}
+            for vs, p in vmap:
+                res = [int(l[v]) for v in vs]
+                
+                # Evaluate the polynomial in place
+                p.eval_in_place(res)
+
+            return f
+                
+        else:
+            self.errors.append((self.file_name, meta.line, 'Undefined term: ' + s))
+            return None
 
 def module_filename(name: str, current_file: str) -> str:
     return os.path.join(os.path.dirname(current_file), *name.split('.')) + '.chyp'

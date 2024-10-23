@@ -25,9 +25,10 @@ class Polynomial:
         lambda terms: f'${" + ".join(terms)}$'
     )
     
-    def __init__(self, terms=None, subs=None,
-                 str_repr=default_str):
-
+    def __init__(self, terms=None, subs=None, str_repr=default_str):
+        self.reset(terms=terms, subs=subs, str_repr=str_repr)
+        
+    def reset(self, terms=None, subs=None, str_repr=default_str):
         self.terms = Counter()
         self.str_repr = str_repr
         
@@ -43,8 +44,14 @@ class Polynomial:
             raise ValueError('Must substitute all variables!')
 
         self.subs = subs if subs is not None else []
+        
 
-
+    def eval_in_place(self, vals):
+        res = self.eval(vals)
+        self.reset([
+            ((0,), res)
+        ])
+        
     def is_const(self):
         monomials = list(self.terms.keys())
         if len(monomials) == 1 and monomials[0] == (0,):
@@ -60,30 +67,6 @@ class Polynomial:
         while exponents and exponents[-1] == 0:
             exponents = exponents[:-1]
         return exponents
-    
-    # def __str__(self):
-    #     """Pretty-print the polynomial."""
-    #     if not self.terms:
-    #         return "0"
-
-
-    #     if self.subs is not None and len(self.subs) != self.nvars:
-    #         raise ValueError('Must substitute all variables!')
-        
-    #     result = []
-    #     for exponents, coeff in self.terms.items(), key=lambda x: x[0]:
-    #         term = [f"{coeff}"]
-    #         for i, exp in enumerate(exponents):
-    #             if exp != 0:
-    #                 var = self.subs[i] if self.subs else f'x_{i}'
-    #                 term.append(f"{var}^{exp}")
-    #         result.append("".join(term))
-
-    #     s = " + ".join(result).replace("+ -", "- ")
-
-    #     return s
-        
-        
     
     def __str__(self, subs=None):
         """
@@ -137,6 +120,9 @@ class Polynomial:
         res = res.replace("+ -", "- ")
         
         return res
+
+    def __repr__(self):
+        return self.__str__()
     
     def __eq__(self, other): 
         terms = sorted(self.terms.items(), key=lambda x: x[1])

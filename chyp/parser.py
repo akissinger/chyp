@@ -21,7 +21,7 @@ from . import state
 
 GRAMMAR = Lark("""
     start : statement*
-    ?statement : import_statement | gen | let | def_statement | rule | rewrite | show | theorem_statement | family
+    ?statement : import_statement | gen | let | def_statement | rule | rewrite | show | theorem_statement | family | call
     gen : "gen" var ":" type_term "->" type_term [ gen_color ]
     def_statement : "def" var "=" term [ gen_color ]
     gen_color : "\\\"" color "\\\"" | "\\\"" color "\\\"" "\\\"" color "\\\""
@@ -41,6 +41,8 @@ GRAMMAR = Lark("""
     rewrite_part : (eq | le) term_hole [ "by" tactic ]
     LHS : "LHS"
     RHS : "RHS"
+
+    
                
     family: "family" var ["(" var_list ")"] ":" type_term "->" type_term
     var_list: var ("," var)*
@@ -71,7 +73,7 @@ GRAMMAR = Lark("""
     tactic : [ converse ] IDENT | IDENT LPAREN [ TACTIC_ARG ("," TACTIC_ARG)* ] ")"
     ?term  : par_term | seq
     ?par_term : nested_term | par | perm | id | id0
-              | redistribution | term_ref
+              | redistribution | term_ref | call
     nested_term : LPAREN term RPAREN
     par : par_term "*" par_term
     seq : term ";" term
@@ -85,6 +87,9 @@ GRAMMAR = Lark("""
 
     import_statement : "import" module_name [ "as" var ] [ "(" import_let ("," import_let)* ")" ]
     import_let : var "=" term
+
+    call: var "(" arg_list ")"
+    arg_list: num? ("," num)*
 
     eq : "=" | "=="
     le : "<=" | "~>"
