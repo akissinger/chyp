@@ -314,7 +314,9 @@ class State(lark.Transformer):
             if existing_domain != domain or existing_codomain != codomain:
                 self.errors.append((self.file_name, meta.line, "Term '{}' already defined with incompatible type {} -> {}.".format(name, existing_domain, existing_codomain)))
                 self.errors.append((self.file_name, meta.line, "(Trying to add) {} -> {}.".format(domain, codomain)))
-        self.parts.append((meta.start_pos, meta.end_pos, 'family', name))
+
+                
+        self.add_part(GenPart(meta.start_pos, meta.end_pos, meta.line, name, self.graphs[name]))
 
     @v_args(meta=True)
     def let(self, meta: Meta, items: List[Any]) -> None:
