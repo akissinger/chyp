@@ -47,7 +47,7 @@ GRAMMAR = Lark("""
     var_list: var ("," var)*
 
     type_term : type_element ("*" type_element)* 
-    type_element: ("'" IDENT_NO_NUM) ["^" "(" poly_expr ")"] | ["("] poly_expr [")"]
+    type_element: IDENT_NO_NUM ["^" ["("] poly_expr [")"]] | ["("] poly_expr [")"]
 
 
     poly_expr: poly_term (("+" poly_term) | sub_term)*   -> add
@@ -62,7 +62,7 @@ GRAMMAR = Lark("""
              | myvar "^" num -> pow
              
 
-    myvar: IDENT -> myvar
+    myvar: "'" IDENT -> myvar
 
     
 
