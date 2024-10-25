@@ -98,8 +98,10 @@ class State(lark.Transformer):
     def num(self, items: List[Any]) -> int:
         return int(items[0])
 
-    def type_element(self, items: list[Any]
-                     ) -> tuple[str | None, int] | None:
+    def type_element(self, items):
+        if isinstance(items[0], Polynomial):
+            return (None, items[0])
+              
         # The default type is denoted by keyword 'u'
         if items[0] == 'u':
             vtype = None
@@ -114,8 +116,12 @@ class State(lark.Transformer):
 
     def type_term(self, items):
 
+       
         if isinstance(items[0], Polynomial) and items[0].is_const():
             return items[0]() * [(None, const_poly(1))]
+
+        if isinstance(items[0], Polynomial):
+            return [(None, i) for i in items if i is not None]
         
         # Assuming strict monoidal category: ignore remove monoidal units
         items = [i for i in items if i is not None]
@@ -251,39 +257,19 @@ class State(lark.Transformer):
 
     @v_args(meta=True)
     def gen(self, meta: Meta, items: List[Any]) -> None:
-        print(meta, items)
-        name = items[0]
-        domain = items[1]
-        codomain = items[2]
-        (fg, bg) = items[3] if items[3] else ('', '')
-        if name not in self.graphs:
-            g = gen(name, domain, codomain, fg=fg, bg=bg)
-            self.graphs[name] = g
-        else:
-            g = self.graphs[name]
-            existing_domain = g.domain()
-            existing_codomain = g.codomain()
-            if existing_domain != domain or existing_codomain != codomain:
-                self.errors.append((self.file_name, meta.line, "Term '{}' already defined with incompatible type {} -> {}.".format(name, existing_domain, existing_codomain)))
-                self.errors.append((self.file_name, meta.line, "(Trying to add) {} -> {}.".format(domain, codomain)))
-        self.add_part(GenPart(meta.start_pos, meta.end_pos, meta.line, name, g))
-
-    @v_args(meta=True)
-    def family(self, meta: Meta, items: List[Any]) -> None:
         name = items[0]
         args = items[1]
         domain = items[2]
         codomain = items[3]
+        (fg, bg) = items[4] if items[4] else ('', '')
 
-
+        self.context[name] = args
+        
         if args is None:
             args = []
         
-        self.context[name] = args
-        
         gen_vars  = set(args)
         poly_vars = set()
-
         types = set()
         
         for typ, p in domain + codomain:
@@ -300,10 +286,10 @@ class State(lark.Transformer):
         if shadowed_vars:
             self.errors.append((self.file_name, meta.line,
                                 f'Types {shadowed_vars} shadow arguments!'))
-            
-        
+
         if name not in self.graphs:
-            self.graphs[name] = gen(f'{name}({", ".join(args)})', domain, codomain)
+            g = gen(f'{name}({", ".join(args)})', domain, codomain, fg=fg, bg=bg)
+            self.graphs[name] = g
         else:
             g = self.graphs[name]
             existing_domain = g.domain()
@@ -311,9 +297,11 @@ class State(lark.Transformer):
             if existing_domain != domain or existing_codomain != codomain:
                 self.errors.append((self.file_name, meta.line, "Term '{}' already defined with incompatible type {} -> {}.".format(name, existing_domain, existing_codomain)))
                 self.errors.append((self.file_name, meta.line, "(Trying to add) {} -> {}.".format(domain, codomain)))
+        self.add_part(GenPart(meta.start_pos, meta.end_pos, meta.line, name, g))
 
-                
-        self.add_part(GenPart(meta.start_pos, meta.end_pos, meta.line, name, self.graphs[name]))
+    @v_args(meta=True)
+    def family(self, meta: Meta, items: List[Any]) -> None:
+        return self.gen(meta, items)
 
     @v_args(meta=True)
     def let(self, meta: Meta, items: List[Any]) -> None:
@@ -659,8 +647,17 @@ class State(lark.Transformer):
             f.name = f'{s}({", ".join(values)})'
 
             l = {p:v for p, v in zip(params, values)}
+
             for vs, p in vmap:
-                res = [int(l[v]) for v in vs]
+                res = []
+                
+                for v in vs:
+                    try:
+                        value = int(l[v])
+                        res.append(value)
+                    except KeyError:
+                        self.errors.append((self.file_name, meta.line, f'During call {f.name} variable "{v}" doesn\'t exist!'))
+                        return None
                 
                 # Evaluate the polynomial in place
                 p.eval_in_place(res)

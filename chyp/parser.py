@@ -22,7 +22,8 @@ from . import state
 GRAMMAR = Lark("""
     start : statement*
     ?statement : import_statement | gen | let | def_statement | rule | rewrite | show | theorem_statement | family | call
-    gen : "gen" var ":" type_term "->" type_term [ gen_color ]
+    gen : "gen" var ["(" var_list ")"] ":" type_term "->" type_term [ gen_color ]
+    family : "family" var ["(" var_list ")"] ":" type_term "->" type_term [ gen_color ]           
     def_statement : "def" var "=" term [ gen_color ]
     gen_color : "\\\"" color "\\\"" | "\\\"" color "\\\"" "\\\"" color "\\\""
     let : "let" var "=" term
@@ -43,12 +44,10 @@ GRAMMAR = Lark("""
     RHS : "RHS"
 
     
-               
-    family: "family" var ["(" var_list ")"] ":" type_term "->" type_term
     var_list: var ("," var)*
 
-    type_term : type_element ("*" type_element)* | poly_expr
-    type_element: IDENT_NO_NUM ["^" ["("] poly_expr  [")"]] 
+    type_term : type_element ("*" type_element)* 
+    type_element: ("'" IDENT_NO_NUM) ["^" "(" poly_expr ")"] | ["("] poly_expr [")"]
 
 
     poly_expr: poly_term (("+" poly_term) | sub_term)*   -> add
@@ -58,7 +57,6 @@ GRAMMAR = Lark("""
          | monomial             
          | num "*" monomial
 
-    
     monomial: var_term ("*" var_term)*
     ?var_term: myvar 
              | myvar "^" num -> pow
